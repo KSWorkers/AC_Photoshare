@@ -4,7 +4,7 @@
 export async function onRequestGet({ params }) {
   const token = params.token
   const WORKER = 'https://ac-photoshare.nikkomaedori.workers.dev'
-  const SITE = 'https://e2cd94a6.ac-photoshare.pages.dev'
+  const SITE = 'https://ac-photoshare.pages.dev'
 
   let albumName = 'フォトギャラリー'
   let hasCover = false

@@ -435,7 +435,7 @@ function renderGrid(){
     const prv=a.published===false
     const soon=a.expiresAt&&!exp&&(new Date(a.expiresAt)-now)<7*864e5
     // ★ アルバム共有URL: Pages デプロイ後に実際のURLに変更してください
-    const url=`https://e2cd94a6.ac-photoshare.pages.dev/a/${a.token}`
+    const url=`https://ac-photoshare.pages.dev/a/${a.token}`
     let sc='sb-on',sl='公開中'
     if(prv){sc='sb-pv';sl='非公開'}
     if(exp){sc='sb-ex';sl='期限切れ'}
