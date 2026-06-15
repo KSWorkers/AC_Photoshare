@@ -28,7 +28,8 @@ async function getAccessToken(env, readonly=false) {
 }
 
 async function driveReq(path,token){
-  const res=await fetch(`https://www.googleapis.com/drive/v3${path}`,{headers:{Authorization:`Bearer ${token}`}})
+  const sep=path.includes('?')?'&':'?'
+  const res=await fetch(`https://www.googleapis.com/drive/v3${path}${sep}supportsAllDrives=true&includeItemsFromAllDrives=true`,{headers:{Authorization:`Bearer ${token}`}})
   if(!res.ok)throw new Error(`Drive ${res.status}: ${await res.text()}`)
   return res.json()
 }
@@ -50,20 +51,20 @@ async function listVideos(folderId,token){
 }
 
 async function createFolder(name,parentId,token){
-  const res=await fetch('https://www.googleapis.com/drive/v3/files',{method:'POST',headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'},body:JSON.stringify({name,mimeType:'application/vnd.google-apps.folder',parents:[parentId]})})
+  const res=await fetch('https://www.googleapis.com/drive/v3/files?supportsAllDrives=true',{method:'POST',headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'},body:JSON.stringify({name,mimeType:'application/vnd.google-apps.folder',parents:[parentId]})})
   if(!res.ok)throw new Error(`CreateFolder: ${await res.text()}`)
   return res.json()
 }
 
 async function deleteFile(fileId,token){
-  const res=await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}`,{method:'DELETE',headers:{Authorization:`Bearer ${token}`}})
+  const res=await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?supportsAllDrives=true`,{method:'DELETE',headers:{Authorization:`Bearer ${token}`}})
   if(!res.ok&&res.status!==404)throw new Error(`Delete: ${res.status}`)
 }
 
 // ─── 動画権限管理 ───────────────────────────────────
 
 async function grantAnyoneRead(fileId,token){
-  try{await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}/permissions`,{method:'POST',headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'},body:JSON.stringify({type:'anyone',role:'reader'})})}catch{}
+  try{await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}/permissions?supportsAllDrives=true`,{method:'POST',headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'},body:JSON.stringify({type:'anyone',role:'reader'})})}catch{}
 }
 
 async function revokeAnyoneRead(fileId,token){
@@ -71,7 +72,7 @@ async function revokeAnyoneRead(fileId,token){
     const d=await driveReq(`/files/${fileId}/permissions?fields=permissions(id,type)`,token)
     const p=(d.permissions||[]).find(p=>p.type==='anyone')
     if(!p)return
-    await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}/permissions/${p.id}`,{method:'DELETE',headers:{Authorization:`Bearer ${token}`}})
+    await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}/permissions/${p.id}?supportsAllDrives=true`,{method:'DELETE',headers:{Authorization:`Bearer ${token}`}})
   }catch{}
 }
 
@@ -453,7 +454,7 @@ export default {
         const foot=enc.encode(`\r\n--${boundary}--`)
         const body=new Uint8Array(head.length+buf.byteLength+foot.length)
         body.set(head,0);body.set(new Uint8Array(buf),head.length);body.set(foot,head.length+buf.byteLength)
-        const res=await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart',{method:'POST',headers:{Authorization:`Bearer ${at}`,'Content-Type':`multipart/related; boundary="${boundary}"`},body})
+        const res=await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&supportsAllDrives=true',{method:'POST',headers:{Authorization:`Bearer ${at}`,'Content-Type':`multipart/related; boundary="${boundary}"`},body})
         if(!res.ok)throw new Error(`Drive upload: ${await res.text()}`)
         const r=await res.json()
         return jsonR({ok:true,id:r.id,name:r.name})
