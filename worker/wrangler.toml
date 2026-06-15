@@ -4,7 +4,7 @@ compatibility_date = "2024-01-01"
 
 [[kv_namespaces]]
 binding = "ALBUMS"
-id = "YOUR_KV_NAMESPACE_ID_HERE"
+id = "f89da5bbc2094c9cb389eee063df15b5"
 
 [vars]
 SITE_URL = "YOUR_PAGES_URL_HERE"
