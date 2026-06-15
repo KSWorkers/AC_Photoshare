@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="theme-color" content="#ffffff">
+<title>フォトギャラリー | Alcyone PhotoShare</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{--border:rgba(0,0,0,0.08);--border-md:rgba(0,0,0,0.14);--text:#1a1a18;--muted:#6b6b67;--bg:#fafaf9;}
+body{font-family:-apple-system,'Hiragino Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+
+/* ── ヘッダー ── */
+.hd{position:fixed;top:0;left:0;right:0;height:52px;display:flex;align-items:center;justify-content:space-between;padding:0 20px;z-index:200;transition:background .4s,backdrop-filter .4s,border-color .4s;}
+.hd.solid{background:rgba(255,255,255,.92);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);}
+.logo{font-size:14px;font-weight:600;letter-spacing:.02em;color:#fff;text-shadow:0 1px 6px rgba(0,0,0,.3);transition:color .4s,text-shadow .4s;}
+.logo span{font-weight:400;opacity:.85;}
+.hd.solid .logo{color:var(--text);text-shadow:none;}
+.hd.solid .logo span{color:var(--muted);opacity:1;}
+.hd-right{display:flex;gap:8px;}
+
+/* ── ボタン ── */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;border:none;transition:all .15s;white-space:nowrap;}
+.btn-gw{background:rgba(255,255,255,.18);color:#fff;border:1px solid rgba(255,255,255,.35);backdrop-filter:blur(4px);}
+.btn-gw:hover{background:rgba(255,255,255,.28);}
+.hd.solid .btn-gw{background:transparent;color:var(--text);border-color:var(--border-md);}
+.hd.solid .btn-gw:hover{background:rgba(0,0,0,.04);}
+.btn-p{background:var(--text);color:#fff;}.btn-p:hover{background:#333;}
+.btn-s{background:transparent;color:var(--text);border:1px solid var(--border-md);}.btn-s:hover{background:#f5f5f3;}
+.btn-w{background:rgba(255,255,255,.14);color:#fff;border:1px solid rgba(255,255,255,.28);}.btn-w:hover{background:rgba(255,255,255,.24);}
+.btn-sm{padding:5px 12px;font-size:12px;}
+
+/* ── スクリーン ── */
+.sc{display:none;}.sc.on{display:block;}
+
+/* ── パスワード ── */
+.pw-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;}
+.pw-card{background:#fff;border:1px solid var(--border);border-radius:16px;padding:36px 28px;max-width:340px;width:100%;text-align:center;}
+.pw-icon{font-size:32px;margin-bottom:16px;}
+.pw-ttl{font-size:18px;font-weight:600;margin-bottom:6px;}
+.pw-sub{font-size:13px;color:var(--muted);margin-bottom:24px;}
+.pw-in{width:100%;padding:10px 12px;border:1px solid var(--border-md);border-radius:8px;font-size:14px;outline:none;transition:border-color .15s;}
+.pw-in:focus{border-color:var(--text);}
+.pw-err{font-size:13px;color:#c0392b;margin-top:10px;display:none;}
+
+/* ── エラー ── */
+.err-wrap{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:24px;text-align:center;}
+.err-icon{font-size:40px;}
+.err-title{font-size:17px;font-weight:600;}
+.err-sub{font-size:14px;color:var(--muted);line-height:1.7;}
+.err-contact{margin-top:8px;font-size:13px;background:#f8f6f2;border:1px solid var(--border);border-radius:10px;padding:12px 16px;color:var(--muted);line-height:1.8;}
+.err-contact strong{color:var(--text);}
+
+/* ── ヒーロー ── */
+.hero{position:relative;width:100%;height:90vh;min-height:480px;overflow:hidden;}
+.hero-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center;animation:heroZ 8s ease-out forwards;}
+@keyframes heroZ{from{transform:scale(1.05);}to{transform:scale(1.0);}}
+.hero-overlay{position:absolute;inset:0;background:rgba(0,0,0,.28);}
+.hero-center{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;animation:fadeUp .8s .3s ease both;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:translateY(0);}}
+.hero-text{
+  color:#fff;text-align:center;padding:0 24px;
+  text-shadow:0 2px 24px rgba(0,0,0,.2);
+  /* フォントはJSで上書き */
+  font-size:clamp(28px,7vw,64px);
+  font-weight:200;letter-spacing:.28em;
+  text-transform:uppercase;
+}
+.scroll-hint{position:absolute;bottom:28px;left:0;right:0;display:flex;flex-direction:column;align-items:center;gap:8px;animation:fadeUp .8s .9s ease both;}
+.scroll-hint span{font-size:11px;letter-spacing:.25em;color:rgba(255,255,255,.55);}
+.scroll-line{width:1.5px;height:52px;background:linear-gradient(to bottom,rgba(255,255,255,.6),transparent);animation:scrollA 2s ease-in-out infinite;}
+@keyframes scrollA{0%,100%{opacity:.3;transform:scaleY(.5);transform-origin:top;}50%{opacity:1;transform:scaleY(1);transform-origin:top;}}
+
+/* ── アルバム情報 ── */
+.album-info{background:#fff;border-bottom:1px solid var(--border);padding:16px 20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;}
+.album-name{font-size:17px;font-weight:600;margin-bottom:4px;}
+.album-meta{display:flex;gap:10px;flex-wrap:wrap;}
+.album-meta span{font-size:12px;color:var(--muted);}
+.album-meta .dot{color:rgba(0,0,0,.15);}
+
+/* ── ツールバー ── */
+.tb{position:sticky;top:52px;z-index:100;background:rgba(250,250,248,.94);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);padding:8px 12px;display:flex;align-items:center;justify-content:flex-end;gap:6px;flex-wrap:wrap;}
+@media(max-width:400px){.btn-sm{padding:5px 8px;font-size:11px;}}
+.dl-wrap{position:relative;}
+.dl-menu{position:absolute;top:calc(100%+6px);right:0;background:#fff;border-radius:10px;box-shadow:0 8px 32px rgba(0,0,0,.12);overflow:hidden;white-space:nowrap;z-index:20;display:none;min-width:200px;}
+.dl-menu.on{display:block;}
+.dl-up .dl-menu{top:auto;bottom:calc(100%+6px);}
+/* sel-bar内のDLメニューはfixedで画面に直接固定 */
+.sel-bar .dl-up .dl-menu{position:fixed;bottom:72px;right:12px;top:auto;min-width:200px;}
+.dl-item{display:block;padding:10px 16px;font-size:13px;color:var(--text);cursor:pointer;border:none;background:transparent;width:100%;text-align:left;}
+.dl-item:hover{background:#f5f5f3;}
+.dl-item small{display:block;font-size:11px;color:var(--muted);margin-top:1px;}
+
+/* ── グリッド ── */
+.gallery{padding:3px 0 100px;}
+.grow{display:flex;gap:3px;margin-bottom:3px;}
+.gi{flex-shrink:0;overflow:hidden;cursor:pointer;position:relative;background:#e8e6e2;}
+.gi img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .3s ease,-webkit-touch-callout:default;}
+.gi img{-webkit-touch-callout:default;}
+.gi:hover img{transform:scale(1.02);}
+.gi-ck{position:absolute;top:8px;left:8px;width:22px;height:22px;border-radius:50%;background:rgba(255,255,255,.88);border:1.5px solid #fff;display:none;align-items:center;justify-content:center;box-shadow:0 1px 4px rgba(0,0,0,.2);z-index:5;}
+.sel-mode .gi-ck{display:flex;}
+.gi.sel .gi-ck{background:var(--text);border-color:var(--text);}
+.gi.sel::before{content:'';position:absolute;inset:0;box-shadow:inset 0 0 0 3px var(--text);pointer-events:none;z-index:4;}
+.gi.sel img{opacity:.75;}
+
+/* 選択バー */
+.sel-bar{position:fixed;bottom:0;left:0;right:0;background:var(--text);color:#fff;padding:14px 20px;display:none;align-items:center;justify-content:space-between;z-index:300;gap:12px;}
+.sel-bar.on{display:flex;}
+
+/* ライトボックス */
+.lb{position:fixed;inset:0;z-index:1000;background:#000;display:none;flex-direction:column;}
+.lb.on{display:flex;}
+.lb-hd{position:absolute;top:0;left:0;right:0;z-index:10;display:flex;align-items:center;justify-content:space-between;padding:10px 16px;background:linear-gradient(to bottom,rgba(0,0,0,.7),transparent);}
+.lb-cnt{color:rgba(255,255,255,.6);font-size:13px;}
+.lb-acts{display:flex;gap:6px;}
+.lb-btn{background:rgba(0,0,0,.4);border:none;color:#fff;border-radius:8px;padding:8px 14px;cursor:pointer;font-size:13px;display:flex;align-items:center;gap:6px;}
+.lb-btn:hover{background:rgba(0,0,0,.6);}
+.lb-main{flex:1;display:flex;align-items:center;position:relative;}
+.lb-wrap{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:52px 52px 16px;transition:opacity .15s;}
+.lb-wrap img{max-width:100%;max-height:100%;object-fit:contain;display:block;}
+.lb-nav{position:absolute;top:50%;transform:translateY(-50%);background:rgba(255,255,255,.12);border:none;color:#fff;width:44px;height:44px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.lb-nav:hover{background:rgba(255,255,255,.22);}
+.lb-nav:disabled{opacity:.15;cursor:default;}
+.lb-prev{left:8px;}.lb-next{right:8px;}
+.lb-hint{position:absolute;bottom:0;left:0;right:0;padding:8px;text-align:center;font-size:12px;color:rgba(255,255,255,.5);background:linear-gradient(to top,rgba(0,0,0,.4),transparent);}
+@media(max-width:600px){.lb-wrap{padding:52px 44px 12px;}.lb-prev{left:4px;}.lb-next{right:4px;}}
+
+/* ローディング */
+.loading-wrap{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;}
+.spin{width:28px;height:28px;border:2.5px solid var(--border-md);border-top-color:var(--text);border-radius:50%;animation:sp .7s linear infinite;}
+@keyframes sp{to{transform:rotate(360deg);}}
+
+/* ガイド */
+.guide{margin:0 16px 24px;background:#f8f6f2;border:1px solid var(--border);border-radius:10px;padding:12px 14px;font-size:12px;color:var(--muted);line-height:1.8;}
+.guide strong{color:var(--text);}
+.guide a{color:var(--text);font-weight:600;}
+
+/* 進行状況 */
+.progress-modal{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:2000;display:none;align-items:center;justify-content:center;}
+.progress-modal.on{display:flex;}
+.progress-card{background:#fff;border-radius:16px;padding:28px;min-width:280px;text-align:center;}
+.progress-ttl{font-size:15px;font-weight:600;margin-bottom:16px;}
+.progress-bar-wrap{background:#f0eeeb;border-radius:100px;height:8px;overflow:hidden;margin-bottom:10px;}
+.progress-bar{background:var(--text);height:100%;border-radius:100px;transition:width .3s;}
+.progress-txt{font-size:13px;color:var(--muted);}
+
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:#1a1a18;color:#fff;padding:10px 18px;border-radius:100px;font-size:13px;font-weight:500;z-index:9999;transition:transform .3s,opacity .3s;opacity:0;pointer-events:none;white-space:nowrap;}
+
+/* 動画セクション */
+.video-section{padding:20px 0 0;}
+.video-hd{padding:0 0 12px;font-size:15px;font-weight:600;display:flex;align-items:center;gap:6px;border-bottom:1px solid var(--border);margin-bottom:12px;}
+.video-list{display:grid;gap:10px;padding-bottom:16px;}
+.video-item{display:flex;align-items:center;gap:10px;padding:10px 12px;background:#fff;border:1px solid var(--border);border-radius:10px;cursor:pointer;color:var(--text);transition:background .15s;min-width:0;overflow:hidden;}
+.video-item:hover{background:#f8f6f2;}
+.video-thumb{width:72px;height:52px;object-fit:cover;border-radius:6px;flex-shrink:0;background:#e8e6e2;}
+.video-thumb-ph{width:72px;height:52px;border-radius:6px;background:#e8e6e2;display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0;}
+.video-info{flex:1;min-width:0;overflow:hidden;}
+.video-name{font-size:12px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:2px;}
+.video-size{font-size:11px;color:var(--muted);}
+.video-play{background:var(--text);color:#fff;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0;}
+/* ガイドリンク */
+.guide-link-big{display:flex;align-items:center;justify-content:center;margin:16px 0 24px;padding:14px;background:#f8f6f2;border:1px solid var(--border);border-radius:10px;font-size:14px;font-weight:600;color:var(--text);text-decoration:none;}
+.guide-link-big:hover{background:#f0ede8;}
+
+</style>
+</head>
+<body>
+
+<header class="hd" id="header">
+  <div class="logo">Alcyone PhotoShare <span>Photo</span></div>
+  <div class="hd-right">
+    <button class="btn btn-gw btn-sm" onclick="shareAlbum()">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.59 13.51l6.83 3.98M15.41 6.51l-6.82 3.98"/></svg>
+      共有
+    </button>
+  </div>
+</header>
+
+<!-- ローディング -->
+<div class="sc on" id="scLoad">
+  <div class="loading-wrap"><div class="spin"></div><span style="font-size:14px;color:var(--muted)">読み込み中...</span></div>
+</div>
+
+<!-- エラー -->
+<div class="sc" id="scErr">
+  <div class="err-wrap">
+    <div class="err-icon" id="errIcon">📭</div>
+    <div class="err-title" id="errTitle">アルバムが見つかりません</div>
+    <div class="err-sub" id="errSub">URLをご確認ください。</div>
+    <div class="err-contact"><strong>お心当たりのない場合はカメラマンにご連絡ください。</strong><br>Instagram: <a href="YOUR_INSTAGRAM_URL_HERE" target="_blank" style="color:var(--text);">YOUR_INSTAGRAM_ID_HERE</a></div>
+  </div>
+</div>
+
+<!-- パスワード -->
+<div class="sc" id="scPw">
+  <div class="pw-wrap"><div class="pw-card">
+    <div class="pw-icon">🔒</div>
+    <div class="pw-ttl" id="pwName">アルバムを開く</div>
+    <div class="pw-sub">パスワードで保護されています</div>
+    <input class="pw-in" type="password" id="pwIn" placeholder="パスワード" onkeydown="if(event.key==='Enter')submitPw()">
+    <button class="btn btn-p" style="width:100%;margin-top:12px;justify-content:center;" onclick="submitPw()">開く</button>
+    <div class="pw-err" id="pwErr">パスワードが違います</div>
+  </div></div>
+</div>
+
+<!-- ギャラリー -->
+<div class="sc" id="scGal">
+  <!-- ヒーロー -->
+  <div class="hero" id="heroSection">
+    <img class="hero-img" id="heroImg" src="" alt="">
+    <div class="hero-overlay"></div>
+    <div class="hero-center">
+      <div class="hero-text" id="heroText">Photography</div>
+    </div>
+    <div class="scroll-hint">
+      <span>SCROLL</span>
+      <div class="scroll-line"></div>
+    </div>
+  </div>
+
+  <!-- アルバム情報（画像の外） -->
+  <div class="album-info">
+    <div>
+      <div class="album-name" id="albumName"></div>
+      <div class="album-meta" id="albumMeta"></div>
+    </div>
+  </div>
+
+  <!-- ツールバー -->
+  <div class="tb">
+    <button class="btn btn-s btn-sm" id="selBtn" onclick="toggleSel()">選択</button>
+    <div class="dl-wrap">
+      <button class="btn btn-p btn-sm" onclick="toggleDlMenu(event)">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        まとめてDL
+      </button>
+      <div class="dl-menu" id="allDlMenu">
+        <button class="dl-item" onclick="downloadAll('full')">フルサイズ<small>元データそのまま</small></button>
+        <button class="dl-item" onclick="downloadAll('medium')">中サイズ（A4印刷対応）<small>約2400px</small></button>
+        <button class="dl-item" onclick="downloadAll('small')">小サイズ（L判印刷対応）<small>約1200px</small></button>
+        <a class="dl-item" href="/download_guide.html" target="_blank" style="border-top:1px solid var(--border);color:var(--muted);">📖 保存方法ガイド</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="gallery" id="grid"></div>
+
+
+  <div class="sel-bar" id="selBar">
+    <div style="font-size:14px;font-weight:500;" id="selCnt">0枚選択中</div>
+    <div style="display:flex;gap:8px;">
+      <div class="dl-wrap dl-up">
+        <button class="btn btn-sm btn-w" onclick="toggleSelDl(event)">選択DL ▾</button>
+        <div class="dl-menu" id="selDlMenu">
+          <button class="dl-item" onclick="downloadSel('full')">フルサイズ<small>元データそのまま</small></button>
+          <button class="dl-item" onclick="downloadSel('medium')">中サイズ（A4印刷対応）<small>約2400px</small></button>
+          <button class="dl-item" onclick="downloadSel('small')">小サイズ（L判印刷対応）<small>約1200px</small></button>
+          <a class="dl-item" href="/download_guide.html" target="_blank" style="border-top:1px solid var(--border);color:var(--muted);">📖 保存方法ガイド</a>
+        </div>
+      </div>
+      <button class="btn btn-sm btn-w" onclick="cancelSel()">キャンセル</button>
+    </div>
+  </div>
+</div>
+
+<!-- ライトボックス -->
+<div class="lb" id="lb">
+  <div class="lb-hd">
+    <span class="lb-cnt" id="lbCnt"></span>
+    <div class="lb-acts">
+      <div class="dl-wrap">
+        <button class="lb-btn" onclick="toggleLbDl(event)">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>保存 ▾
+        </button>
+        <div class="dl-menu" id="lbDlMenu">
+          <button class="dl-item" onclick="dlCurrent('full')">フルサイズ<small>元データそのまま</small></button>
+          <button class="dl-item" onclick="dlCurrent('medium')">中サイズ（A4印刷対応）<small>約2400px</small></button>
+          <button class="dl-item" onclick="dlCurrent('small')">小サイズ（L判印刷対応）<small>約1200px</small></button>
+          <a class="dl-item" href="/download_guide.html" target="_blank" style="border-top:1px solid var(--border);color:var(--muted);">📖 保存方法ガイド</a>
+        </div>
+      </div>
+      <button class="lb-btn" onclick="closeLb()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+    </div>
+  </div>
+  <div class="lb-main">
+    <button class="lb-nav lb-prev" id="lbPrev" onclick="lbMv(-1)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg></button>
+    <div class="lb-wrap" id="lbWrap"><img id="lbImg" src="" alt=""></div>
+    <button class="lb-nav lb-next" id="lbNext" onclick="lbMv(1)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg></button>
+  </div>
+  <div class="lb-hint" id="lbHint"></div>
+</div>
+
+<!-- 進行状況 -->
+<div class="progress-modal" id="progressModal">
+  <div class="progress-card">
+    <div class="progress-ttl" id="progressTtl">ZIPを生成中...</div>
+    <div class="progress-bar-wrap"><div class="progress-bar" id="progressBar" style="width:0%"></div></div>
+    <div class="progress-txt" id="progressTxt">0 / 0 枚</div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script>
+const W = 'https://ac-photoshare.nikkomaedori.workers.dev'
+const token = new URLSearchParams(location.search).get('token') || location.pathname.split('/').pop()
+const isMobile = /iPhone|iPad|Android/i.test(navigator.userAgent)
+
+// フォント定義
+const FONTS = {
+  josefin:   { url:'Josefin+Sans:wght@200;300',           css:"'Josefin Sans',sans-serif",         weight:200, spacing:'.28em', transform:'uppercase' },
+  cormorant: { url:'Cormorant+Garamond:ital,wght@0,300;1,300', css:"'Cormorant Garamond',serif",   weight:300, spacing:'.14em', transform:'none' },
+  playfair:  { url:'Playfair+Display:wght@400',            css:"'Playfair Display',serif",          weight:400, spacing:'.08em', transform:'none' },
+  montserrat:{ url:'Montserrat:wght@200;300',              css:"'Montserrat',sans-serif",           weight:200, spacing:'.22em', transform:'uppercase' },
+  system:    { url:null,                                   css:"-apple-system,'Hiragino Sans',sans-serif", weight:300, spacing:'.06em', transform:'none' },
+}
+
+function applyFont(fontKey) {
+  const f = FONTS[fontKey] || FONTS.josefin
+  if (f.url) {
+    const link = document.createElement('link')
+    link.rel = 'stylesheet'
+    link.href = `https://fonts.googleapis.com/css2?family=${f.url}&display=swap`
+    document.head.appendChild(link)
+  }
+  const el = document.getElementById('heroText')
+  el.style.fontFamily = f.css
+  el.style.fontWeight = f.weight
+  el.style.letterSpacing = f.spacing
+  el.style.textTransform = f.transform
+}
+
+let photos=[], pw='', selMode=false, selIds=new Set(), cur=0, lastSel=-1
+
+function show(id) { document.querySelectorAll('.sc').forEach(s=>s.classList.remove('on')); document.getElementById(id).classList.add('on') }
+
+function showErr(type) {
+  const c = {
+    notfound:{ icon:'📭', title:'アルバムが見つかりません', sub:'URLをご確認ください。' },
+    expired: { icon:'⏰', title:'このアルバムは期限切れです', sub:'ダウンロード期限が過ぎています。' },
+    private: { icon:'🔒', title:'このアルバムは現在非公開です', sub:'公開されるまでしばらくお待ちください。' },
+    error:   { icon:'⚠️', title:'読み込みに失敗しました', sub:'時間をおいて再試行してください。' },
+  }[type] || {icon:'⚠️',title:'エラー',sub:''}
+  document.getElementById('errIcon').textContent=c.icon
+  document.getElementById('errTitle').textContent=c.title
+  document.getElementById('errSub').textContent=c.sub
+  show('scErr')
+}
+
+async function load(password='') {
+  try {
+    const qs = password ? `?pw=${encodeURIComponent(password)}` : ''
+    const res = await fetch(`${W}/api/album/${token}${qs}`)
+    const d = await res.json()
+    if (res.status===404) return showErr('notfound')
+    if (res.status===410) return showErr('expired')
+    if (res.status===403) return showErr('private')
+    if (d.requirePassword) { document.getElementById('pwName').textContent=d.name; return show('scPw') }
+    if (!res.ok) return showErr('error')
+    pw=password; photos=d.photos
+
+    // ヒーロー設定
+    applyFont(d.heroFont||'josefin')
+    document.getElementById('heroText').textContent = d.heroText||'Photography'
+
+    // カバー画像（スマホ: coverIdMobile > coverId > 1枚目、PC: coverId > 1枚目）
+    const preferredId = isMobile ? (d.coverIdMobile || d.coverId) : d.coverId
+    const cover = preferredId ? photos.find(p=>p.id===preferredId) : photos[0]
+    if (cover) {
+      document.getElementById('heroImg').src = cover.thumb
+      document.getElementById('heroSection').style.display = 'block'
+    } else {
+      // カバー未設定時: ヒーロー非表示 + ヘッダー分のスペース確保
+      document.getElementById('heroSection').style.display = 'none'
+      document.querySelector('.album-info').style.marginTop = '52px'
+    }
+
+    // アルバム情報
+    document.getElementById('albumName').textContent = d.name
+    const meta=[]
+    if (d.count) meta.push(`${d.count}枚`)
+    if (d.totalSizeLabel) meta.push(d.totalSizeLabel)
+    if (d.expiresAt) meta.push(`期限：${d.expiresAt.slice(0,10)}`)
+    document.getElementById('albumMeta').innerHTML = meta.map((m,i)=>
+      i<meta.length-1 ? `<span>${m}</span><span class="dot">·</span>` : `<span>${m}</span>`
+    ).join('')
+
+    if (photos.length > 0) {
+      renderGrid()
+    } else {
+      document.getElementById('grid').style.display = 'none'
+    }
+    // 動画セクション
+    const wrap = document.getElementById('scGal')
+    if (d.videos && d.videos.length > 0) {
+      renderVideos(d.videos)
+    } else {
+      addGuideLink(document.getElementById('grid').parentNode)
+    }
+    show('scGal')
+  } catch(e) { showErr('error') }
+}
+
+function submitPw() {
+  const v=document.getElementById('pwIn').value; if(!v)return
+  show('scLoad'); load(v)
+}
+
+// ヘッダー透明→ソリッド
+window.addEventListener('scroll',()=>{
+  document.getElementById('header').classList.toggle('solid', window.scrollY > window.innerHeight*0.65)
+},{passive:true})
+
+// ジャスティファイドグリッド
+function renderGrid() {
+  const grid=document.getElementById('grid')
+  const cw=grid.clientWidth||window.innerWidth
+  const isMob=cw<600, gap=3
+
+  if (isMob) {
+    const rows=[];for(let i=0;i<photos.length;i+=2)rows.push(photos.slice(i,i+2).map((p,j)=>({...p,_i:i+j})))
+    grid.innerHTML=rows.map(row=>{
+      if(row.length===1){const p=row[0];const ar=(p.width||4)/(p.height||3);const h=Math.round(cw/ar);return`<div class="grow"><div class="gi" id="gi${p._i}" style="width:${cw}px;height:${h}px;" onclick="onClick(${p._i},event)"><img class="ld" src="${p.thumb}" loading="lazy" onload="this.classList.remove('ld')" onerror="this.classList.remove('ld')"><div class="gi-ck"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></div></div></div>`}
+      const ar0=(row[0].width||4)/(row[0].height||3),ar1=(row[1].width||4)/(row[1].height||3)
+      const rh=Math.round((cw-gap)/(ar0+ar1)),w0=Math.round(rh*ar0),w1=cw-gap-w0
+      return`<div class="grow">${[[row[0],w0],[row[1],w1]].map(([p,w])=>`<div class="gi" id="gi${p._i}" style="width:${w}px;height:${rh}px;" onclick="onClick(${p._i},event)"><img src="${p.thumb}" loading="lazy"><div class="gi-ck"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></div></div>`).join('')}</div>`
+    }).join('')
+  } else {
+    const th=Math.min(320,window.innerHeight*.4),rows=[],row=[];let rw=0
+    photos.forEach((p,i)=>{const ar=(p.width||4)/(p.height||3),w=th*ar;if(rw+w+gap*row.length>cw&&row.length>0){rows.push([...row]);row.length=0;rw=0}row.push({...p,_w:w,_i:i});rw+=w})
+    if(row.length)rows.push([...row])
+    grid.innerHTML=rows.map(r=>{const tg=(r.length-1)*gap,tw=r.reduce((s,p)=>s+p._w,0),sc=(cw-tg)/tw,rh=Math.round(th*sc);return`<div class="grow">${r.map(p=>`<div class="gi" id="gi${p._i}" style="width:${Math.round(p._w*sc)}px;height:${rh}px;" onclick="onClick(${p._i},event)"><img src="${p.thumb}" loading="lazy"><div class="gi-ck"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></div></div>`).join('')}</div>`}).join('')
+  }
+}
+window.addEventListener('resize',()=>{if(photos.length)renderGrid()})
+
+function onClick(i,e){
+  if(selMode){
+    if(e.shiftKey&&lastSel>=0){const mn=Math.min(i,lastSel),mx=Math.max(i,lastSel);for(let j=mn;j<=mx;j++){selIds.add(j);document.getElementById(`gi${j}`)?.classList.add('sel')}}
+    else{const el=document.getElementById(`gi${i}`);if(selIds.has(i)){selIds.delete(i);el.classList.remove('sel')}else{selIds.add(i);el.classList.add('sel')}}
+    lastSel=i;document.getElementById('selCnt').textContent=`${selIds.size}枚選択中`;document.getElementById('selBar').classList.toggle('on',selIds.size>0)
+  }else openLb(i)
+}
+function toggleSel(){selMode=!selMode;document.getElementById('grid').classList.toggle('sel-mode',selMode);document.getElementById('selBtn').textContent=selMode?'選択解除':'選択';if(!selMode)cancelSel()}
+function cancelSel(){selMode=false;selIds.clear();lastSel=-1;document.querySelectorAll('.gi').forEach(el=>el.classList.remove('sel'));document.getElementById('grid').classList.remove('sel-mode');document.getElementById('selBar').classList.remove('on');document.getElementById('selBtn').textContent='選択'}
+
+function photoUrl(p,size){const params=new URLSearchParams({size,name:p.name,token});if(pw)params.set('pw',pw);return`${W}/api/photo/${p.id}?${params}`}
+
+function showProgress(title){document.getElementById('progressTtl').textContent=title;document.getElementById('progressModal').classList.add('on')}
+function hideProgress(){document.getElementById('progressModal').classList.remove('on')}
+function updateProgress(done,total){document.getElementById('progressBar').style.width=Math.round(done/total*100)+'%';document.getElementById('progressTxt').textContent=`${done} / ${total} 枚`}
+
+async function downloadZip(list,size){
+  showProgress('ZIPを生成中...');updateProgress(0,list.length)
+  try{
+    const zip=new JSZip();let done=0
+    await Promise.all(list.map(async p=>{const res=await fetch(photoUrl(p,size));zip.file(`${size==='full'?'':size+'_'}${p.name}`,await res.blob());done++;updateProgress(done,list.length)}))
+    document.getElementById('progressTtl').textContent='ZIPを圧縮中...'
+    const blob=await zip.generateAsync({type:'blob'})
+    const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`photos_${size}.zip`;a.click()
+    showToast('ダウンロード完了！')
+  }catch{showToast('エラーが発生しました')}
+  finally{setTimeout(hideProgress,800)}
+}
+function downloadAll(size){closeAllMenus();downloadZip(photos,size)}
+function downloadSel(size){closeAllMenus();downloadZip([...selIds].map(i=>photos[i]),size);cancelSel()}
+function dlCurrent(size){closeAllMenus();const p=photos[cur];const a=document.createElement('a');a.href=photoUrl(p,size);a.download=(size==='full'?'':size+'_')+p.name;a.click();showToast('ダウンロードを開始します')}
+
+function toggleDlMenu(e){e.stopPropagation();document.getElementById('allDlMenu').classList.toggle('on')}
+function toggleSelDl(e){e.stopPropagation();document.getElementById('selDlMenu').classList.toggle('on')}
+function toggleLbDl(e){e.stopPropagation();document.getElementById('lbDlMenu').classList.toggle('on')}
+function closeAllMenus(){document.querySelectorAll('.dl-menu').forEach(m=>m.classList.remove('on'))}
+document.addEventListener('click',closeAllMenus)
+
+async function shareAlbum(){
+  const url=location.href
+  if(navigator.share){try{await navigator.share({title:document.getElementById('albumName').textContent,url});return}catch(e){}}
+  navigator.clipboard?.writeText(url).catch(()=>{})
+  showToast('URLをコピーしました')
+}
+
+function openLb(i){cur=i;updLb();document.getElementById('lb').classList.add('on');document.body.style.overflow='hidden'}
+function closeLb(){document.getElementById('lb').classList.remove('on');document.body.style.overflow=''}
+function updLb(){
+  const p=photos[cur]
+  const wrap=document.getElementById('lbWrap')
+  const img=document.getElementById('lbImg')
+  // 表示はthumb（高速CDN）、DLボタンはphotoUrlで別途
+  const displaySrc = p.thumb
+  wrap.style.opacity='0'
+  img.onload=()=>{ wrap.style.opacity='1' }
+  img.onerror=()=>{ wrap.style.opacity='1' }
+  img.src=displaySrc
+  document.getElementById('lbCnt').textContent=`${cur+1} / ${photos.length}`
+  document.getElementById('lbPrev').disabled=cur===0
+  document.getElementById('lbNext').disabled=cur===photos.length-1
+  document.getElementById('lbHint').innerHTML=isMobile?'長押し →「イメージを保存」でカメラロールに保存<br>（A4印刷サイズまで対応）':''
+}
+function lbMv(dir){
+  const n=cur+dir;if(n<0||n>=photos.length)return;cur=n
+  const wrap=document.getElementById('lbWrap')
+  wrap.style.opacity='0'
+  // 即座にsrc更新（onloadで表示）
+  setTimeout(()=>updLb(),80)
+}
+document.addEventListener('keydown',e=>{if(!document.getElementById('lb').classList.contains('on'))return;if(e.key==='ArrowLeft')lbMv(-1);if(e.key==='ArrowRight')lbMv(1);if(e.key==='Escape')closeLb()})
+let tx=0;document.getElementById('lb').addEventListener('touchstart',e=>{tx=e.touches[0].clientX},{passive:true});document.getElementById('lb').addEventListener('touchend',e=>{const dx=e.changedTouches[0].clientX-tx;if(Math.abs(dx)>50)lbMv(dx<0?1:-1)})
+
+
+function fmtSize(b){if(!b)return'';if(b>=1e9)return`${(b/1e9).toFixed(1)} GB`;if(b>=1e6)return`${(b/1e6).toFixed(1)} MB`;return`${(b/1e3).toFixed(0)} KB`}
+
+function renderVideos(videos) {
+  const section = document.createElement('div')
+  section.className = 'video-section'
+  const wrap = document.getElementById('grid').parentNode
+  section.innerHTML = `<div class="video-hd"><span>🎬</span>動画（${videos.length}件）</div>
+    <div class="video-list">${videos.map(v=>`
+      <div class="video-item" onclick="openVideoPlayer('${v.viewLink}')">
+        ${v.thumb?`<img class="video-thumb" src="${v.thumb}" alt="">`:'<div class="video-thumb-ph">🎬</div>'}
+        <div class="video-info">
+          <div class="video-name">${v.name}</div>
+          ${v.size?`<div class="video-size">${fmtSize(v.size)}</div>`:''}
+        </div>
+        <div class="video-play">▶</div>
+      </div>`).join('')}
+    </div>`
+  wrap.appendChild(section)
+  addGuideLink(wrap)
+}
+
+function openVideoPlayer(viewLink) {
+  const fileId = viewLink.match(/\/d\/([^/]+)\//)?.[1] || ''
+  const previewUrl = viewLink.replace('/view', '/preview').replace('/edit', '/preview')
+  const downloadUrl = `https://drive.google.com/uc?export=download&id=${fileId}`
+  const overlay = document.createElement('div')
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:1000;display:flex;flex-direction:column;align-items:center;justify-content:center;'
+  overlay.onclick = e => { if(e.target===overlay) document.body.removeChild(overlay) }
+  const closeBtn = document.createElement('button')
+  closeBtn.innerHTML = '×'
+  closeBtn.style.cssText = 'position:absolute;top:16px;right:20px;background:none;border:none;color:#fff;font-size:32px;cursor:pointer;line-height:1;'
+  closeBtn.onclick = () => document.body.removeChild(overlay)
+  const iframe = document.createElement('iframe')
+  iframe.src = previewUrl
+  iframe.style.cssText = 'width:min(95vw,900px);height:min(70vh,560px);border:none;border-radius:8px;'
+  iframe.allow = 'autoplay'
+  // ダウンロードボタン
+  const dlBtn = document.createElement('a')
+  dlBtn.href = downloadUrl
+  dlBtn.target = '_blank'
+  dlBtn.style.cssText = 'display:inline-flex;align-items:center;gap:6px;margin-top:14px;background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.3);border-radius:8px;padding:8px 18px;font-size:13px;text-decoration:none;backdrop-filter:blur(4px);'
+  dlBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> 動画をダウンロード'
+  overlay.appendChild(closeBtn)
+  overlay.appendChild(iframe)
+  overlay.appendChild(dlBtn)
+  document.body.appendChild(overlay)
+}
+
+function addGuideLink(container) {
+  const guide = document.createElement('a')
+  guide.href = '/download_guide.html'
+  guide.className = 'guide-link-big'
+  guide.innerHTML = '📖 写真・動画の保存方法ガイドを見る →'
+  container.appendChild(guide)
+}
+
+function showToast(m){const t=document.getElementById('toast');t.textContent=m;t.style.transform='translateX(-50%) translateY(0)';t.style.opacity='1';clearTimeout(t._t);t._t=setTimeout(()=>{t.style.transform='translateX(-50%) translateY(80px)';t.style.opacity='0'},2800)}
+
+if(!token||token==='album')showErr('notfound')
+else load()
+</script>
+</body>
+</html>

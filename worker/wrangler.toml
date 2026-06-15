@@ -1,0 +1,10 @@
+name = "ac-photoshare"
+main = "index.js"
+compatibility_date = "2024-01-01"
+
+[[kv_namespaces]]
+binding = "ALBUMS"
+id = "YOUR_KV_NAMESPACE_ID_HERE"
+
+[vars]
+SITE_URL = "YOUR_PAGES_URL_HERE"

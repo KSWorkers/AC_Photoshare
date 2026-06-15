@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>写真選定 | Alcyone PhotoShare</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{--text:#1a1a18;--muted:#6b6b67;--border:rgba(0,0,0,0.08);--border-md:rgba(0,0,0,0.14);--bg:#fafaf9;--accent:#C47A4A;}
+body{font-family:-apple-system,'Hiragino Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+.hd{position:sticky;top:0;z-index:200;background:rgba(255,255,255,.95);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);padding:0 16px;height:52px;display:flex;align-items:center;justify-content:space-between;}
+.logo{font-size:14px;font-weight:600;}
+.logo span{color:var(--muted);font-weight:400;}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;border:none;transition:all .15s;white-space:nowrap;}
+.btn-p{background:var(--text);color:#fff;}.btn-p:hover{background:#333;}
+.btn-a{background:var(--accent);color:#fff;}.btn-a:hover{opacity:.9;}
+.btn-s{background:transparent;color:var(--text);border:1px solid var(--border-md);}
+.btn-sm{padding:5px 12px;font-size:12px;}
+
+/* バナー */
+.banner{padding:12px 16px;font-size:13px;font-weight:500;display:flex;align-items:center;gap:8px;}
+.banner-warn{background:#fff8ee;color:#9a5a1a;border-bottom:1px solid #ffe8c0;}
+.banner-ok{background:#edfbf0;color:#1a7a3c;border-bottom:1px solid #c0f0ce;}
+
+/* フラグ進捗 */
+.progress-bar{background:#fff;border-bottom:1px solid var(--border);padding:12px 16px;display:flex;gap:10px;overflow-x:auto;-webkit-overflow-scrolling:touch;}
+.flag-prog{display:flex;align-items:center;gap:6px;white-space:nowrap;flex-shrink:0;}
+.flag-prog-label{font-size:13px;}
+.flag-prog-count{font-size:12px;color:var(--muted);background:var(--bg);border:1px solid var(--border);border-radius:100px;padding:2px 8px;}
+.flag-prog-count.full{background:var(--accent);color:#fff;border-color:var(--accent);}
+
+/* グリッド */
+.gallery{padding:3px 0 120px;}
+.grow{display:flex;gap:3px;margin-bottom:3px;}
+.gi{flex-shrink:0;overflow:hidden;cursor:pointer;position:relative;background:#e8e6e2;}
+.gi img{width:100%;height:100%;object-fit:cover;display:block;transition:opacity .2s;}
+.gi-flags{position:absolute;top:6px;right:6px;display:flex;flex-direction:column;gap:3px;align-items:flex-end;}
+.gi-flag{font-size:16px;filter:drop-shadow(0 1px 2px rgba(0,0,0,.4));line-height:1;}
+
+/* フラグ選択ポップアップ */
+.popup-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:500;display:none;}
+.popup-overlay.on{display:block;}
+.popup{position:fixed;bottom:0;left:0;right:0;background:#fff;border-radius:16px 16px 0 0;padding:20px 16px 32px;z-index:501;transform:translateY(100%);transition:transform .3s ease;}
+.popup.on{transform:translateY(0);}
+.popup-thumb{width:80px;height:60px;object-fit:cover;border-radius:6px;flex-shrink:0;}
+.popup-top{display:flex;gap:12px;align-items:center;margin-bottom:16px;}
+.popup-name{font-size:13px;color:var(--muted);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.popup-flags{display:grid;gap:8px;}
+.flag-btn{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-radius:10px;border:1.5px solid var(--border);background:#fff;cursor:pointer;font-size:14px;transition:all .15s;}
+.flag-btn.active{border-color:var(--accent);background:#fff8f3;}
+.flag-btn.disabled{opacity:.4;cursor:default;}
+.flag-btn-left{display:flex;align-items:center;gap:8px;}
+.flag-btn-badge{font-size:11px;color:var(--muted);background:var(--bg);border:1px solid var(--border);padding:2px 8px;border-radius:100px;}
+.flag-btn.active .flag-btn-badge{background:var(--accent);color:#fff;border-color:var(--accent);}
+.popup-close{position:absolute;top:16px;right:16px;font-size:20px;cursor:pointer;color:var(--muted);line-height:1;background:none;border:none;}
+
+/* 送信バー */
+.submit-bar{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--border);padding:12px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px;z-index:300;}
+.submit-info{font-size:13px;color:var(--muted);}
+.submit-info strong{color:var(--text);}
+
+/* ローディング */
+.loading-wrap{min-height:calc(100vh - 52px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;}
+.spin{width:28px;height:28px;border:2.5px solid var(--border-md);border-top-color:var(--text);border-radius:50%;animation:sp .7s linear infinite;}
+@keyframes sp{to{transform:rotate(360deg);}}
+.err-wrap{min-height:calc(100vh - 52px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-align:center;padding:24px;}
+
+#toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%) translateY(80px);background:#1a1a18;color:#fff;padding:10px 18px;border-radius:100px;font-size:13px;font-weight:500;z-index:9999;transition:transform .3s,opacity .3s;opacity:0;pointer-events:none;white-space:nowrap;}
+</style>
+</head>
+<body>
+<header class="hd">
+  <div class="logo">写真選定 <span>| Alcyone PhotoShare</span></div>
+  <button class="btn btn-s btn-sm" id="saveBtn" onclick="autoSave()">保存</button>
+</header>
+
+<div id="banner" class="banner banner-warn">
+  <span>⚠️</span><span>まだ送信されていません。選定が終わったら下の「送信する」ボタンを押してください。</span>
+</div>
+
+<div class="progress-bar" id="progressBar"></div>
+
+<div id="loading" class="loading-wrap"><div class="spin"></div><span style="color:var(--muted)">読み込み中...</span></div>
+<div id="errWrap" class="err-wrap" style="display:none"></div>
+<div class="gallery" id="grid" style="display:none"></div>
+
+<div class="popup-overlay" id="overlay" onclick="closePopup()"></div>
+<div class="popup" id="popup">
+  <button class="popup-close" onclick="closePopup()">×</button>
+  <div class="popup-top">
+    <img class="popup-thumb" id="popupThumb" src="" alt="">
+    <div class="popup-name" id="popupName"></div>
+  </div>
+  <div class="popup-flags" id="popupFlags"></div>
+</div>
+
+<div class="submit-bar">
+  <div class="submit-info" id="submitInfo">0枚選択中</div>
+  <button class="btn btn-a" id="submitBtn" onclick="confirmSubmit()">送信する →</button>
+</div>
+
+<div id="toast"></div>
+
+<script>
+const W = 'https://ac-photoshare.nikkomaedori.workers.dev'
+const selectToken = new URLSearchParams(location.search).get('token') || ''
+let photos = [], flagDefs = [], selections = {}, submitted = false
+let currentPhotoId = null, saveTimer = null
+
+async function init() {
+  if (!selectToken) { showErr('URLが正しくありません'); return }
+  try {
+    const res = await fetch(`${W}/api/select/${selectToken}`)
+    const d = await res.json()
+    if (res.status === 404) return showErr('このURLは無効です')
+    if (res.status === 410) return showErr('⏰ ダウンロード期限が切れています')
+    if (res.status === 403) return showErr('このアルバムは現在非公開です')
+    if (!res.ok) return showErr('読み込みに失敗しました')
+    photos = d.photos; flagDefs = d.flagDefs; selections = d.selections || {}
+    submitted = d.submitted
+    document.title = `${d.name} - 写真選定`
+    updateBanner()
+    updateProgress()
+    renderGrid()
+    document.getElementById('loading').style.display = 'none'
+    document.getElementById('grid').style.display = 'block'
+  } catch { showErr('読み込みに失敗しました') }
+}
+
+function showErr(msg) {
+  document.getElementById('loading').style.display = 'none'
+  const w = document.getElementById('errWrap'); w.style.display = 'flex'
+  w.innerHTML = `<div style="font-size:40px">😔</div><div style="font-size:16px;font-weight:600">${msg}</div>`
+}
+
+function updateBanner() {
+  const b = document.getElementById('banner')
+  if (submitted) {
+    b.className = 'banner banner-ok'
+    b.innerHTML = '<span>✅</span><span>送信済みです！内容を変更した場合は再度送信してください。</span>'
+    document.getElementById('submitBtn').textContent = '再送信する →'
+  } else {
+    b.className = 'banner banner-warn'
+    b.innerHTML = '<span>⚠️</span><span>まだ送信されていません。選定が終わったら下の「送信する」ボタンを押してください。</span>'
+    document.getElementById('submitBtn').textContent = '送信する →'
+  }
+}
+
+function updateProgress() {
+  const bar = document.getElementById('progressBar')
+  const counts = {}
+  for (const flags of Object.values(selections)) {
+    for (const f of flags) counts[f] = (counts[f]||0) + 1
+  }
+  bar.innerHTML = flagDefs.map(fd => {
+    const cnt = counts[fd.key] || 0
+    const full = fd.max > 0 && cnt >= fd.max
+    return `<div class="flag-prog">
+      <span class="flag-prog-label">${fd.label}</span>
+      <span class="flag-prog-count${full?' full':''}">${fd.max>0?`${cnt}/${fd.max}`:cnt+'枚'}</span>
+    </div>`
+  }).join('')
+  const total = Object.values(selections).filter(f=>f.length>0).length
+  document.getElementById('submitInfo').innerHTML = `<strong>${total}枚</strong>選択中`
+}
+
+function renderGrid() {
+  const grid = document.getElementById('grid')
+  const cw = grid.clientWidth || window.innerWidth
+  const isMob = cw < 600, gap = 3
+  if (isMob) {
+    const rows = []; for(let i=0;i<photos.length;i+=2) rows.push(photos.slice(i,i+2).map((p,j)=>({...p,_i:i+j})))
+    grid.innerHTML = rows.map(row => {
+      if(row.length===1){const p=row[0];const ar=(p.width||4)/(p.height||3);const h=Math.round(cw/ar);return`<div class="grow"><div class="gi" id="gi${p._i}" style="width:${cw}px;height:${h}px;" onclick="openPopup('${p.id}',${p._i})">${giInner(p)}</div></div>`}
+      const ar0=(row[0].width||4)/(row[0].height||3),ar1=(row[1].width||4)/(row[1].height||3),rh=Math.round((cw-gap)/(ar0+ar1)),w0=Math.round(rh*ar0),w1=cw-gap-w0
+      return `<div class="grow">${[[row[0],w0],[row[1],w1]].map(([p,w])=>`<div class="gi" id="gi${p._i}" style="width:${w}px;height:${rh}px;" onclick="openPopup('${p.id}',${p._i})">${giInner(p)}</div>`).join('')}</div>`
+    }).join('')
+  } else {
+    const th=Math.min(300,window.innerHeight*.38),rows=[],row=[];let rw=0
+    photos.forEach((p,i)=>{const ar=(p.width||4)/(p.height||3),w=th*ar;if(rw+w+gap*row.length>cw&&row.length>0){rows.push([...row]);row.length=0;rw=0}row.push({...p,_w:w,_i:i});rw+=w})
+    if(row.length)rows.push([...row])
+    grid.innerHTML=rows.map(r=>{const tg=(r.length-1)*gap,tw=r.reduce((s,p)=>s+p._w,0),sc=(cw-tg)/tw,rh=Math.round(th*sc);return`<div class="grow">${r.map(p=>`<div class="gi" id="gi${p._i}" style="width:${Math.round(p._w*sc)}px;height:${rh}px;" onclick="openPopup('${p.id}',${p._i})">${giInner(p)}</div>`).join('')}</div>`}).join('')
+  }
+}
+
+function giInner(p) {
+  const flags = selections[p.id] || []
+  const flagIcons = flagDefs.filter(fd=>flags.includes(fd.key)).map(fd=>fd.label.split(' ')[0])
+  return `<img src="${p.thumb}" loading="lazy"><div class="gi-flags">${flagIcons.map(ic=>`<span class="gi-flag">${ic}</span>`).join('')}</div>`
+}
+
+function refreshGi(photoId) {
+  const p = photos.find(p=>p.id===photoId); if(!p) return
+  const el = document.getElementById(`gi${p._i||photos.indexOf(p)}`)
+  if(el) el.querySelector('.gi-flags').innerHTML = (flagDefs.filter(fd=>(selections[photoId]||[]).includes(fd.key)).map(fd=>`<span class="gi-flag">${fd.label.split(' ')[0]}</span>`)).join('')
+}
+
+function openPopup(photoId, idx) {
+  currentPhotoId = photoId
+  const p = photos.find(p=>p.id===photoId); if(!p) return
+  document.getElementById('popupThumb').src = p.thumb
+  document.getElementById('popupName').textContent = p.name
+  renderPopupFlags()
+  document.getElementById('overlay').classList.add('on')
+  document.getElementById('popup').classList.add('on')
+}
+
+function renderPopupFlags() {
+  const curFlags = selections[currentPhotoId] || []
+  const counts = {}
+  for(const flags of Object.values(selections)){for(const f of flags)counts[f]=(counts[f]||0)+1}
+  document.getElementById('popupFlags').innerHTML = flagDefs.map(fd => {
+    const isActive = curFlags.includes(fd.key)
+    const count = counts[fd.key] || 0
+    const maxReached = fd.max > 0 && count >= fd.max && !isActive
+    return `<button class="flag-btn${isActive?' active':''}${maxReached?' disabled':''}" onclick="toggleFlag('${fd.key}',${maxReached})" ${maxReached?'disabled':''}>
+      <span class="flag-btn-left"><span>${fd.label}</span></span>
+      <span class="flag-btn-badge">${fd.max>0?`${count}/${fd.max}`:count+'枚'}</span>
+    </button>`
+  }).join('')
+}
+
+function toggleFlag(flagKey, maxReached) {
+  if(maxReached) return
+  if(!selections[currentPhotoId]) selections[currentPhotoId] = []
+  const idx = selections[currentPhotoId].indexOf(flagKey)
+  if(idx>=0) selections[currentPhotoId].splice(idx,1)
+  else selections[currentPhotoId].push(flagKey)
+  if(selections[currentPhotoId].length===0) delete selections[currentPhotoId]
+  renderPopupFlags()
+  refreshGi(currentPhotoId)
+  updateProgress()
+  scheduleAutoSave()
+}
+
+function closePopup() {
+  document.getElementById('overlay').classList.remove('on')
+  document.getElementById('popup').classList.remove('on')
+  currentPhotoId = null
+}
+
+function scheduleAutoSave() {
+  clearTimeout(saveTimer)
+  saveTimer = setTimeout(autoSave, 2000)
+}
+
+async function autoSave() {
+  try {
+    await fetch(`${W}/api/select/${selectToken}`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({selections})})
+    showToast('自動保存しました')
+  } catch { showToast('保存に失敗しました') }
+}
+
+async function confirmSubmit() {
+  const total = Object.values(selections).filter(f=>f.length>0).length
+  if(!confirm(`${total}枚の選定内容を送信しますか？\n送信後も内容を変更できます。`)) return
+  try {
+    const res = await fetch(`${W}/api/select/${selectToken}`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({selections, submitted:true})})
+    const d = await res.json()
+    if(d.ok){submitted=true;updateBanner();showToast('送信しました！')}
+  } catch { showToast('送信に失敗しました') }
+}
+
+window.addEventListener('resize',()=>{if(photos.length)renderGrid()})
+
+function showToast(m){const t=document.getElementById('toast');t.textContent=m;t.style.transform='translateX(-50%) translateY(0)';t.style.opacity='1';clearTimeout(t._t);t._t=setTimeout(()=>{t.style.transform='translateX(-50%) translateY(80px)';t.style.opacity='0'},2500)}
+
+init()
+</script>
+</body>
+</html>

@@ -1,0 +1,1002 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>管理画面 | Alcyone PhotoShare</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{--bg:#fafaf9;--sur:#fff;--bd:rgba(0,0,0,.08);--bdm:rgba(0,0,0,.14);--tx:#1a1a18;--mt:#6b6b67;--dg:#c0392b;--r:10px;--rl:16px;}
+body{font-family:-apple-system,'Hiragino Sans',sans-serif;background:var(--bg);color:var(--tx);min-height:100vh;}
+.hd{background:var(--sur);border-bottom:1px solid var(--bd);padding:0 20px;height:52px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;}
+.logo{font-size:14px;font-weight:600;letter-spacing:.02em;}.logo span{color:var(--mt);font-weight:400;}
+.btn{text-decoration:none;font-weight:normal;display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;border:none;transition:background .15s;white-space:nowrap;}
+.btn-p{background:var(--tx);color:#fff;}.btn-p:hover{background:#333;}
+.btn-s{background:transparent;color:var(--tx);border:1px solid var(--bdm);}.btn-s:hover{background:var(--bg);}
+.btn-d{background:transparent;color:var(--dg);border:1px solid rgba(192,57,43,.3);}.btn-d:hover{background:rgba(192,57,43,.06);}
+.btn-ds{background:var(--dg);color:#fff;}.btn-ds:hover{background:#a93226;}
+.btn-sm{padding:5px 10px;font-size:12px;}
+.lw{min-height:calc(100vh - 52px);display:flex;align-items:center;justify-content:center;padding:20px;}
+.lc{background:var(--sur);border:1px solid var(--bd);border-radius:var(--rl);padding:36px 28px;max-width:340px;width:100%;}
+.lt{font-size:17px;font-weight:600;margin-bottom:20px;}
+.fd{display:flex;flex-direction:column;gap:6px;}
+.fd label{font-size:13px;font-weight:500;color:var(--mt);}
+.fd input{width:100%;padding:9px 12px;border:1px solid var(--bdm);border-radius:8px;font-size:14px;color:var(--tx);background:var(--sur);outline:none;transition:border-color .15s;}
+.fd input:focus{border-color:var(--tx);}
+.le{font-size:13px;color:var(--dg);margin-top:10px;display:none;}
+.main{max-width:960px;margin:0 auto;padding:24px 20px;display:none;}
+.main.on{display:block;}
+.ph{display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:16px;}
+.ph-t{font-size:20px;font-weight:600;margin-bottom:4px;}.ph-s{font-size:13px;color:var(--mt);}
+.fts{display:flex;gap:6px;margin-bottom:20px;flex-wrap:wrap;}
+.ft{padding:5px 12px;border-radius:20px;font-size:13px;font-weight:500;cursor:pointer;border:1px solid var(--bdm);background:transparent;color:var(--mt);transition:all .15s;}
+.ft.on{background:var(--tx);color:#fff;border-color:var(--tx);}
+.bb{background:var(--tx);color:#fff;padding:12px 20px;display:none;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px;border-radius:var(--r);}
+.bb.on{display:flex;}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:16px;}
+.card{background:var(--sur);border:1px solid var(--bd);border-radius:var(--rl);overflow:hidden;transition:box-shadow .2s;position:relative;}
+.card:hover{box-shadow:0 4px 16px rgba(0,0,0,.08);}
+.card.sel-c{outline:2.5px solid var(--tx);}
+.ck{position:absolute;top:10px;left:10px;z-index:5;width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.9);border:2px solid #fff;display:none;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.2);transition:background .15s;}
+.bulk-mode .ck{display:flex;}
+.card.sel-c .ck{background:var(--tx);border-color:var(--tx);}
+.th{aspect-ratio:4/3;background:#eeecea;position:relative;overflow:hidden;}
+.th img{width:100%;height:100%;object-fit:cover;display:block;}
+.th-ph{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:28px;}
+.sb{position:absolute;top:10px;right:10px;font-size:11px;font-weight:600;padding:3px 8px;border-radius:20px;background:rgba(255,255,255,.92);}
+.sb-on{color:#1a7a3c;}.sb-pv{color:#7a6b1a;}.sb-ex{color:var(--dg);}
+.ci{padding:14px 16px 16px;}
+.cn{font-size:14px;font-weight:600;margin-bottom:4px;}
+.cs{display:flex;gap:10px;font-size:12px;color:var(--mt);margin-bottom:4px;}
+.cm{font-size:12px;color:var(--mt);display:flex;flex-direction:column;gap:2px;margin-bottom:10px;}
+.ub{display:flex;gap:6px;align-items:center;background:var(--bg);border:1px solid var(--bd);border-radius:8px;padding:4px 4px 4px 10px;font-size:12px;margin-bottom:10px;}
+.ub span{flex:1;color:var(--mt);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.ca{display:flex;gap:6px;flex-wrap:wrap;}
+.cn-new{background:var(--sur);border:1.5px dashed var(--bdm);border-radius:var(--rl);display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:240px;cursor:pointer;color:var(--mt);transition:border-color .15s,color .15s;}
+.cn-new:hover{border-color:var(--tx);color:var(--tx);}
+.mo{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:500;display:none;align-items:center;justify-content:center;padding:20px;}
+.mo.on{display:flex;}
+.md{background:var(--sur);border-radius:var(--rl);width:100%;max-width:480px;box-shadow:0 20px 60px rgba(0,0,0,.15);max-height:90vh;overflow-y:auto;}
+.mh{padding:20px 24px 0;font-size:17px;font-weight:600;}
+.mb{padding:20px 24px;display:flex;flex-direction:column;gap:16px;}
+.mf{padding:0 24px 20px;display:flex;gap:8px;justify-content:flex-end;}
+.sw-w{display:flex;align-items:center;justify-content:space-between;}
+.sw{width:42px;height:24px;border-radius:12px;background:#ddd;position:relative;cursor:pointer;transition:background .2s;border:none;flex-shrink:0;}
+.sw.on{background:var(--tx);}
+.sw::after{content:'';position:absolute;top:2px;left:2px;width:20px;height:20px;border-radius:50%;background:#fff;transition:transform .2s;}
+.sw.on::after{transform:translateX(18px);}
+.del-opt{background:#fff8f8;border:1px solid rgba(192,57,43,.2);border-radius:8px;padding:10px 14px;display:flex;align-items:center;gap:8px;cursor:pointer;}
+.del-opt input{cursor:pointer;width:16px;height:16px;}
+.del-opt label{font-size:13px;color:var(--dg);cursor:pointer;}
+.sp{width:18px;height:18px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:s .7s linear infinite;display:inline-block;}
+.sp-sm{width:16px;height:16px;border:2px solid var(--bdm);border-top-color:var(--tx);border-radius:50%;animation:s .7s linear infinite;}
+@keyframes s{to{transform:rotate(360deg);}}
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:#1a1a18;color:#fff;padding:10px 18px;border-radius:100px;font-size:13px;font-weight:500;z-index:9999;transition:transform .3s,opacity .3s;opacity:0;pointer-events:none;white-space:nowrap;}
+.cl{display:flex;align-items:center;gap:10px;color:var(--mt);font-size:13px;padding:40px 0;}
+.cmenu{display:none;position:absolute;right:0;top:calc(100% + 4px);background:#fff;border:1px solid var(--bdm);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.12);min-width:170px;z-index:100;overflow:hidden;}
+.cmenu.on{display:block;}
+.cmi{display:flex;align-items:center;gap:8px;width:100%;text-align:left;padding:9px 14px;font-size:13px;border:none;background:transparent;cursor:pointer;color:var(--tx);}
+.cmi:hover{background:var(--bg);}
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+</head>
+<body>
+<header class="hd">
+  <div class="logo">Alcyone PhotoShare <span>Photo</span> — 管理画面</div>
+  <div style="display:flex;gap:8px;align-items:center;">
+    <button class="btn btn-s btn-sm" onclick="openSettings()" style="display:none;" id="settingsBtn">⚙️ 設定</button>
+    <button class="btn btn-s btn-sm" id="bulkBtn" onclick="toggleBulk()" style="display:none;">まとめて選択</button>
+    <button class="btn btn-s btn-sm" onclick="logout()">ログアウト</button>
+  </div>
+</header>
+
+<div id="loginWrap" class="lw">
+  <div class="lc">
+    <div class="lt">管理者ログイン</div>
+    <div class="fd"><label>パスワード</label><input type="password" id="tkIn" placeholder="" onkeydown="if(event.key==='Enter')login()"></div>
+    <button class="btn btn-p" style="width:100%;margin-top:16px;justify-content:center;" id="loginBtn" onclick="login()">ログイン</button>
+    <div class="le" id="loginErr">パスワードが正しくありません</div>
+  </div>
+</div>
+
+<div id="notifBanner" style="display:none;background:#fff8ee;border-bottom:2px solid #f0c060;padding:12px 20px;align-items:center;justify-content:space-between;gap:12px;">
+  <span style="font-size:13px;font-weight:500;color:#9a5a1a;" id="notifText">📬 未確認の選定があります</span>
+  <div style="display:flex;gap:8px;flex-shrink:0;">
+    <button onclick="openFirstUnread()" style="background:#9a5a1a;color:#fff;border:none;border-radius:6px;padding:5px 12px;font-size:12px;cursor:pointer;font-weight:500;">確認する</button>
+    <button onclick="dismissNotif()" style="background:transparent;border:1px solid #c8a060;border-radius:6px;padding:5px 10px;font-size:12px;cursor:pointer;color:#9a5a1a;">×</button>
+  </div>
+</div>
+<div id="main" class="main">
+  <div class="ph">
+    <div><div class="ph-t">アルバム一覧</div><div class="ph-s" id="phS"></div></div>
+    <button class="btn btn-p" onclick="openCreate()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>新しいアルバム</button>
+  </div>
+  <div class="fts">
+    <button class="ft on" onclick="setFilter('all',this)">すべて</button>
+    <button class="ft" onclick="setFilter('active',this)">公開中</button>
+    <button class="ft" onclick="setFilter('private',this)">非公開</button>
+    <button class="ft" onclick="setFilter('expired',this)">期限切れ</button>
+  </div>
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;">
+    <label style="font-size:13px;color:var(--mt);white-space:nowrap;">並べ替え：</label>
+    <select id="sortSel" onchange="applyFilter()" style="padding:6px 10px;border:1px solid var(--bdm);border-radius:8px;font-size:13px;color:var(--tx);background:var(--sur);outline:none;cursor:pointer;">
+      <option value="created_desc">作成日（新しい順）</option>
+      <option value="created_asc">作成日（古い順）</option>
+      <option value="name_asc">アルバム名（A→Z）</option>
+      <option value="updated_desc">更新日（新しい順）</option>
+      <option value="status">ステータス順（公開→期限切れ→非公開）</option>
+    </select>
+  </div>
+  <div class="bb" id="bulkBar">
+    <div style="font-size:14px;font-weight:500;" id="bulkCnt">0件選択中</div>
+    <div style="display:flex;gap:8px;">
+      <button class="btn btn-sm btn-ds" onclick="bulkDelete()">まとめて削除</button>
+      <button class="btn btn-sm" style="background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.3);" onclick="cancelBulk()">キャンセル</button>
+    </div>
+  </div>
+  <div class="grid" id="grid"><div class="cl"><div class="sp-sm"></div>読み込み中...</div></div>
+</div>
+
+<!-- 作成モーダル -->
+<div class="mo" id="moCreate" onclick="if(event.target===this)closeCreate()">
+  <div class="md">
+    <div class="mh">新しいアルバムを作成</div>
+    <div class="mb">
+      <div class="fd"><label>アルバム名</label><input type="text" id="nName" placeholder="例：山田様　お宮参り"></div>
+      <div class="fd"><div class="sw-w"><span style="font-size:14px;">有効期限を設定する</span><button class="sw on" id="nExpSw" onclick="toggleNExp()"></button></div></div>
+      <div id="nExpFd" class="fd"><label>有効期限</label><input type="date" id="nExp"></div>
+      <div class="fd"><div class="sw-w"><span style="font-size:14px;">パスワードを設定する</span><button class="sw" id="nPwSw" onclick="toggleNPw()"></button></div></div>
+      <div id="nPwFd" class="fd" style="display:none;"><label>パスワード</label><input type="text" id="nPw" placeholder="例：yamada2026"></div>
+      <div style="border-top:1px solid var(--bd);padding-top:14px;">
+        <div style="font-size:13px;font-weight:600;color:var(--mt);margin-bottom:10px;">カバーテキスト</div>
+        <div class="fd">
+          <label>表示テキスト</label>
+          <select id="nHeroTextSel" onchange="onNHeroTextSel()" style="padding:9px 12px;border:1px solid var(--bdm);border-radius:8px;font-size:14px;color:var(--tx);background:var(--sur);outline:none;">
+            <option value="Photography">Photography</option>
+            <option value="Shichigosan">Shichigosan</option>
+            <option value="Omiyamairi">Omiyamairi</option>
+            <option value="Wedding">Wedding</option>
+            <option value="Studio">Studio</option>
+            <option value="__custom">カスタム入力...</option>
+          </select>
+        </div>
+        <div id="nHeroCustomFd" class="fd" style="display:none;"><label>カスタムテキスト</label><input type="text" id="nHeroCustom" placeholder="例：Family Portrait"></div>
+        <div class="fd" style="margin-top:10px;">
+          <label>フォント</label>
+          <select id="nHeroFont" style="padding:9px 12px;border:1px solid var(--bdm);border-radius:8px;font-size:14px;color:var(--tx);background:var(--sur);outline:none;">
+            <option value="josefin">Josefin Sans（デフォルト）</option>
+            <option value="cormorant">Cormorant Garamond</option>
+            <option value="playfair">Playfair Display</option>
+            <option value="montserrat">Montserrat</option>
+            <option value="system">シンプル（システム）</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="mf"><button class="btn btn-s" onclick="closeCreate()">キャンセル</button><button class="btn btn-p" id="createBtn" onclick="createAlbum()">作成してURLを発行</button></div>
+  </div>
+</div>
+
+<!-- 設定モーダル -->
+<div class="mo" id="moEdit" onclick="if(event.target===this)closeEdit()">
+  <div class="md">
+    <div class="mh">アルバム設定</div>
+    <div class="mb">
+      <div class="fd"><label>アルバム名</label><input type="text" id="eName"></div>
+      <div class="fd"><div class="sw-w"><span style="font-size:14px;">公開する</span><button class="sw" id="ePubSw" onclick="toggleEPub()"></button></div></div>
+      <div class="fd"><div class="sw-w"><span style="font-size:14px;">有効期限を設定する</span><button class="sw" id="eExpSw" onclick="toggleEExp()"></button></div></div>
+      <div id="eExpFd" class="fd" style="display:none;"><label>有効期限</label><input type="date" id="eExp"></div>
+      <div style="border-top:1px solid var(--bd);padding-top:14px;">
+        <div style="font-size:13px;font-weight:600;color:var(--mt);margin-bottom:10px;">カバーテキスト</div>
+        <div class="fd">
+          <label>表示テキスト</label>
+          <select id="eHeroTextSel" onchange="onHeroTextSel()" style="padding:9px 12px;border:1px solid var(--bdm);border-radius:8px;font-size:14px;color:var(--tx);background:var(--sur);outline:none;">
+            <option value="Photography">Photography</option>
+            <option value="Shichigosan">Shichigosan</option>
+            <option value="Omiyamairi">Omiyamairi</option>
+            <option value="Wedding">Wedding</option>
+            <option value="Studio">Studio</option>
+            <option value="__custom">カスタム入力...</option>
+          </select>
+        </div>
+        <div id="eHeroCustomFd" class="fd" style="display:none;">
+          <label>カスタムテキスト</label>
+          <input type="text" id="eHeroCustom" placeholder="例：Family Portrait">
+        </div>
+        <div class="fd" style="margin-top:10px;">
+          <label>フォント</label>
+          <select id="eHeroFont" style="padding:9px 12px;border:1px solid var(--bdm);border-radius:8px;font-size:14px;color:var(--tx);background:var(--sur);outline:none;">
+            <option value="josefin">Josefin Sans（デフォルト）</option>
+            <option value="cormorant">Cormorant Garamond</option>
+            <option value="playfair">Playfair Display</option>
+            <option value="montserrat">Montserrat</option>
+            <option value="system">シンプル（システム）</option>
+          </select>
+        </div>
+      </div>
+      <div style="border-top:1px solid var(--bd);padding-top:14px;">
+        <div style="font-size:13px;font-weight:600;color:var(--mt);margin-bottom:10px;">選定フラグ設定</div>
+        <div class="fd"><div class="sw-w"><span style="font-size:14px;">アルバム固有のフラグを設定する</span><button class="sw" id="albumFlagSw" onclick="toggleAlbumFlag()"></button></div></div>
+        <div id="albumFlagFd" style="display:none;margin-top:10px;">
+          <div style="font-size:12px;color:var(--mt);margin-bottom:8px;">未設定の場合はシステムデフォルトが使われます</div>
+          <div id="albumFlagDefsEditor" style="display:grid;gap:6px;"></div>
+          <button class="btn btn-s btn-sm" onclick="addAlbumFlagDef()" style="margin-top:6px;align-self:flex-start;">＋ フラグを追加</button>
+        </div>
+      </div>
+      <div style="border-top:1px solid var(--bd);padding-top:14px;">
+        <div style="font-size:13px;font-weight:600;color:var(--mt);margin-bottom:10px;">パスワード設定</div>
+        <div class="fd"><div class="sw-w"><span style="font-size:14px;">パスワードを変更する</span><button class="sw" id="ePwSw" onclick="toggleEPw()"></button></div></div>
+        <div id="ePwFd" class="fd" style="display:none;">
+          <label>新しいパスワード</label>
+          <input type="text" id="ePw" placeholder="新しいパスワードを入力">
+          <button class="btn btn-d btn-sm" style="align-self:flex-start;margin-top:4px;" onclick="clearPassword()">パスワードを削除する</button>
+        </div>
+      </div>
+    </div>
+    <div class="mf"><button class="btn btn-s" onclick="closeEdit()">キャンセル</button><button class="btn btn-p" id="editBtn" onclick="saveEdit()">保存</button></div>
+  </div>
+</div>
+
+<!-- サムネイル選択モーダル -->
+<div class="mo" id="moThumb" onclick="if(event.target===this)closeThumb()">
+  <div class="md" style="max-width:600px;">
+    <div class="mh">サムネイルを選択</div>
+    <div class="mb">
+      <div style="display:flex;gap:6px;padding:2px;background:var(--bg);border-radius:10px;">
+        <button id="thumbTabPc" onclick="setThumbTab('pc')" style="flex:1;padding:8px;border:none;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;background:var(--tx);color:#fff;transition:all .15s;">💻 PC用（横長推奨）</button>
+        <button id="thumbTabMobile" onclick="setThumbTab('mobile')" style="flex:1;padding:8px;border:none;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;background:transparent;color:var(--mt);transition:all .15s;">📱 スマホ用（縦長推奨）</button>
+      </div>
+      <div style="font-size:12px;color:var(--mt);" id="thumbTabHint">PC・スマホ共通のカバー画像を選択します。</div>
+      <div id="thumbGrid" style="max-height:400px;overflow-y:auto;overflow-x:hidden;">
+        <div style="text-align:center;padding:20px;color:var(--mt);">読み込み中...</div>
+      </div>
+    </div>
+    <div class="mf"><button class="btn btn-s" onclick="closeThumb()">キャンセル</button><button class="btn btn-p" id="thumbSaveBtn" onclick="saveThumb()" disabled>選択して保存</button></div>
+  </div>
+</div>
+
+<!-- アップロードモーダル -->
+<div class="mo" id="moUpload" onclick="if(event.target===this)closeUpload()">
+  <div class="md" style="max-width:480px;">
+    <div class="mh">📤 写真・動画をアップロード</div>
+    <div class="mb" style="gap:14px;">
+      <div style="font-size:13px;color:var(--mt);">このアルバムのGoogleドライブに直接アップロードします。</div>
+      <label style="display:block;border:2px dashed var(--bdm);border-radius:12px;padding:28px;text-align:center;cursor:pointer;background:var(--bg);" id="uploadDropZone">
+        <div style="font-size:28px;margin-bottom:6px;">📁</div>
+        <div style="font-size:14px;font-weight:500;margin-bottom:4px;">クリックして選択</div>
+        <div style="font-size:12px;color:var(--mt);">JPG・PNG・MP4・MOVなど複数選択可</div>
+        <input type="file" multiple accept="image/*,video/*" id="uploadFileInput" style="display:none;" onchange="onFilesSelected()">
+      </label>
+      <div id="uploadList" style="display:grid;gap:6px;max-height:240px;overflow-y:auto;"></div>
+    </div>
+    <div class="mf"><button class="btn btn-s" onclick="closeUpload()">閉じる</button></div>
+  </div>
+</div>
+
+<!-- 削除確認モーダル -->
+<div class="mo" id="moDelete" onclick="if(event.target===this)closeDelete()">
+  <div class="md">
+    <div class="mh">アルバムを削除</div>
+    <div class="mb">
+      <div style="font-size:14px;" id="delMsg"></div>
+      <label class="del-opt">
+        <input type="checkbox" id="delDriveChk">
+        <label for="delDriveChk">Googleドライブのフォルダと写真も一緒に削除する</label>
+      </label>
+      <div style="font-size:12px;color:var(--mt);">※チェックなしの場合、Driveのフォルダは残ります。</div>
+    </div>
+    <div class="mf"><button class="btn btn-s" onclick="closeDelete()">キャンセル</button><button class="btn btn-ds" id="delConfirmBtn">削除する</button></div>
+  </div>
+</div>
+
+<!-- システム設定モーダル -->
+<div class="mo" id="moSettings" onclick="if(event.target===this)closeSettings()">
+  <div class="md">
+    <div class="mh">⚙️ システム設定（フラグ定義）</div>
+    <div class="mb" id="settingsBody" style="gap:10px;">
+      <div style="font-size:13px;color:var(--mt);">選定機能のフラグ種類・枚数制限を設定します。アルバムごとに上書きも可能です。</div>
+      <div id="flagDefsEditor" style="display:grid;gap:8px;"></div>
+      <button class="btn btn-s btn-sm" onclick="addFlagDef()" style="align-self:flex-start;">＋ フラグを追加</button>
+    </div>
+    <div class="mf"><button class="btn btn-s" onclick="closeSettings()">キャンセル</button><button class="btn btn-p" id="saveSettingsBtn" onclick="saveSettings()">保存</button></div>
+  </div>
+</div>
+
+<!-- 選定リンク発行モーダル -->
+<div class="mo" id="moSelectIssue" onclick="if(event.target===this)document.getElementById('moSelectIssue').classList.remove('on')">
+  <div class="md" style="max-width:520px;">
+    <div class="mh" id="selectIssueMhTitle">選定リンク発行</div>
+    <div class="mb" style="gap:14px;">
+      <div>
+        <div style="font-size:13px;font-weight:600;color:var(--mt);margin-bottom:8px;">フラグ設定</div>
+        <div class="fd"><div class="sw-w"><span style="font-size:14px;">アルバム固有のフラグを使う</span><button class="sw" id="issueFlagSw" onclick="toggleIssueFlag()"></button></div></div>
+        <div id="issueFlagFd" style="display:none;margin-top:8px;">
+          <div style="font-size:12px;color:var(--mt);margin-bottom:6px;">OFF の場合はシステムデフォルトを使用</div>
+          <div id="issueFlagDefsEditor" style="display:grid;gap:6px;"></div>
+          <button class="btn btn-s btn-sm" onclick="addIssueFlagDef()" style="margin-top:6px;">＋ フラグを追加</button>
+        </div>
+      </div>
+      <div id="issueUrlPanel" style="display:none;">
+        <div style="font-size:13px;font-weight:600;color:var(--mt);margin-bottom:8px;">選定URL（お客さんに送信）</div>
+        <div style="display:flex;gap:6px;align-items:center;">
+          <div style="flex:1;background:var(--bg);border:1px solid var(--bdm);border-radius:8px;padding:8px 12px;font-size:12px;color:var(--mt);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" id="selectUrlText"></div>
+          <button class="btn btn-s btn-sm" onclick="copySelectUrl()">コピー</button>
+        </div>
+      </div>
+      <div id="issueNoUrlPanel" style="display:none;">
+        <div style="font-size:13px;color:var(--mt);margin-bottom:10px;">URLを発行するとお客さんが写真を選定できるようになります。</div>
+      </div>
+    </div>
+    <div class="mf">
+      <button class="btn btn-s" onclick="document.getElementById('moSelectIssue').classList.remove('on')">閉じる</button>
+      <button class="btn btn-p" id="issueUrlBtn" onclick="generateSelectUrl()">選定URLを発行する</button>
+    </div>
+  </div>
+</div>
+
+<!-- 選定写真確認モーダル -->
+<div class="mo" id="moSelectView" onclick="if(event.target===this)document.getElementById('moSelectView').classList.remove('on')">
+  <div class="md" style="max-width:560px;">
+    <div class="mh" id="selectViewMhTitle">選定写真確認</div>
+    <div class="mb" style="gap:14px;">
+      <div style="font-size:13px;font-weight:600;color:var(--mt);" id="selectViewStatus"></div>
+      <div id="selectViewContent">
+        <div style="text-align:center;padding:24px;color:var(--mt);font-size:13px;">読み込み中...</div>
+      </div>
+    </div>
+    <div class="mf"><button class="btn btn-s" onclick="document.getElementById('moSelectView').classList.remove('on')">閉じる</button></div>
+  </div>
+</div>
+
+<div id="toast"></div>
+<script>
+// ★ Worker URL: Workerデプロイ後に実際のURLを確認してください
+const W = 'https://ac-photoshare.nikkomaedori.workers.dev'
+let tok = sessionStorage.getItem('adminToken') || ''
+let albums=[], filtered=[]
+let filter='all', bulk=false, selToks=new Set(), lastBulkSel=-1
+let editTok='', nExpOn=true, nPwOn=false, ePubOn=true, eExpOn=false, ePwOn=false
+let deleteTarget=null
+
+if (tok) initMain()
+
+async function login() {
+  const t = document.getElementById('tkIn').value.trim(); if (!t) return
+  const btn = document.getElementById('loginBtn'); btn.innerHTML='<div class="sp"></div>'; btn.disabled=true
+  try {
+    const r = await fetch(`${W}/api/admin/login`, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({token:t})})
+    const d = await r.json()
+    if (r.status===429) { document.getElementById('loginErr').textContent='試行回数が多すぎます。15分後にお試しください。'; document.getElementById('loginErr').style.display='block'; return }
+    if (!d.ok) { document.getElementById('loginErr').style.display='block'; return }
+    tok=d.session; sessionStorage.setItem('adminToken',tok); initMain()
+  } catch { document.getElementById('loginErr').style.display='block' }
+  finally { btn.innerHTML='ログイン'; btn.disabled=false }
+}
+
+function logout(){
+  if (tok) fetch(`${W}/api/admin/logout`,{method:'POST',headers:{Authorization:`Bearer ${tok}`}}).catch(()=>{})
+  sessionStorage.removeItem('adminToken'); tok=''
+  document.getElementById('loginWrap').style.display='flex'
+  document.getElementById('main').classList.remove('on')
+  document.getElementById('bulkBtn').style.display='none'
+}
+
+function initMain(){
+  document.getElementById('loginWrap').style.display='none'
+  document.getElementById('main').classList.add('on')
+  document.getElementById('bulkBtn').style.display='inline-flex'
+  document.getElementById('settingsBtn').style.display='inline-flex'
+  loadAlbums()
+}
+
+async function loadAlbums() {
+  try {
+    const r=await fetch(`${W}/api/admin/albums`,{headers:{Authorization:`Bearer ${tok}`}})
+    const d=await r.json()
+    albums=d.albums||[]; applyFilter(); checkNotifications()
+  } catch { document.getElementById('grid').innerHTML='<div style="color:#c0392b;font-size:13px;">読み込みに失敗しました</div>' }
+}
+
+function setFilter(f,btn){filter=f;document.querySelectorAll('.ft').forEach(t=>t.classList.remove('on'));btn.classList.add('on');applyFilter()}
+
+function applyFilter(){
+  const now=new Date()
+  filtered=albums.filter(a=>{
+    const exp=a.expiresAt&&new Date(a.expiresAt)<now
+    const prv=a.published===false
+    if(filter==='active')return!exp&&!prv
+    if(filter==='private')return prv
+    if(filter==='expired')return exp
+    return true
+  })
+  const sort = document.getElementById('sortSel')?.value || 'created_desc'
+  filtered.sort((a,b) => {
+    switch(sort) {
+      case 'name_asc': return a.name.localeCompare(b.name, 'ja')
+      case 'created_asc': return new Date(a.createdAt) - new Date(b.createdAt)
+      case 'created_desc': return new Date(b.createdAt) - new Date(a.createdAt)
+      case 'updated_desc': return new Date(b.updatedAt||b.createdAt) - new Date(a.updatedAt||a.createdAt)
+      case 'status': { const rank = x => x.published===false ? 2 : (x.expiresAt&&new Date(x.expiresAt)<now ? 1 : 0); return rank(a) - rank(b) }
+      default: return 0
+    }
+  })
+  const tot=albums.length
+  const act=albums.filter(a=>!(a.expiresAt&&new Date(a.expiresAt)<new Date())).filter(a=>a.published!==false).length
+  document.getElementById('phS').textContent=`全${tot}件 / 公開中${act}件`
+  renderGrid()
+}
+
+function renderGrid(){
+  const now=new Date()
+  const g=document.getElementById('grid')
+  g.className=`grid${bulk?' bulk-mode':''}`
+  const cards=filtered.map((a,fi)=>{
+    const exp=a.expiresAt&&new Date(a.expiresAt)<now
+    const prv=a.published===false
+    const soon=a.expiresAt&&!exp&&(new Date(a.expiresAt)-now)<7*864e5
+    // ★ アルバム共有URL: Pages デプロイ後に実際のURLに変更してください
+    const url=`YOUR_PAGES_URL_HERE/a/${a.token}`
+    let sc='sb-on',sl='公開中'
+    if(prv){sc='sb-pv';sl='非公開'}
+    if(exp){sc='sb-ex';sl='期限切れ'}
+    const isSel=selToks.has(a.token)
+    const thumbHtml=a.coverId
+      ?`<img src="${W}/api/admin/thumb/${a.coverId}?session=${tok}" loading="lazy" onerror="this.parentNode.innerHTML='<div class=th-ph>📸</div>'">`
+      :`<div class="th-ph">📸</div>`
+    const heroVal=a.heroText||'Photography'
+    const heroOpts=['Photography','Shichigosan','Omiyamairi','Wedding','Studio']
+    const heroOptHtml=heroOpts.map(o=>`<option value="${o}"${o===heroVal?'selected':''}>${o}</option>`).join('')
+      +`<option value="__custom"${!heroOpts.includes(heroVal)?'selected':''}>カスタム…</option>`
+    const hasNew=a.selectToken&&a.selectSubmitted
+    return `<div class="card${isSel?' sel-c':''}" id="card-${a.token}">
+      <div class="ck" onclick="toggleCardSel('${a.token}',${fi},event)">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="${isSel?'#fff':'transparent'}" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>
+      </div>
+      <div class="th">${thumbHtml}<span class="sb ${sc}">${sl}</span></div>
+      <div class="ci">
+        <div class="cn">${a.name}</div>
+        <div class="cs">
+          ${a.count!==undefined?`<span>📷 ${a.count}枚</span>`:''}
+          ${a.totalSizeLabel?`<span>💾 ${a.totalSizeLabel}</span>`:''}
+        </div>
+        <div class="cm">
+          <span>作成：${a.createdAt?a.createdAt.slice(0,10):'-'}</span>
+          ${a.expiresAt?`<span style="${exp?'color:#c0392b':''}">期限：${a.expiresAt.slice(0,10)}${soon?' ⚠️':''}</span>`:'<span>期限：無期限</span>'}
+          ${a.password?'<span>🔒 パスワードあり</span>':''}
+        </div>
+        <div style="margin-bottom:8px;">
+          <button onclick="quickTogglePublish('${a.token}',${a.published===false})" class="btn btn-sm"
+            style="padding:4px 10px;font-size:12px;border:1px solid ${a.published===false?'var(--bdm)':'#1a7a3c'};border-radius:20px;color:${a.published===false?'var(--mt)':'#1a7a3c'};background:${a.published===false?'transparent':'#edfbf0'};">
+            ${a.published===false?'⚫ 非公開':'🟢 公開中'}
+          </button>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:10px;">
+          <span style="font-size:12px;color:var(--mt);white-space:nowrap;">カバーテキスト</span>
+          <select onchange="quickHeroChange('${a.token}',this)" style="flex:1;padding:5px 8px;border:1px solid var(--bdm);border-radius:6px;font-size:12px;color:var(--tx);background:var(--sur);outline:none;">
+            ${heroOptHtml}
+          </select>
+        </div>
+        <div class="ub"><span>${url}</span><button class="btn btn-s btn-sm" onclick="copyUrl('${url}')">コピー</button></div>
+        <div class="ca">
+          <div style="display:flex;gap:5px;">
+            <a class="btn btn-s btn-sm" href="${url}" target="_blank" style="flex:1;justify-content:center;">アルバムを開く</a>
+            <button class="btn btn-s btn-sm" onclick="openUpload('${a.token}')">アップロード</button>
+            <button class="btn btn-s btn-sm" onclick="openSettingsPopup('${a.token}',event)" style="padding:5px 10px;" title="設定">⚙️</button>
+          </div>
+        </div>
+      </div>
+    </div>`
+  }).join('')
+  g.innerHTML=cards+`<div class="cn-new" onclick="openCreate()"><div style="font-size:28px;margin-bottom:8px;">＋</div><div style="font-size:13px;font-weight:500;">新しいアルバムを作成</div></div>`
+}
+
+function toggleBulk(){bulk=!bulk;document.getElementById('bulkBtn').textContent=bulk?'選択解除':'まとめて選択';if(!bulk)cancelBulk();else renderGrid()}
+function toggleCardSel(token,fi,e){
+  if(!bulk)return
+  if(e.shiftKey&&lastBulkSel>=0){const mn=Math.min(fi,lastBulkSel),mx=Math.max(fi,lastBulkSel);filtered.slice(mn,mx+1).forEach(a=>selToks.add(a.token))}
+  else{if(selToks.has(token))selToks.delete(token);else selToks.add(token)}
+  lastBulkSel=fi
+  document.getElementById('bulkCnt').textContent=`${selToks.size}件選択中`
+  document.getElementById('bulkBar').classList.toggle('on',selToks.size>0)
+  renderGrid()
+}
+function cancelBulk(){bulk=false;selToks.clear();lastBulkSel=-1;document.getElementById('bulkBar').classList.remove('on');document.getElementById('bulkBtn').textContent='まとめて選択';renderGrid()}
+
+async function bulkDelete(){
+  deleteTarget={tokens:[...selToks],name:`${selToks.size}件のアルバム`,bulk:true}
+  document.getElementById('delMsg').textContent=`「${deleteTarget.name}」を削除しますか？`
+  document.getElementById('delDriveChk').checked=false
+  document.getElementById('delConfirmBtn').onclick=executeDelete
+  document.getElementById('moDelete').classList.add('on')
+}
+
+function onNHeroTextSel(){const v=document.getElementById('nHeroTextSel').value;document.getElementById('nHeroCustomFd').style.display=v==='__custom'?'flex':'none'}
+function onHeroTextSel(){const v=document.getElementById('eHeroTextSel').value;document.getElementById('eHeroCustomFd').style.display=v==='__custom'?'flex':'none'}
+function getHeroText(selId,customId){const v=document.getElementById(selId).value;return v==='__custom'?document.getElementById(customId).value.trim()||'Photography':v}
+
+function openCreate(){
+  const d=new Date();d.setMonth(d.getMonth()+1)
+  document.getElementById('nExp').value=d.toISOString().split('T')[0]
+  document.getElementById('nName').value='';document.getElementById('nPw').value=''
+  nExpOn=true;nPwOn=false
+  document.getElementById('nExpSw').className='sw on';document.getElementById('nPwSw').className='sw'
+  document.getElementById('nExpFd').style.display='flex';document.getElementById('nPwFd').style.display='none'
+  document.getElementById('moCreate').classList.add('on')
+}
+function closeCreate(){document.getElementById('moCreate').classList.remove('on')}
+function toggleNExp(){nExpOn=!nExpOn;document.getElementById('nExpSw').className=`sw${nExpOn?' on':''}`;document.getElementById('nExpFd').style.display=nExpOn?'flex':'none'}
+function toggleNPw(){nPwOn=!nPwOn;document.getElementById('nPwSw').className=`sw${nPwOn?' on':''}`;document.getElementById('nPwFd').style.display=nPwOn?'flex':'none'}
+
+let creating=false
+async function createAlbum(){
+  if(creating)return
+  const name=document.getElementById('nName').value.trim();if(!name){document.getElementById('nName').focus();return}
+  const expiresAt=nExpOn?document.getElementById('nExp').value||null:null
+  const password=nPwOn?document.getElementById('nPw').value.trim()||null:null
+  creating=true
+  const btn=document.getElementById('createBtn');btn.innerHTML='<div class="sp"></div> 作成中...';btn.disabled=true
+  try{
+    const r=await fetch(`${W}/api/admin/albums`,{method:'POST',headers:{Authorization:`Bearer ${tok}`,'Content-Type':'application/json'},body:JSON.stringify({name,expiresAt,password,heroText:getHeroText('nHeroTextSel','nHeroCustom'),heroFont:document.getElementById('nHeroFont').value})})
+    const d=await r.json()
+    closeCreate();await loadAlbums();showToast('アルバムを作成しました！')
+    if(d.url)copyUrl(d.url,false)
+  }catch{showToast('作成に失敗しました')}
+  finally{creating=false;btn.innerHTML='作成してURLを発行';btn.disabled=false}
+}
+
+function openEdit(token){
+  const a=albums.find(x=>x.token===token);if(!a)return
+  editTok=token
+  document.getElementById('eName').value=a.name
+  ePubOn=a.published!==false;eExpOn=!!a.expiresAt;ePwOn=false
+  document.getElementById('ePubSw').className=`sw${ePubOn?' on':''}`
+  document.getElementById('eExpSw').className=`sw${eExpOn?' on':''}`
+  document.getElementById('ePwSw').className='sw'
+  document.getElementById('eExpFd').style.display=eExpOn?'flex':'none'
+  document.getElementById('eExp').value=a.expiresAt?a.expiresAt.slice(0,10):''
+  const heroText=a.heroText||'Photography'
+  const presets=['Photography','Shichigosan','Omiyamairi','Wedding','Studio']
+  const sel=document.getElementById('eHeroTextSel')
+  if(presets.includes(heroText)){sel.value=heroText;document.getElementById('eHeroCustomFd').style.display='none'}
+  else{sel.value='__custom';document.getElementById('eHeroCustomFd').style.display='flex';document.getElementById('eHeroCustom').value=heroText}
+  document.getElementById('eHeroFont').value=a.heroFont||'josefin'
+  document.getElementById('ePwFd').style.display='none'
+  document.getElementById('ePw').value=''
+  albumFlagOn=!!a.flagDefs
+  albumFlagDefs=a.flagDefs?JSON.parse(JSON.stringify(a.flagDefs)):[...DEFAULT_CLIENT_FLAG_DEFS]
+  document.getElementById('albumFlagSw').className=`sw${albumFlagOn?' on':''}`
+  document.getElementById('albumFlagFd').style.display=albumFlagOn?'block':'none'
+  if(albumFlagOn)renderAlbumFlagDefsEditor()
+  document.getElementById('moEdit').classList.add('on')
+}
+function closeEdit(){document.getElementById('moEdit').classList.remove('on')}
+function toggleEPub(){ePubOn=!ePubOn;document.getElementById('ePubSw').className=`sw${ePubOn?' on':''}`}
+function toggleEExp(){eExpOn=!eExpOn;document.getElementById('eExpSw').className=`sw${eExpOn?' on':''}`;document.getElementById('eExpFd').style.display=eExpOn?'flex':'none'}
+function toggleEPw(){ePwOn=!ePwOn;document.getElementById('ePwSw').className=`sw${ePwOn?' on':''}`;document.getElementById('ePwFd').style.display=ePwOn?'flex':'none'}
+function clearPassword(){
+  if(!confirm('パスワードを削除しますか？'))return
+  document.getElementById('ePw').value=''
+  document.getElementById('ePw').dataset.clear='true'
+}
+
+async function saveEdit(){
+  const btn=document.getElementById('editBtn');btn.innerHTML='<div class="sp"></div>';btn.disabled=true
+  try{
+    const body={name:document.getElementById('eName').value.trim(),published:ePubOn,expiresAt:eExpOn?document.getElementById('eExp').value||null:null,heroText:getHeroText('eHeroTextSel','eHeroCustom'),heroFont:document.getElementById('eHeroFont').value,flagDefs:albumFlagOn?albumFlagDefs:null}
+    const pwInput=document.getElementById('ePw')
+    if(ePwOn){
+      if(pwInput.dataset.clear==='true'){body.password=null;delete pwInput.dataset.clear}
+      else if(pwInput.value.trim())body.password=pwInput.value.trim()
+    }
+    const r=await fetch(`${W}/api/admin/albums/${editTok}`,{method:'PATCH',headers:{Authorization:`Bearer ${tok}`,'Content-Type':'application/json'},body:JSON.stringify(body)})
+    if(!r.ok){const d=await r.json();throw new Error(d.error||'Error')}
+    closeEdit();await loadAlbums();showToast('設定を保存しました')
+  }catch(e){showToast(`保存に失敗しました: ${e.message}`)}
+  finally{btn.innerHTML='保存';btn.disabled=false}
+}
+
+function renderThumbGrid(photos, currentCoverId) {
+  const cw=Math.min(document.getElementById('thumbGrid').clientWidth||520,520)
+  const th=160,gap=4,rows=[],row=[];let rw=0
+  photos.forEach((p,i)=>{const ar=(p.width||4)/(p.height||3),w=th*ar;if(rw+w+gap*row.length>cw&&row.length>0){rows.push([...row]);row.length=0;rw=0}row.push({...p,_w:w,_i:i});rw+=w})
+  if(row.length)rows.push([...row])
+  return rows.map(r=>{
+    const tg=(r.length-1)*gap,tw=r.reduce((s,p)=>s+p._w,0),sc=(cw-tg)/tw,rh=Math.round(th*sc)
+    return `<div style="display:flex;gap:${gap}px;margin-bottom:${gap}px;">${r.map(p=>{
+      const w=Math.round(p._w*sc),sel=p.id===currentCoverId
+      return `<div onclick="selectThumb('${p.id}')" data-id="${p.id}"
+        style="width:${w}px;height:${rh}px;flex-shrink:0;overflow:hidden;cursor:pointer;border-radius:6px;border:3px solid ${sel?'var(--tx)':'transparent'};position:relative;">
+        <img src="${p.thumb}" loading="lazy" style="width:100%;height:100%;object-fit:cover;display:block;">
+        <div class="thumb-check" style="position:absolute;inset:0;display:${sel?'flex':'none'};align-items:center;justify-content:center;background:rgba(0,0,0,.35);">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>
+        </div>
+      </div>`
+    }).join('')}</div>`
+  }).join('')
+}
+
+let thumbToken='', thumbPhotos=[], selectedCoverId=null, thumbTab='pc'
+
+function setThumbTab(tab){
+  thumbTab=tab
+  const isPc=tab==='pc'
+  document.getElementById('thumbTabPc').style.cssText=`flex:1;padding:8px;border:none;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;transition:all .15s;background:${isPc?'var(--tx)':'transparent'};color:${isPc?'#fff':'var(--mt)'};`
+  document.getElementById('thumbTabMobile').style.cssText=`flex:1;padding:8px;border:none;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;transition:all .15s;background:${isPc?'transparent':'var(--tx)'};color:${isPc?'var(--mt)':'#fff'};`
+  document.getElementById('thumbTabHint').textContent=isPc?'PC・スマホ共通のカバー画像を選択します。':'スマホ専用カバー画像（縦長写真推奨）。未設定の場合はPC用と同じ画像が使われます。'
+  const album=albums.find(a=>a.token===thumbToken)
+  const currentId=isPc?(album?.coverId||null):(album?.coverIdMobile||null)
+  selectedCoverId=currentId
+  document.getElementById('thumbSaveBtn').disabled=false
+  document.getElementById('thumbGrid').innerHTML=renderThumbGrid(thumbPhotos,currentId)
+}
+
+async function openThumb(token){
+  thumbToken=token;thumbPhotos=[];selectedCoverId=null;thumbTab='pc'
+  document.getElementById('thumbSaveBtn').disabled=true
+  document.getElementById('thumbGrid').innerHTML='<div style="text-align:center;padding:20px;color:var(--mt);">読み込み中...</div>'
+  document.getElementById('moThumb').classList.add('on')
+  try{
+    const r=await fetch(`${W}/api/admin/albums/${token}/photos`,{headers:{Authorization:`Bearer ${tok}`}})
+    const d=await r.json()
+    if(!d.photos?.length){document.getElementById('thumbGrid').innerHTML='<div style="text-align:center;padding:20px;color:var(--mt);">写真がありません</div>';return}
+    thumbPhotos=d.photos
+    const album=albums.find(a=>a.token===token)
+    selectedCoverId=album?.coverId||null
+    document.getElementById('thumbGrid').innerHTML=renderThumbGrid(thumbPhotos,selectedCoverId)
+    if(selectedCoverId)document.getElementById('thumbSaveBtn').disabled=false
+    setThumbTab('pc')
+  }catch{document.getElementById('thumbGrid').innerHTML='<div style="text-align:center;padding:20px;color:#c0392b;">読み込みに失敗しました</div>'}
+}
+
+function selectThumb(id){
+  selectedCoverId=id
+  document.querySelectorAll('#thumbGrid [data-id]').forEach(d=>{
+    const sel=d.dataset.id===id
+    d.style.border=`3px solid ${sel?'var(--tx)':'transparent'}`
+    d.querySelector('.thumb-check').style.display=sel?'flex':'none'
+  })
+  document.getElementById('thumbSaveBtn').disabled=false
+}
+
+function closeThumb(){document.getElementById('moThumb').classList.remove('on')}
+
+async function saveThumb(){
+  if(!selectedCoverId)return
+  const btn=document.getElementById('thumbSaveBtn');btn.innerHTML='<div class="sp"></div>';btn.disabled=true
+  const body=thumbTab==='pc'?{coverId:selectedCoverId}:{coverIdMobile:selectedCoverId}
+  try{
+    await fetch(`${W}/api/admin/albums/${thumbToken}`,{method:'PATCH',headers:{Authorization:`Bearer ${tok}`,'Content-Type':'application/json'},body:JSON.stringify(body)})
+    closeThumb();await loadAlbums();showToast(thumbTab==='pc'?'PC用サムネイルを変更しました':'スマホ用サムネイルを変更しました')
+  }catch{showToast('保存に失敗しました')}
+  finally{btn.innerHTML='選択して保存';btn.disabled=false}
+}
+
+function openDelete(token,name){
+  deleteTarget={tokens:[token],name,bulk:false}
+  document.getElementById('delMsg').textContent=`「${name}」を削除しますか？`
+  document.getElementById('delDriveChk').checked=false
+  document.getElementById('delConfirmBtn').onclick=executeDelete
+  document.getElementById('moDelete').classList.add('on')
+}
+function closeDelete(){document.getElementById('moDelete').classList.remove('on');deleteTarget=null}
+
+async function executeDelete(){
+  if(!deleteTarget)return
+  const deleteDrive=document.getElementById('delDriveChk').checked
+  const btn=document.getElementById('delConfirmBtn');btn.innerHTML='<div class="sp"></div>';btn.disabled=true
+  try{
+    if(deleteTarget.tokens.length===1){
+      await fetch(`${W}/api/admin/albums/${deleteTarget.tokens[0]}${deleteDrive?'?deleteDrive=true':''}`,{method:'DELETE',headers:{Authorization:`Bearer ${tok}`}})
+    }else{
+      await fetch(`${W}/api/admin/albums`,{method:'DELETE',headers:{Authorization:`Bearer ${tok}`,'Content-Type':'application/json'},body:JSON.stringify({tokens:deleteTarget.tokens,deleteDrive})})
+    }
+    closeDelete();cancelBulk();await loadAlbums()
+    showToast(deleteTarget.bulk?`${deleteTarget.tokens.length}件を削除しました`:'削除しました')
+  }catch{showToast('削除に失敗しました')}
+  finally{btn.innerHTML='削除する';btn.disabled=false}
+}
+
+function copyUrl(url,toast=true){navigator.clipboard?.writeText(url).catch(()=>{});if(toast)showToast('URLをコピーしました')}
+
+function showToast(m){
+  const t=document.getElementById('toast')
+  t.textContent=m;t.style.transform='translateX(-50%) translateY(0)';t.style.opacity='1'
+  clearTimeout(t._t);t._t=setTimeout(()=>{t.style.transform='translateX(-50%) translateY(80px)';t.style.opacity='0'},2500)
+}
+
+// ─── システム設定 ─────────────────────────────────
+let sysSettings=null
+
+async function openSettings(){
+  const res=await fetch(`${W}/api/admin/settings`,{headers:{Authorization:`Bearer ${tok}`}})
+  sysSettings=await res.json()
+  renderFlagDefsEditor(sysSettings.flagDefs)
+  document.getElementById('moSettings').classList.add('on')
+}
+function closeSettings(){document.getElementById('moSettings').classList.remove('on')}
+
+function renderFlagDefsEditor(flagDefs){
+  const editor=document.getElementById('flagDefsEditor')
+  editor.innerHTML=flagDefs.map((fd,i)=>`
+    <div style="display:flex;gap:8px;align-items:center;background:var(--bg);border:1px solid var(--bdm);border-radius:8px;padding:10px 12px;">
+      <input value="${fd.label}" placeholder="ラベル（例：⭐ お気に入り）" data-idx="${i}" data-field="label"
+        style="flex:1;border:none;background:transparent;font-size:13px;outline:none;" onchange="updateFlagDef(this)">
+      <input type="number" value="${fd.max}" min="0" placeholder="上限（0=無制限）" data-idx="${i}" data-field="max"
+        style="width:90px;border:1px solid var(--bdm);border-radius:6px;padding:4px 8px;font-size:13px;" onchange="updateFlagDef(this)">
+      <button onclick="removeFlagDef(${i})" style="border:none;background:none;color:var(--dg);cursor:pointer;font-size:16px;">×</button>
+    </div>`).join('')
+}
+
+function updateFlagDef(el){const i=parseInt(el.dataset.idx),field=el.dataset.field;const fd=sysSettings.flagDefs[i];if(field==='max')fd.max=parseInt(el.value)||0;else fd[field]=el.value}
+function addFlagDef(){sysSettings.flagDefs.push({key:`flag_${Date.now()}`,label:'',max:0});renderFlagDefsEditor(sysSettings.flagDefs)}
+function removeFlagDef(i){sysSettings.flagDefs.splice(i,1);renderFlagDefsEditor(sysSettings.flagDefs)}
+
+async function saveSettings(){
+  const btn=document.getElementById('saveSettingsBtn');btn.innerHTML='<div class="sp-sm"></div>';btn.disabled=true
+  try{
+    await fetch(`${W}/api/admin/settings`,{method:'PATCH',headers:{Authorization:`Bearer ${tok}`,'Content-Type':'application/json'},body:JSON.stringify(sysSettings)})
+    closeSettings();showToast('設定を保存しました')
+  }catch{showToast('保存に失敗しました')}
+  finally{btn.innerHTML='保存';btn.disabled=false}
+}
+
+// ─── 選定リンク発行 ────────────────────────────────
+let selectAlbumToken='', selectUrl='', issueFlagOn=false, issueFlagDefs=[]
+
+async function openSelect(albumToken){
+  selectAlbumToken=albumToken
+  const album=albums.find(a=>a.token===albumToken)
+  document.getElementById('selectIssueMhTitle').textContent=`選定リンク発行 — ${album?.name||''}`
+  issueFlagOn=!!album?.flagDefs
+  issueFlagDefs=album?.flagDefs?JSON.parse(JSON.stringify(album.flagDefs)):JSON.parse(JSON.stringify(DEFAULT_CLIENT_FLAG_DEFS))
+  document.getElementById('issueFlagSw').className=`sw${issueFlagOn?' on':''}`
+  document.getElementById('issueFlagFd').style.display=issueFlagOn?'block':'none'
+  if(issueFlagOn)renderIssueFlagDefsEditor()
+  if(album?.selectToken){
+    selectUrl=`${location.origin}/select.html?token=${album.selectToken}`
+    document.getElementById('selectUrlText').textContent=selectUrl
+    document.getElementById('issueUrlPanel').style.display='block'
+    document.getElementById('issueNoUrlPanel').style.display='none'
+    document.getElementById('issueUrlBtn').textContent='再発行する'
+  }else{
+    document.getElementById('issueUrlPanel').style.display='none'
+    document.getElementById('issueNoUrlPanel').style.display='block'
+    document.getElementById('issueUrlBtn').textContent='選定URLを発行する'
+  }
+  document.getElementById('moSelectIssue').classList.add('on')
+}
+
+function toggleIssueFlag(){
+  issueFlagOn=!issueFlagOn
+  document.getElementById('issueFlagSw').className=`sw${issueFlagOn?' on':''}`
+  document.getElementById('issueFlagFd').style.display=issueFlagOn?'block':'none'
+  if(issueFlagOn&&!issueFlagDefs.length)issueFlagDefs=JSON.parse(JSON.stringify(DEFAULT_CLIENT_FLAG_DEFS))
+  if(issueFlagOn)renderIssueFlagDefsEditor()
+}
+
+function renderIssueFlagDefsEditor(){
+  const ed=document.getElementById('issueFlagDefsEditor')
+  ed.innerHTML=issueFlagDefs.map((fd,i)=>`
+    <div style="display:flex;gap:6px;align-items:center;background:var(--bg);border:1px solid var(--bdm);border-radius:8px;padding:8px 10px;">
+      <input value="${fd.label}" placeholder="ラベル" data-idx="${i}" data-field="label"
+        style="flex:1;border:none;background:transparent;font-size:13px;outline:none;" onchange="updateIssueFlagDef(this)">
+      <input type="number" value="${fd.max}" min="0" data-idx="${i}" data-field="max"
+        style="width:70px;border:1px solid var(--bdm);border-radius:6px;padding:4px 6px;font-size:12px;" onchange="updateIssueFlagDef(this)">
+      <button onclick="removeIssueFlagDef(${i})" style="border:none;background:none;color:var(--dg);cursor:pointer;font-size:16px;">×</button>
+    </div>`).join('')
+}
+
+function updateIssueFlagDef(el){const i=parseInt(el.dataset.idx),field=el.dataset.field;if(field==='max')issueFlagDefs[i].max=parseInt(el.value)||0;else issueFlagDefs[i][field]=el.value}
+function addIssueFlagDef(){issueFlagDefs.push({key:`flag_${Date.now()}`,label:'',max:0});renderIssueFlagDefsEditor()}
+function removeIssueFlagDef(i){issueFlagDefs.splice(i,1);renderIssueFlagDefsEditor()}
+
+async function generateSelectUrl(){
+  const btn=document.getElementById('issueUrlBtn')
+  btn.innerHTML='<div class="sp-sm"></div> 発行中...';btn.disabled=true
+  await fetch(`${W}/api/admin/albums/${selectAlbumToken}`,{method:'PATCH',headers:{Authorization:`Bearer ${tok}`,'Content-Type':'application/json'},body:JSON.stringify({flagDefs:issueFlagOn?issueFlagDefs:null})})
+  try{
+    const res=await fetch(`${W}/api/admin/albums/${selectAlbumToken}/select`,{method:'POST',headers:{Authorization:`Bearer ${tok}`}})
+    const d=await res.json()
+    selectUrl=`${location.origin}/select.html?token=${d.selectToken}`
+    document.getElementById('selectUrlText').textContent=selectUrl
+    document.getElementById('issueUrlPanel').style.display='block'
+    document.getElementById('issueNoUrlPanel').style.display='none'
+    await loadAlbums()
+    showToast('選定URLを発行しました')
+  }catch{showToast('発行に失敗しました')}
+  finally{btn.innerHTML='再発行する';btn.disabled=false}
+}
+
+function copySelectUrl(){navigator.clipboard?.writeText(selectUrl).catch(()=>{});showToast('選定URLをコピーしました')}
+
+// ─── 選定写真確認 ────────────────────────────────
+async function openSelectResults(albumToken){
+  selectAlbumToken=albumToken
+  const album=albums.find(a=>a.token===albumToken)
+  document.getElementById('selectViewMhTitle').textContent=`選定写真確認 — ${album?.name||''}`
+  document.getElementById('selectViewStatus').textContent=''
+  document.getElementById('selectViewContent').innerHTML='<div style="text-align:center;padding:24px;color:var(--mt);font-size:13px;">読み込み中...</div>'
+  document.getElementById('moSelectView').classList.add('on')
+  localStorage.setItem(`sel_read_${albumToken}`,Date.now())
+  checkNotifications()
+  if(!album?.selectToken){document.getElementById('selectViewContent').innerHTML='<div style="font-size:13px;color:var(--mt);">まだ選定URLが発行されていません。</div>';return}
+  try{
+    const res=await fetch(`${W}/api/admin/albums/${albumToken}/select`,{headers:{Authorization:`Bearer ${tok}`}})
+    const d=await res.json()
+    if(!d.hasSelect){document.getElementById('selectViewContent').innerHTML='<div style="font-size:13px;color:var(--mt);">選定データがありません。</div>';return}
+    document.getElementById('selectViewStatus').textContent=d.submitted?`✅ 送信済み（${d.submittedAt?.slice(0,10)||''}）`:'⏳ 未送信（下書き保存中）'
+    const container=document.getElementById('selectViewContent')
+    const flagDefs=d.flagDefs&&d.flagDefs.length?d.flagDefs:DEFAULT_CLIENT_FLAG_DEFS
+    const selections=d.selections||{}
+    const byFlag={}
+    for(const fd of flagDefs)byFlag[fd.key]=[]
+    for(const[photoId,flags]of Object.entries(selections)){for(const flag of(Array.isArray(flags)?flags:[])){if(!byFlag[flag])byFlag[flag]=[];const photo=d.photoMap?.[photoId]||{id:photoId,name:photoId,thumb:null};byFlag[flag].push(photo)}}
+    const totalSelected=Object.values(byFlag).reduce((s,arr)=>s+arr.length,0)
+    if(totalSelected===0&&Object.keys(selections).length===0){container.innerHTML='<div style="font-size:13px;color:var(--mt);">まだ選定された写真がありません。</div>'}
+    else{
+      const photosHtml=flagDefs.map(fd=>{
+        const photos=byFlag[fd.key]||[]
+        if(!photos.length)return''
+        return `<div style="margin-bottom:16px;">
+          <div style="font-size:13px;font-weight:600;margin-bottom:8px;">${fd.label}（${photos.length}枚）</div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;">${photos.map(p=>{const src=p.thumb?`${W}/api/admin/thumb/${p.id}?session=${tok}`:'';return`<img src="${src}" style="width:72px;height:54px;object-fit:cover;border-radius:6px;background:#eee;" title="${p.name||''}" onerror="this.style.background='#eee'">`}).join('')}</div>
+          <button class="btn btn-s btn-sm" onclick="downloadByFlag('${fd.key}','${fd.label}')">📥 ${fd.label}をZIPでDL</button>
+        </div>`
+      }).filter(Boolean).join('<hr style="border:none;border-top:1px solid var(--bd);margin:8px 0;">')
+      container.innerHTML=photosHtml||'<div style="font-size:13px;color:var(--mt);">選定された写真がありません。</div>'
+    }
+    const log=d.activityLog||[]
+    if(log.length>0||d.submitted){
+      const logHtml=`<div style="margin-top:20px;border-top:1px solid var(--bd);padding-top:16px;">
+        <div style="font-size:13px;font-weight:600;color:var(--mt);margin-bottom:10px;">📋 アクティビティログ</div>
+        <div style="display:grid;gap:6px;">${log.slice().reverse().map(entry=>{
+          const time=entry.at?entry.at.replace('T',' ').slice(0,16):'-'
+          if(entry.type==='submitted')return`<div style="font-size:12px;padding:6px 10px;background:#edfbf0;border-radius:6px;color:#1a7a3c;">✅ ${time} — お客さんが選定を送信</div>`
+          if(entry.type==='download')return`<div style="font-size:12px;padding:6px 10px;background:var(--bg);border:1px solid var(--bd);border-radius:6px;">📥 ${time} — ${entry.flagLabel||entry.flagKey}（${entry.count}枚）をダウンロード</div>`
+          return''
+        }).filter(Boolean).join('')}</div>
+      </div>`
+      container.innerHTML+=logHtml
+    }
+  }catch(e){document.getElementById('selectViewContent').innerHTML=`<div style="color:#c0392b;font-size:13px;">読み込みに失敗しました: ${e.message}</div>`}
+}
+
+async function downloadByFlag(flagKey,flagLabel){
+  const res=await fetch(`${W}/api/admin/albums/${selectAlbumToken}/select`,{headers:{Authorization:`Bearer ${tok}`}})
+  const d=await res.json()
+  const photos=d.byFlag?.[flagKey]||[]
+  if(!photos.length){showToast('選定された写真がありません');return}
+  showToast(`${photos.length}枚のZIPを生成中...`)
+  try{
+    const zip=new JSZip();let done=0,errors=[]
+    await Promise.all(photos.map(async p=>{try{const params=new URLSearchParams({size:'full',name:p.name||p.id+'.jpg',token:selectAlbumToken});const r=await fetch(`${W}/api/photo/${p.id}?${params}`);if(!r.ok)throw new Error();zip.file(p.name||`${p.id}.jpg`,await r.blob());done++}catch{errors.push(p.name||p.id)}}))
+    const blob=await zip.generateAsync({type:'blob'})
+    const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`${(flagLabel||flagKey).replace(/\s/g,'_')}_${done}枚.zip`;a.click()
+    fetch(`${W}/api/admin/albums/${selectAlbumToken}/select/log`,{method:'POST',headers:{Authorization:`Bearer ${tok}`,'Content-Type':'application/json'},body:JSON.stringify({type:'download',flagKey,flagLabel,count:done})}).catch(()=>{})
+    showToast(errors.length?`${done}枚完了（${errors.length}枚失敗）`:`✅ ${done}枚すべてDL完了`)
+  }catch{showToast('ZIPの生成に失敗しました')}
+}
+
+function checkNotifications(){
+  const unread=albums.filter(a=>a.selectSubmitted&&!localStorage.getItem(`sel_read_${a.token}`))
+  const banner=document.getElementById('notifBanner')
+  if(unread.length>0){document.getElementById('notifText').textContent=`📬 選定が届いています（${unread.length}件未確認）`;banner.style.display='flex'}
+  else{banner.style.display='none'}
+}
+function dismissNotif(){document.getElementById('notifBanner').style.display='none'}
+function openFirstUnread(){const unread=albums.filter(a=>a.selectSubmitted&&!localStorage.getItem(`sel_read_${a.token}`));if(unread.length>0)openSelectResults(unread[0].token)}
+
+async function quickTogglePublish(token,publish){
+  const msg=publish?'🟢 このアルバムを公開しますか？\nお客さんがURLにアクセスできるようになります。':'⚫ このアルバムを非公開にしますか？\nお客さんがアクセスできなくなります。'
+  if(!confirm(msg))return
+  await fetch(`${W}/api/admin/albums/${token}`,{method:'PATCH',headers:{Authorization:`Bearer ${tok}`,'Content-Type':'application/json'},body:JSON.stringify({published:publish})})
+  await loadAlbums()
+  showToast(publish?'公開しました':'非公開にしました')
+}
+
+// ─── カード設定ポップアップ ───
+const settingsPopupHtml=`
+<div id="settingsPopupOverlay" onclick="closeSettingsPopup()" style="position:fixed;inset:0;z-index:500;"></div>
+<div id="settingsPopup" style="position:fixed;z-index:501;background:#fff;border:1px solid var(--bdm);border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,.15);min-width:190px;overflow:hidden;display:none;">
+  <button class="cmi" id="spi-select">🔗 選定リンク発行</button>
+  <button class="cmi" id="spi-results">📋 選定写真確認</button>
+  <button class="cmi" id="spi-thumb">🖼 サムネイル設定</button>
+  <button class="cmi" id="spi-edit">⚙️ アルバム設定</button>
+  <div style="border-top:1px solid var(--bd);margin:3px 0;"></div>
+  <button class="cmi" id="spi-delete" style="color:#c0392b;">🗑 削除</button>
+</div>`
+document.body.insertAdjacentHTML('beforeend',settingsPopupHtml)
+
+function openSettingsPopup(token,e){
+  e.stopPropagation()
+  const album=albums.find(a=>a.token===token)
+  const hasNew=album?.selectToken&&album?.selectSubmitted
+  document.getElementById('spi-results').textContent=`📋 選定写真確認${hasNew?' 🔴':''}`
+  document.getElementById('spi-select').onclick=()=>{closeSettingsPopup();openSelect(token)}
+  document.getElementById('spi-results').onclick=()=>{closeSettingsPopup();openSelectResults(token)}
+  document.getElementById('spi-thumb').onclick=()=>{closeSettingsPopup();openThumb(token)}
+  document.getElementById('spi-edit').onclick=()=>{closeSettingsPopup();openEdit(token)}
+  document.getElementById('spi-delete').onclick=()=>{closeSettingsPopup();openDelete(token,album?.name||'')}
+  const popup=document.getElementById('settingsPopup')
+  popup.style.display='block'
+  const btn=e.currentTarget,r=btn.getBoundingClientRect(),pw=popup.offsetWidth,ph=popup.offsetHeight
+  let top=r.bottom+6,left=r.right-pw
+  if(top+ph>window.innerHeight-8)top=r.top-ph-6
+  if(left<8)left=8
+  popup.style.top=top+'px';popup.style.left=left+'px'
+  document.getElementById('settingsPopupOverlay').style.display='block'
+}
+function closeSettingsPopup(){document.getElementById('settingsPopup').style.display='none';document.getElementById('settingsPopupOverlay').style.display='none'}
+
+async function quickHeroChange(token,sel){
+  const val=sel.value
+  if(val==='__custom'){const input=prompt('カバーテキストを入力してください','');if(!input){await loadAlbums();return};await fetch(`${W}/api/admin/albums/${token}`,{method:'PATCH',headers:{Authorization:`Bearer ${tok}`,'Content-Type':'application/json'},body:JSON.stringify({heroText:input})})}
+  else{await fetch(`${W}/api/admin/albums/${token}`,{method:'PATCH',headers:{Authorization:`Bearer ${tok}`,'Content-Type':'application/json'},body:JSON.stringify({heroText:val})})}
+  showToast('カバーテキストを変更しました')
+}
+
+// ─── アップロード ─────────────────────────────────
+let uploadAlbumToken=''
+
+function openUpload(albumToken){uploadAlbumToken=albumToken;document.getElementById('uploadList').innerHTML='';document.getElementById('uploadFileInput').value='';document.getElementById('moUpload').classList.add('on')}
+function closeUpload(){document.getElementById('moUpload').classList.remove('on')}
+function onFilesSelected(){const files=Array.from(document.getElementById('uploadFileInput').files);if(!files.length)return;uploadFiles(files)}
+
+async function uploadFiles(files){
+  const list=document.getElementById('uploadList')
+  const items={}
+  for(const f of files){
+    const key=f.name+f.size
+    const item=document.createElement('div')
+    item.style.cssText='display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--bg);border:1px solid var(--bdm);border-radius:8px;font-size:13px;'
+    item.innerHTML=`<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${f.name}</span><span class="sp-sm" id="sp_${key}"></span><span id="st_${key}" style="color:var(--mt);font-size:12px;">待機中</span>`
+    list.appendChild(item)
+    items[key]={f,item}
+  }
+  for(const[key,{f}]of Object.entries(items)){
+    document.getElementById(`st_${key}`).textContent='アップロード中...'
+    try{
+      const fd=new FormData();fd.append('file',f)
+      const res=await fetch(`${W}/api/admin/albums/${uploadAlbumToken}/upload`,{method:'POST',headers:{Authorization:`Bearer ${tok}`},body:fd})
+      document.getElementById(`sp_${key}`)?.remove()
+      if(res.ok){const st=document.getElementById(`st_${key}`);st.textContent='✅ 完了';st.style.color='#1a7a3c'}
+      else throw new Error()
+    }catch{document.getElementById(`sp_${key}`)?.remove();const st=document.getElementById(`st_${key}`);st.textContent='❌ 失敗';st.style.color='#c0392b'}
+  }
+  await loadAlbums()
+}
+
+// ─── アルバム固有フラグ設定 ───────────────────────
+const DEFAULT_CLIENT_FLAG_DEFS=[
+  {key:'favorite',label:'⭐ お気に入り',max:0},
+  {key:'cover',label:'📖 表紙',max:1},
+  {key:'page',label:'📄 中ページ',max:10}
+]
+let albumFlagOn=false, albumFlagDefs=[]
+
+function toggleAlbumFlag(){
+  albumFlagOn=!albumFlagOn
+  document.getElementById('albumFlagSw').className=`sw${albumFlagOn?' on':''}`
+  document.getElementById('albumFlagFd').style.display=albumFlagOn?'block':'none'
+  if(albumFlagOn&&!albumFlagDefs.length)albumFlagDefs=JSON.parse(JSON.stringify(DEFAULT_CLIENT_FLAG_DEFS))
+  if(albumFlagOn)renderAlbumFlagDefsEditor()
+}
+
+function renderAlbumFlagDefsEditor(){
+  const ed=document.getElementById('albumFlagDefsEditor')
+  ed.innerHTML=albumFlagDefs.map((fd,i)=>`
+    <div style="display:flex;gap:6px;align-items:center;background:var(--bg);border:1px solid var(--bdm);border-radius:8px;padding:8px 10px;">
+      <input value="${fd.label}" placeholder="ラベル（例：⭐ お気に入り）" data-idx="${i}" data-field="label"
+        style="flex:1;border:none;background:transparent;font-size:13px;outline:none;" onchange="updateAlbumFlagDef(this)">
+      <input type="number" value="${fd.max}" min="0" data-idx="${i}" data-field="max"
+        style="width:70px;border:1px solid var(--bdm);border-radius:6px;padding:4px 6px;font-size:12px;" onchange="updateAlbumFlagDef(this)" title="上限枚数（0=無制限）">
+      <button onclick="removeAlbumFlagDef(${i})" style="border:none;background:none;color:var(--dg);cursor:pointer;font-size:16px;">×</button>
+    </div>`).join('')
+}
+
+function updateAlbumFlagDef(el){const i=parseInt(el.dataset.idx),field=el.dataset.field;if(field==='max')albumFlagDefs[i].max=parseInt(el.value)||0;else albumFlagDefs[i][field]=el.value}
+function addAlbumFlagDef(){albumFlagDefs.push({key:`flag_${Date.now()}`,label:'',max:0});renderAlbumFlagDefsEditor()}
+function removeAlbumFlagDef(i){albumFlagDefs.splice(i,1);renderAlbumFlagDefsEditor()}
+</script>
+</body>
+</html>
