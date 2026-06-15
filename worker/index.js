@@ -435,6 +435,30 @@ export default {
         return new Response(blob,{headers:{'Content-Type':imgRes.headers.get('Content-Type')||'image/jpeg','Content-Disposition':disp,'Cache-Control':'private, max-age=3600',...CORS}})
       }
 
+      // ══ アップロード ══════════════════════════════════
+      const uploadMatch=path.match(/^\/api\/admin\/albums\/([a-z0-9]+)\/upload$/)
+      if(uploadMatch&&req.method==='POST'){
+        if(!await isAdmin(req,env))return errR('Unauthorized',401)
+        const t=uploadMatch[1],album=await getAlbum(env,t)
+        if(!album)return errR('Not found',404)
+        const fd=await req.formData()
+        const file=fd.get('file')
+        if(!file)return errR('No file',400)
+        const at=await getAccessToken(env,false)
+        const boundary='-------314159265358979323846'
+        const meta=JSON.stringify({name:file.name,parents:[album.folderId]})
+        const buf=await file.arrayBuffer()
+        const enc=new TextEncoder()
+        const head=enc.encode(`--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${meta}\r\n--${boundary}\r\nContent-Type: ${file.type||'application/octet-stream'}\r\n\r\n`)
+        const foot=enc.encode(`\r\n--${boundary}--`)
+        const body=new Uint8Array(head.length+buf.byteLength+foot.length)
+        body.set(head,0);body.set(new Uint8Array(buf),head.length);body.set(foot,head.length+buf.byteLength)
+        const res=await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart',{method:'POST',headers:{Authorization:`Bearer ${at}`,'Content-Type':`multipart/related; boundary="${boundary}"`},body})
+        if(!res.ok)throw new Error(`Drive upload: ${await res.text()}`)
+        const r=await res.json()
+        return jsonR({ok:true,id:r.id,name:r.name})
+      }
+
       return errR('Not found',404)
     }catch(e){console.error(e);return errR(`Error: ${e.message}`,500)}
   }
