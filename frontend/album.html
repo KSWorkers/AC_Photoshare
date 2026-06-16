@@ -380,6 +380,7 @@ async function load(password='') {
     if (d.requirePassword) { document.getElementById('pwName').textContent=d.name; return show('scPw') }
     if (!res.ok) return showErr('error')
     pw=password; photos=d.photos
+    if(d.allowCustomerUpload)document.getElementById('custUploadBtn').style.display='inline-flex'
 
     // ヒーロー設定
     applyFont(d.heroFont||'josefin')
