@@ -713,7 +713,9 @@ async function executeDelete(){
     }else{
       res=await fetch(`${W}/api/admin/albums`,{method:'DELETE',headers:{Authorization:`Bearer ${tok}`,'Content-Type':'application/json'},body:JSON.stringify({tokens:deleteTarget.tokens,deleteDrive})})
     }
-    if(!res.ok){const d=await res.json();throw new Error(d.error||'Error')}
+    const resData=await res.json()
+    if(!res.ok){throw new Error(resData.error||'Error')}
+    if(resData.driveError)console.warn('Drive削除エラー:',resData.driveError)
     const delToks=new Set(deleteTarget.tokens)
     const successMsg=deleteTarget.bulk?`${deleteTarget.tokens.length}件を削除しました`:'削除しました'
     closeDelete();cancelBulk()
