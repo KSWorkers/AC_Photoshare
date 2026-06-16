@@ -230,7 +230,6 @@ body{font-family:-apple-system,'Hiragino Sans',sans-serif;background:var(--bg);c
   <!-- ツールバー -->
   <div class="tb">
     <button class="btn btn-s btn-sm" id="selBtn" onclick="toggleSel()">選択</button>
-    <button class="btn btn-s btn-sm" id="custUploadBtn" onclick="openCustUpload()" style="display:none;">📤 写真を追加</button>
     <div class="dl-wrap">
       <button class="btn btn-p btn-sm" onclick="toggleDlMenu(event)">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
@@ -320,6 +319,11 @@ body{font-family:-apple-system,'Hiragino Sans',sans-serif;background:var(--bg);c
   </div>
 </div>
 
+<!-- 写真追加フローティングボタン -->
+<button id="custUploadBtn" onclick="openCustUpload()" style="display:none;position:fixed;bottom:24px;right:20px;z-index:200;width:56px;height:56px;border-radius:50%;background:#1a1a18;color:#fff;border:none;cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,.32);font-size:22px;align-items:center;justify-content:center;transition:transform .15s,box-shadow .15s;" onmouseenter="this.style.transform='scale(1.08)'" onmouseleave="this.style.transform='scale(1)'">
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+</button>
+
 <div id="toast"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
@@ -380,7 +384,7 @@ async function load(password='') {
     if (d.requirePassword) { document.getElementById('pwName').textContent=d.name; return show('scPw') }
     if (!res.ok) return showErr('error')
     pw=password; photos=d.photos
-    if(d.allowCustomerUpload)document.getElementById('custUploadBtn').style.display='inline-flex'
+    if(d.allowCustomerUpload){const b=document.getElementById('custUploadBtn');b.style.display='flex'}
 
     // ヒーロー設定
     applyFont(d.heroFont||'josefin')
