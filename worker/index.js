@@ -58,7 +58,7 @@ async function createFolder(name,parentId,token){
 
 async function deleteFile(fileId,token){
   const res=await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?supportsAllDrives=true`,{method:'DELETE',headers:{Authorization:`Bearer ${token}`}})
-  if(!res.ok&&res.status!==404)throw new Error(`Delete: ${res.status}`)
+  if(!res.ok){const body=await res.text().catch(()=>'');throw new Error(`Delete: ${res.status} ${body}`)}
 }
 
 // ─── 動画権限管理 ───────────────────────────────────
