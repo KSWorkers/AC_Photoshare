@@ -95,6 +95,7 @@ body{font-family:-apple-system,'Hiragino Sans',sans-serif;background:var(--bg);c
   <div class="lc">
     <div class="lt">管理者ログイン</div>
     <div class="fd"><label>パスワード</label><input type="password" id="tkIn" placeholder="" onkeydown="if(event.key==='Enter')login()"></div>
+    <div style="display:flex;align-items:center;gap:8px;margin-top:4px;"><input type="checkbox" id="rememberMe" style="width:16px;height:16px;cursor:pointer;"><label for="rememberMe" style="font-size:13px;color:var(--mt);cursor:pointer;">ログイン状態を保持する</label></div>
     <button class="btn btn-p" style="width:100%;margin-top:16px;justify-content:center;" id="loginBtn" onclick="login()">ログイン</button>
     <div class="le" id="loginErr">パスワードが正しくありません</div>
   </div>
@@ -367,7 +368,7 @@ body{font-family:-apple-system,'Hiragino Sans',sans-serif;background:var(--bg);c
 <script>
 // ★ Worker URL: Workerデプロイ後に実際のURLを確認してください
 const W = 'https://ac-photoshare.nikkomaedori.workers.dev'
-let tok = sessionStorage.getItem('adminToken') || ''
+let tok = sessionStorage.getItem('adminToken') || localStorage.getItem('adminToken') || ''
 let albums=[], filtered=[]
 let filter='all', bulk=false, selToks=new Set(), lastBulkSel=-1
 let editTok='', nExpOn=true, nPwOn=false, ePubOn=true, eExpOn=false, ePwOn=false, eUploadOn=false
@@ -383,14 +384,14 @@ async function login() {
     const d = await r.json()
     if (r.status===429) { document.getElementById('loginErr').textContent='試行回数が多すぎます。15分後にお試しください。'; document.getElementById('loginErr').style.display='block'; return }
     if (!d.ok) { document.getElementById('loginErr').style.display='block'; return }
-    tok=d.session; sessionStorage.setItem('adminToken',tok); initMain()
+    tok=d.session; sessionStorage.setItem('adminToken',tok); if(document.getElementById('rememberMe').checked)localStorage.setItem('adminToken',tok); initMain()
   } catch { document.getElementById('loginErr').style.display='block' }
   finally { btn.innerHTML='ログイン'; btn.disabled=false }
 }
 
 function logout(){
   if (tok) fetch(`${W}/api/admin/logout`,{method:'POST',headers:{Authorization:`Bearer ${tok}`}}).catch(()=>{})
-  sessionStorage.removeItem('adminToken'); tok=''
+  sessionStorage.removeItem('adminToken'); localStorage.removeItem('adminToken'); tok=''
   document.getElementById('loginWrap').style.display='flex'
   document.getElementById('main').classList.remove('on')
   document.getElementById('bulkBtn').style.display='none'
