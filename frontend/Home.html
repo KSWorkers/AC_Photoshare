@@ -721,7 +721,7 @@ async function executeDelete(){
     closeDelete();cancelBulk()
     albums=albums.filter(a=>!delToks.has(a.token));applyFilter()
     showToast(successMsg)
-    loadAlbums()
+    setTimeout(loadAlbums,2000)
   }catch(e){showToast(`削除に失敗しました: ${e.message}`)}
   finally{btn.innerHTML='削除する';btn.disabled=false}
 }
