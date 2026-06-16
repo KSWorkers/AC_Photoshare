@@ -247,6 +247,7 @@ export default {
           heroText:'heroText'in body?body.heroText:(album.heroText??'Photography'),
           heroFont:'heroFont'in body?body.heroFont:(album.heroFont??'josefin'),
           flagDefs:'flagDefs'in body?body.flagDefs:album.flagDefs,
+          allowCustomerUpload:'allowCustomerUpload'in body?body.allowCustomerUpload:album.allowCustomerUpload,
           updatedAt:new Date().toISOString(),
         }
         // 動画権限を同期
@@ -413,7 +414,7 @@ export default {
         const videoFiles=await listVideos(album.folderId,at)
         if(videoFiles.length>0){ctx.waitUntil(getAccessToken(env,false).then(rwAt=>Promise.all(videoFiles.map(v=>grantAnyoneRead(v.id,rwAt)))).catch(()=>{}))}
         const videos=videoFiles.map(v=>({id:v.id,name:v.name,thumb:v.thumbnailLink?.replace('=s220','=s400')||null,viewLink:v.webViewLink,size:parseInt(v.size||0)}))
-        return jsonR({name:album.name,expiresAt:album.expiresAt,count:photos.length,totalSize,totalSizeLabel:fmtSize(totalSize),heroText:album.heroText||'Photography',heroFont:album.heroFont||'josefin',coverId:album.coverId||null,coverIdMobile:album.coverIdMobile||null,selectToken:album.selectToken||null,photos,videos})
+        return jsonR({name:album.name,expiresAt:album.expiresAt,count:photos.length,totalSize,totalSizeLabel:fmtSize(totalSize),heroText:album.heroText||'Photography',heroFont:album.heroFont||'josefin',coverId:album.coverId||null,coverIdMobile:album.coverIdMobile||null,selectToken:album.selectToken||null,allowCustomerUpload:album.allowCustomerUpload||false,photos,videos})
       }
 
       // 写真DL（認証付き）
@@ -434,6 +435,32 @@ export default {
         const blob=await imgRes.blob()
         const disp=size==='full'?`attachment; filename="${fname}"`:`attachment; filename="${size}_${fname}"`
         return new Response(blob,{headers:{'Content-Type':imgRes.headers.get('Content-Type')||'image/jpeg','Content-Disposition':disp,'Cache-Control':'private, max-age=3600',...CORS}})
+      }
+
+      // ══ お客さんアップロード（公開）══════════════════
+      const pubUploadMatch=path.match(/^\/api\/album\/([a-z0-9]+)\/upload$/)
+      if(pubUploadMatch&&req.method==='POST'){
+        const t=pubUploadMatch[1],album=await getAlbum(env,t)
+        if(!album)return errR('Not found',404)
+        if(album.published===false)return errR('Not published',403)
+        if(album.expiresAt&&new Date(album.expiresAt)<new Date())return errR('Expired',410)
+        if(!album.allowCustomerUpload)return errR('Upload not allowed',403)
+        const fd=await req.formData()
+        const file=fd.get('file')
+        if(!file)return errR('No file',400)
+        const at=await getAccessToken(env,false)
+        const boundary='-------314159265358979323846'
+        const meta=JSON.stringify({name:file.name,parents:[album.folderId]})
+        const buf=await file.arrayBuffer()
+        const enc=new TextEncoder()
+        const head=enc.encode(`--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${meta}\r\n--${boundary}\r\nContent-Type: ${file.type||'application/octet-stream'}\r\n\r\n`)
+        const foot=enc.encode(`\r\n--${boundary}--`)
+        const body=new Uint8Array(head.length+buf.byteLength+foot.length)
+        body.set(head,0);body.set(new Uint8Array(buf),head.length);body.set(foot,head.length+buf.byteLength)
+        const res=await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&supportsAllDrives=true',{method:'POST',headers:{Authorization:`Bearer ${at}`,'Content-Type':`multipart/related; boundary="${boundary}"`},body})
+        if(!res.ok)throw new Error(`Drive upload: ${await res.text()}`)
+        const r=await res.json()
+        return jsonR({ok:true,id:r.id,name:r.name})
       }
 
       // ══ アップロード ══════════════════════════════════

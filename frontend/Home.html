@@ -79,6 +79,7 @@ body{font-family:-apple-system,'Hiragino Sans',sans-serif;background:var(--bg);c
 .cmi:hover{background:var(--bg);}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 </head>
 <body>
 <header class="hd">
@@ -184,6 +185,7 @@ body{font-family:-apple-system,'Hiragino Sans',sans-serif;background:var(--bg);c
     <div class="mb">
       <div class="fd"><label>アルバム名</label><input type="text" id="eName"></div>
       <div class="fd"><div class="sw-w"><span style="font-size:14px;">公開する</span><button class="sw" id="ePubSw" onclick="toggleEPub()"></button></div></div>
+      <div class="fd"><div class="sw-w"><span style="font-size:14px;">お客さんによる写真追加を許可する</span><button class="sw" id="eUploadSw" onclick="toggleEUpload()"></button></div></div>
       <div class="fd"><div class="sw-w"><span style="font-size:14px;">有効期限を設定する</span><button class="sw" id="eExpSw" onclick="toggleEExp()"></button></div></div>
       <div id="eExpFd" class="fd" style="display:none;"><label>有効期限</label><input type="date" id="eExp"></div>
       <div style="border-top:1px solid var(--bd);padding-top:14px;">
@@ -348,6 +350,18 @@ body{font-family:-apple-system,'Hiragino Sans',sans-serif;background:var(--bg);c
   </div>
 </div>
 
+<!-- QRコードモーダル -->
+<div class="mo" id="moQr" onclick="if(event.target===this)closeQr()">
+  <div class="md" style="max-width:360px;">
+    <div class="mh">QRコード</div>
+    <div class="mb" style="align-items:center;gap:16px;">
+      <div id="qrCanvas" style="display:flex;justify-content:center;"></div>
+      <div style="font-size:12px;color:var(--mt);word-break:break-all;text-align:center;" id="qrUrl"></div>
+    </div>
+    <div class="mf"><button class="btn btn-s" onclick="closeQr()">閉じる</button><button class="btn btn-p" onclick="downloadQr()">ダウンロード</button></div>
+  </div>
+</div>
+
 <div id="toast"></div>
 <script>
 // ★ Worker URL: Workerデプロイ後に実際のURLを確認してください
@@ -355,7 +369,7 @@ const W = 'https://ac-photoshare.nikkomaedori.workers.dev'
 let tok = sessionStorage.getItem('adminToken') || ''
 let albums=[], filtered=[]
 let filter='all', bulk=false, selToks=new Set(), lastBulkSel=-1
-let editTok='', nExpOn=true, nPwOn=false, ePubOn=true, eExpOn=false, ePwOn=false
+let editTok='', nExpOn=true, nPwOn=false, ePubOn=true, eExpOn=false, ePwOn=false, eUploadOn=false
 let deleteTarget=null
 
 if (tok) initMain()
@@ -476,7 +490,7 @@ function renderGrid(){
             ${heroOptHtml}
           </select>
         </div>
-        <div class="ub"><span>${url}</span><button class="btn btn-s btn-sm" onclick="copyUrl('${url}')">コピー</button></div>
+        <div class="ub"><span>${url}</span><button class="btn btn-s btn-sm" onclick="copyUrl('${url}')">コピー</button><button class="btn btn-s btn-sm" onclick="showQr('${url}',event)" title="QRコード">QR</button></div>
         <div class="ca">
           <div style="display:flex;gap:5px;">
             <a class="btn btn-s btn-sm" href="${url}" target="_blank" style="flex:1;justify-content:center;">アルバムを開く</a>
@@ -548,8 +562,9 @@ function openEdit(token){
   const a=albums.find(x=>x.token===token);if(!a)return
   editTok=token
   document.getElementById('eName').value=a.name
-  ePubOn=a.published!==false;eExpOn=!!a.expiresAt;ePwOn=false
+  ePubOn=a.published!==false;eExpOn=!!a.expiresAt;ePwOn=false;eUploadOn=!!a.allowCustomerUpload
   document.getElementById('ePubSw').className=`sw${ePubOn?' on':''}`
+  document.getElementById('eUploadSw').className=`sw${eUploadOn?' on':''}`
   document.getElementById('eExpSw').className=`sw${eExpOn?' on':''}`
   document.getElementById('ePwSw').className='sw'
   document.getElementById('eExpFd').style.display=eExpOn?'flex':'none'
@@ -571,6 +586,7 @@ function openEdit(token){
 }
 function closeEdit(){document.getElementById('moEdit').classList.remove('on')}
 function toggleEPub(){ePubOn=!ePubOn;document.getElementById('ePubSw').className=`sw${ePubOn?' on':''}`}
+function toggleEUpload(){eUploadOn=!eUploadOn;document.getElementById('eUploadSw').className=`sw${eUploadOn?' on':''}`}
 function toggleEExp(){eExpOn=!eExpOn;document.getElementById('eExpSw').className=`sw${eExpOn?' on':''}`;document.getElementById('eExpFd').style.display=eExpOn?'flex':'none'}
 function toggleEPw(){ePwOn=!ePwOn;document.getElementById('ePwSw').className=`sw${ePwOn?' on':''}`;document.getElementById('ePwFd').style.display=ePwOn?'flex':'none'}
 function clearPassword(){
@@ -582,7 +598,7 @@ function clearPassword(){
 async function saveEdit(){
   const btn=document.getElementById('editBtn');btn.innerHTML='<div class="sp"></div>';btn.disabled=true
   try{
-    const body={name:document.getElementById('eName').value.trim(),published:ePubOn,expiresAt:eExpOn?document.getElementById('eExp').value||null:null,heroText:getHeroText('eHeroTextSel','eHeroCustom'),heroFont:document.getElementById('eHeroFont').value,flagDefs:albumFlagOn?albumFlagDefs:null}
+    const body={name:document.getElementById('eName').value.trim(),published:ePubOn,allowCustomerUpload:eUploadOn,expiresAt:eExpOn?document.getElementById('eExp').value||null:null,heroText:getHeroText('eHeroTextSel','eHeroCustom'),heroFont:document.getElementById('eHeroFont').value,flagDefs:albumFlagOn?albumFlagDefs:null}
     const pwInput=document.getElementById('ePw')
     if(ePwOn){
       if(pwInput.dataset.clear==='true'){body.password=null;delete pwInput.dataset.clear}
@@ -997,6 +1013,23 @@ function renderAlbumFlagDefsEditor(){
 function updateAlbumFlagDef(el){const i=parseInt(el.dataset.idx),field=el.dataset.field;if(field==='max')albumFlagDefs[i].max=parseInt(el.value)||0;else albumFlagDefs[i][field]=el.value}
 function addAlbumFlagDef(){albumFlagDefs.push({key:`flag_${Date.now()}`,label:'',max:0});renderAlbumFlagDefsEditor()}
 function removeAlbumFlagDef(i){albumFlagDefs.splice(i,1);renderAlbumFlagDefsEditor()}
+
+// ─── QRコード ─────────────────────────────────────────
+let qrInstance=null
+function showQr(url,e){
+  e.stopPropagation()
+  document.getElementById('qrUrl').textContent=url
+  const canvas=document.getElementById('qrCanvas')
+  canvas.innerHTML=''
+  qrInstance=new QRCode(canvas,{text:url,width:220,height:220,correctLevel:QRCode.CorrectLevel.M})
+  document.getElementById('moQr').classList.add('on')
+}
+function closeQr(){document.getElementById('moQr').classList.remove('on')}
+function downloadQr(){
+  const canvas=document.getElementById('qrCanvas').querySelector('canvas')
+  if(!canvas){const img=document.getElementById('qrCanvas').querySelector('img');if(!img)return;const a=document.createElement('a');a.href=img.src;a.download='qr.png';a.click();return}
+  const a=document.createElement('a');a.href=canvas.toDataURL('image/png');a.download='qr.png';a.click()
+}
 </script>
 </body>
 </html>
