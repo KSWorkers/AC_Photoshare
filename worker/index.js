@@ -265,9 +265,10 @@ export default {
       if(albumTokenMatch&&req.method==='DELETE'){
         if(!await isAdmin(req,env))return errR('Unauthorized',401)
         const t=albumTokenMatch[1]
-        if(url.searchParams.get('deleteDrive')==='true'){const album=await getAlbum(env,t);if(album?.folderId){const at=await getAccessToken(env,false);await deleteFile(album.folderId,at).catch(()=>{})}}
+        let driveError=null
+        if(url.searchParams.get('deleteDrive')==='true'){const album=await getAlbum(env,t);if(album?.folderId){const at=await getAccessToken(env,false);await deleteFile(album.folderId,at).catch(e=>{driveError=e.message})}}
         await env.ALBUMS.delete(`album:${t}`)
-        return jsonR({ok:true})
+        return jsonR({ok:true,driveError})
       }
 
       if(path==='/api/admin/albums'&&req.method==='DELETE'){
