@@ -10,7 +10,7 @@
 body{font-family:-apple-system,'Hiragino Sans',sans-serif;background:var(--bg);color:var(--tx);min-height:100vh;}
 .hd{background:var(--sur);border-bottom:1px solid var(--bd);padding:0 20px;height:52px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;}
 .logo{font-size:14px;font-weight:600;letter-spacing:.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}.logo span{color:var(--mt);font-weight:400;}
-@media(max-width:600px){.logo{font-size:12px;}.logo .logo-sub{display:none;}.btn-sm{padding:5px 8px;font-size:11px;}}
+@media(max-width:600px){.hd{height:auto;flex-direction:column;align-items:stretch;padding:10px 16px;gap:8px;}.logo{font-size:13px;}.logo .logo-sub{display:none;}.btn-sm{padding:5px 8px;font-size:11px;}.hd>div:last-child{display:flex;justify-content:flex-end;}}
 .btn{text-decoration:none;font-weight:normal;display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;border:none;transition:background .15s;white-space:nowrap;}
 .btn-p{background:var(--tx);color:#fff;}.btn-p:hover{background:#333;}
 .btn-s{background:transparent;color:var(--tx);border:1px solid var(--bdm);}.btn-s:hover{background:var(--bg);}
