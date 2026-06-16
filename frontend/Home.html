@@ -559,7 +559,6 @@ async function createAlbum(){
     applyFilter()
     showToast('アルバムを作成しました！')
     if(d.url)copyUrl(d.url,false)
-    setTimeout(loadAlbums,2000)
   }catch{showToast('作成に失敗しました')}
   finally{creating=false;btn.innerHTML='作成してURLを発行';btn.disabled=false}
 }
