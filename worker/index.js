@@ -112,7 +112,7 @@ function genToken(n=8){const c='abcdefghijkmnpqrstuvwxyz23456789';return Array.f
 function genSessionToken(){return Array.from(crypto.getRandomValues(new Uint8Array(32))).map(b=>b.toString(16).padStart(2,'0')).join('')}
 function genSelectToken(){return'sel_'+Array.from(crypto.getRandomValues(new Uint8Array(12))).map(b=>'abcdefghijkmnpqrstuvwxyz23456789'[b%32]).join('')}
 function fmtSize(b){if(!b)return'0 B';if(b>=1e9)return`${(b/1e9).toFixed(1)} GB`;if(b>=1e6)return`${(b/1e6).toFixed(1)} MB`;return`${(b/1e3).toFixed(0)} KB`}
-function buildFolderName(name){const d=new Date();return`${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}_${name}`}
+function buildFolderName(name){return name}
 function normalizeExpiresAt(dateStr){if(!dateStr)return null;if(dateStr.includes('T'))return dateStr;return`${dateStr}T23:59:59+09:00`}
 async function sha256hex(str){const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(str));return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('')}
 async function hashPassword(password){const salt=Array.from(crypto.getRandomValues(new Uint8Array(16))).map(b=>b.toString(16).padStart(2,'0')).join('');const hash=await sha256hex(salt+password);return`${salt}:${hash}`}
