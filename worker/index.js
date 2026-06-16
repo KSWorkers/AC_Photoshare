@@ -219,12 +219,12 @@ export default {
 
       if(path==='/api/admin/albums'&&req.method==='POST'){
         if(!await isAdmin(req,env))return errR('Unauthorized',401)
-        const{name,expiresAt,password}=await req.json()
+        const{name,expiresAt,password,heroText,heroFont,allowCustomerUpload}=await req.json()
         if(!name)return errR('name required')
         const token=genToken()
         const at=await getAccessToken(env,false)
         const folder=await createFolder(buildFolderName(name),env.DRIVE_ROOT_FOLDER_ID,at)
-        const album={name,folderId:folder.id,createdAt:new Date().toISOString(),expiresAt:normalizeExpiresAt(expiresAt),password:password?await hashPassword(password):null,published:true,heroText:'Photography',heroFont:'josefin'}
+        const album={name,folderId:folder.id,createdAt:new Date().toISOString(),expiresAt:normalizeExpiresAt(expiresAt),password:password?await hashPassword(password):null,published:true,heroText:heroText||'Photography',heroFont:heroFont||'josefin',allowCustomerUpload:!!allowCustomerUpload}
         await saveAlbum(env,token,album)
         return jsonR({token,url:`${env.SITE_URL}/album.html?token=${token}`,folderId:folder.id,album})
       }

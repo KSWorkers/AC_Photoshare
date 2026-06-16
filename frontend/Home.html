@@ -148,6 +148,7 @@ body{font-family:-apple-system,'Hiragino Sans',sans-serif;background:var(--bg);c
       <div id="nExpFd" class="fd"><label>有効期限</label><input type="date" id="nExp"></div>
       <div class="fd"><div class="sw-w"><span style="font-size:14px;">パスワードを設定する</span><button class="sw" id="nPwSw" onclick="toggleNPw()"></button></div></div>
       <div id="nPwFd" class="fd" style="display:none;"><label>パスワード</label><input type="text" id="nPw" placeholder="例：yamada2026"></div>
+      <div class="fd"><div class="sw-w"><span style="font-size:14px;">お客様によるアップロードを許可</span><button class="sw" id="nUploadSw" onclick="toggleNUpload()"></button></div></div>
       <div style="border-top:1px solid var(--bd);padding-top:14px;">
         <div style="font-size:13px;font-weight:600;color:var(--mt);margin-bottom:10px;">カバーテキスト</div>
         <div class="fd">
@@ -532,14 +533,17 @@ function openCreate(){
   const d=new Date();d.setMonth(d.getMonth()+1)
   document.getElementById('nExp').value=d.toISOString().split('T')[0]
   document.getElementById('nName').value='';document.getElementById('nPw').value=''
-  nExpOn=true;nPwOn=false
-  document.getElementById('nExpSw').className='sw on';document.getElementById('nPwSw').className='sw'
+  nExpOn=true;nPwOn=false;nUploadOn=false
+  document.getElementById('nExpSw').className='sw on';document.getElementById('nPwSw').className='sw';document.getElementById('nUploadSw').className='sw'
   document.getElementById('nExpFd').style.display='flex';document.getElementById('nPwFd').style.display='none'
   document.getElementById('moCreate').classList.add('on')
 }
 function closeCreate(){document.getElementById('moCreate').classList.remove('on')}
 function toggleNExp(){nExpOn=!nExpOn;document.getElementById('nExpSw').className=`sw${nExpOn?' on':''}`;document.getElementById('nExpFd').style.display=nExpOn?'flex':'none'}
 function toggleNPw(){nPwOn=!nPwOn;document.getElementById('nPwSw').className=`sw${nPwOn?' on':''}`;document.getElementById('nPwFd').style.display=nPwOn?'flex':'none'}
+
+let nUploadOn=false
+function toggleNUpload(){nUploadOn=!nUploadOn;document.getElementById('nUploadSw').className=`sw${nUploadOn?' on':''}`}
 
 let creating=false
 async function createAlbum(){
@@ -550,12 +554,12 @@ async function createAlbum(){
   creating=true
   const btn=document.getElementById('createBtn');btn.innerHTML='<div class="sp"></div> 作成中...';btn.disabled=true
   try{
-    const r=await fetch(`${W}/api/admin/albums`,{method:'POST',headers:{Authorization:`Bearer ${tok}`,'Content-Type':'application/json'},body:JSON.stringify({name,expiresAt,password,heroText:getHeroText('nHeroTextSel','nHeroCustom'),heroFont:document.getElementById('nHeroFont').value})})
+    const r=await fetch(`${W}/api/admin/albums`,{method:'POST',headers:{Authorization:`Bearer ${tok}`,'Content-Type':'application/json'},body:JSON.stringify({name,expiresAt,password,heroText:getHeroText('nHeroTextSel','nHeroCustom'),heroFont:document.getElementById('nHeroFont').value,allowCustomerUpload:nUploadOn})})
     const d=await r.json()
     if(!r.ok)throw new Error(d.error||'Error')
     // 即時表示してからバックグラウンドで再読み込み
     closeCreate()
-    albums=[{token:d.token,name,folderId:d.folderId,createdAt:new Date().toISOString(),expiresAt,published:true,heroText:getHeroText('nHeroTextSel','nHeroCustom'),count:0,totalSize:0,totalSizeLabel:'0 B'},...albums]
+    albums=[{token:d.token,name,folderId:d.folderId,createdAt:new Date().toISOString(),expiresAt,published:true,heroText:getHeroText('nHeroTextSel','nHeroCustom'),allowCustomerUpload:nUploadOn,count:0,totalSize:0,totalSizeLabel:'0 B'},...albums]
     applyFilter()
     showToast('アルバムを作成しました！')
     if(d.url)copyUrl(d.url,false)
