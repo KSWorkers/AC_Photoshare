@@ -355,11 +355,16 @@ body{font-family:-apple-system,'Hiragino Sans',sans-serif;background:var(--bg);c
 
 <!-- QRコードモーダル -->
 <div class="mo" id="moQr" onclick="if(event.target===this)closeQr()">
-  <div class="md" style="max-width:360px;">
+  <div class="md" style="max-width:400px;">
     <div class="mh">QRコード</div>
-    <div class="mb" style="align-items:center;gap:16px;">
+    <div class="mb" style="align-items:center;gap:12px;">
+      <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">
+        <button class="btn btn-s btn-sm" id="qrTabPlain" onclick="setQrMode('plain')" style="font-size:12px;">QRのみ</button>
+        <button class="btn btn-p btn-sm" id="qrTabCard" onclick="setQrMode('card')" style="font-size:12px;">デザインカード</button>
+      </div>
       <div id="qrCanvas" style="display:flex;justify-content:center;"></div>
-      <div style="font-size:12px;color:var(--mt);word-break:break-all;text-align:center;" id="qrUrl"></div>
+      <canvas id="qrCardCanvas" style="display:none;border-radius:12px;max-width:100%;"></canvas>
+      <div style="font-size:11px;color:var(--mt);word-break:break-all;text-align:center;" id="qrUrl"></div>
     </div>
     <div class="mf"><button class="btn btn-s" onclick="closeQr()">閉じる</button><button class="btn btn-p" onclick="downloadQr()">ダウンロード</button></div>
   </div>
@@ -493,7 +498,7 @@ function renderGrid(){
             ${heroOptHtml}
           </select>
         </div>
-        <div class="ub"><span>${url}</span><button class="btn btn-s btn-sm" onclick="copyUrl('${url}')">コピー</button><button class="btn btn-s btn-sm" onclick="showQr('${url}',event)" title="QRコード">QR</button></div>
+        <div class="ub"><span>${url}</span><button class="btn btn-s btn-sm" onclick="copyUrl('${url}')">コピー</button><button class="btn btn-s btn-sm" onclick="showQr('${url}','${a.name.replace(/'/g,"\\'")}',event)" title="QRコード">QR</button></div>
         <div class="ca">
           <div style="display:flex;gap:5px;">
             <a class="btn btn-s btn-sm" href="${url}" target="_blank" style="flex:1;justify-content:center;">アルバムを開く</a>
@@ -1034,17 +1039,79 @@ function addAlbumFlagDef(){albumFlagDefs.push({key:`flag_${Date.now()}`,label:''
 function removeAlbumFlagDef(i){albumFlagDefs.splice(i,1);renderAlbumFlagDefsEditor()}
 
 // ─── QRコード ─────────────────────────────────────────
-let qrInstance=null
-function showQr(url,e){
+let qrInstance=null,qrCurrentUrl='',qrCurrentName='',qrMode='card'
+function showQr(url,name,e){
   e.stopPropagation()
+  qrCurrentUrl=url;qrCurrentName=name
   document.getElementById('qrUrl').textContent=url
-  const canvas=document.getElementById('qrCanvas')
-  canvas.innerHTML=''
-  qrInstance=new QRCode(canvas,{text:url,width:220,height:220,correctLevel:QRCode.CorrectLevel.M})
+  const wrap=document.getElementById('qrCanvas')
+  wrap.innerHTML=''
+  qrInstance=new QRCode(wrap,{text:url,width:200,height:200,correctLevel:QRCode.CorrectLevel.M})
   document.getElementById('moQr').classList.add('on')
+  setTimeout(()=>setQrMode(qrMode),120)
 }
+function setQrMode(mode){
+  qrMode=mode
+  document.getElementById('qrTabPlain').className=`btn btn-sm ${mode==='plain'?'btn-p':'btn-s'}`;document.getElementById('qrTabPlain').style.fontSize='12px'
+  document.getElementById('qrTabCard').className=`btn btn-sm ${mode==='card'?'btn-p':'btn-s'}`;document.getElementById('qrTabCard').style.fontSize='12px'
+  document.getElementById('qrCanvas').style.display=mode==='plain'?'flex':'none'
+  const cc=document.getElementById('qrCardCanvas')
+  cc.style.display=mode==='card'?'block':'none'
+  if(mode==='card')renderQrCard()
+}
+function renderQrCard(){
+  const qrEl=document.getElementById('qrCanvas').querySelector('canvas')||document.getElementById('qrCanvas').querySelector('img')
+  if(!qrEl)return
+  const W=400,H=520,pad=32,qrSize=220
+  const cc=document.getElementById('qrCardCanvas')
+  cc.width=W;cc.height=H
+  const ctx=cc.getContext('2d')
+  // background gradient
+  const grad=ctx.createLinearGradient(0,0,0,H)
+  grad.addColorStop(0,'#0f172a');grad.addColorStop(1,'#1e3a5f')
+  ctx.fillStyle=grad;ctx.beginPath();roundRect(ctx,0,0,W,H,20);ctx.fill()
+  // subtle grid lines
+  ctx.strokeStyle='rgba(255,255,255,0.04)';ctx.lineWidth=1
+  for(let y=0;y<H;y+=24){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke()}
+  // logo area
+  ctx.fillStyle='rgba(255,255,255,0.08)';ctx.beginPath();roundRect(ctx,pad,28,W-pad*2,52,10);ctx.fill()
+  ctx.font='bold 15px "Helvetica Neue",Arial,sans-serif'
+  ctx.fillStyle='#93c5fd';ctx.textAlign='center'
+  ctx.fillText('Alcyone',W/2-32,60)
+  ctx.font='12px "Helvetica Neue",Arial,sans-serif'
+  ctx.fillStyle='rgba(255,255,255,0.7)'
+  ctx.fillText('PhotoShare',W/2+28,60)
+  // QR white card
+  const qx=(W-qrSize)/2,qy=100
+  ctx.fillStyle='#ffffff';ctx.beginPath();roundRect(ctx,qx-12,qy-12,qrSize+24,qrSize+24,14);ctx.fill()
+  ctx.drawImage(qrEl,qx,qy,qrSize,qrSize)
+  // album name
+  ctx.font='bold 18px "Helvetica Neue",Arial,sans-serif'
+  ctx.fillStyle='#ffffff';ctx.textAlign='center'
+  const nameStr=qrCurrentName||'アルバム'
+  wrapText(ctx,nameStr,W/2,qy+qrSize+52,W-pad*2,24)
+  // divider
+  const dy=qy+qrSize+90
+  ctx.strokeStyle='rgba(255,255,255,0.15)';ctx.lineWidth=1
+  ctx.beginPath();ctx.moveTo(pad,dy);ctx.lineTo(W-pad,dy);ctx.stroke()
+  // url
+  ctx.font='10px "Helvetica Neue",Arial,monospace'
+  ctx.fillStyle='rgba(255,255,255,0.45)';ctx.textAlign='center'
+  const shortUrl=qrCurrentUrl.replace(/^https?:\/\//,'')
+  ctx.fillText(shortUrl,W/2,dy+18,W-pad*2)
+  // scan label
+  ctx.font='bold 11px "Helvetica Neue",Arial,sans-serif'
+  ctx.fillStyle='#93c5fd';ctx.textAlign='center'
+  ctx.fillText('▲  QRコードをスキャン  ▲',W/2,H-18)
+}
+function roundRect(ctx,x,y,w,h,r){ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);ctx.arcTo(x+w,y,x+w,y+r,r);ctx.lineTo(x+w,y+h-r);ctx.arcTo(x+w,y+h,x+w-r,y+h,r);ctx.lineTo(x+r,y+h);ctx.arcTo(x,y+h,x,y+h-r,r);ctx.lineTo(x,y+r);ctx.arcTo(x,y,x+r,y,r);ctx.closePath()}
+function wrapText(ctx,text,x,y,maxW,lineH){const words=text.split('');let line='';for(const c of words){const t=line+c;if(ctx.measureText(t).width>maxW&&line){ctx.fillText(line,x,y);line=c;y+=lineH}else line=t}if(line)ctx.fillText(line,x,y)}
 function closeQr(){document.getElementById('moQr').classList.remove('on')}
 function downloadQr(){
+  if(qrMode==='card'){
+    const cc=document.getElementById('qrCardCanvas')
+    const a=document.createElement('a');a.href=cc.toDataURL('image/png');a.download=`qr_${qrCurrentName||'album'}.png`;a.click();return
+  }
   const canvas=document.getElementById('qrCanvas').querySelector('canvas')
   if(!canvas){const img=document.getElementById('qrCanvas').querySelector('img');if(!img)return;const a=document.createElement('a');a.href=img.src;a.download='qr.png';a.click();return}
   const a=document.createElement('a');a.href=canvas.toDataURL('image/png');a.download='qr.png';a.click()
