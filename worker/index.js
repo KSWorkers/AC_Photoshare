@@ -250,6 +250,11 @@ export default {
           allowCustomerUpload:'allowCustomerUpload'in body?body.allowCustomerUpload:album.allowCustomerUpload,
           updatedAt:new Date().toISOString(),
         }
+        // Driveフォルダ名をリネーム
+        if(body.name&&body.name!==album.name&&album.folderId){
+          const _r=getAccessToken(env,false).then(at=>fetch(`https://www.googleapis.com/drive/v3/files/${album.folderId}?supportsAllDrives=true`,{method:'PATCH',headers:{Authorization:`Bearer ${at}`,'Content-Type':'application/json'},body:JSON.stringify({name:body.name})})).catch(()=>{})
+          ctx.waitUntil(_r)
+        }
         // 動画権限を同期
         const wasActive=isAlbumActive(album),willBeActive=isAlbumActive(updated)
         if(wasActive!==willBeActive){const _p=getAccessToken(env,false).then(at=>syncVideoPerms(updated.folderId,willBeActive,at)).catch(()=>{});ctx.waitUntil(_p)}

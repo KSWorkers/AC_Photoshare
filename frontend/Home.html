@@ -552,8 +552,14 @@ async function createAlbum(){
   try{
     const r=await fetch(`${W}/api/admin/albums`,{method:'POST',headers:{Authorization:`Bearer ${tok}`,'Content-Type':'application/json'},body:JSON.stringify({name,expiresAt,password,heroText:getHeroText('nHeroTextSel','nHeroCustom'),heroFont:document.getElementById('nHeroFont').value})})
     const d=await r.json()
-    closeCreate();await loadAlbums();showToast('アルバムを作成しました！')
+    if(!r.ok)throw new Error(d.error||'Error')
+    // 即時表示してからバックグラウンドで再読み込み
+    closeCreate()
+    albums=[{token:d.token,name,folderId:d.folderId,createdAt:new Date().toISOString(),expiresAt,published:true,heroText:getHeroText('nHeroTextSel','nHeroCustom'),count:0,totalSize:0,totalSizeLabel:'0 B'},...albums]
+    applyFilter()
+    showToast('アルバムを作成しました！')
     if(d.url)copyUrl(d.url,false)
+    loadAlbums()
   }catch{showToast('作成に失敗しました')}
   finally{creating=false;btn.innerHTML='作成してURLを発行';btn.disabled=false}
 }
@@ -701,14 +707,19 @@ async function executeDelete(){
   const deleteDrive=document.getElementById('delDriveChk').checked
   const btn=document.getElementById('delConfirmBtn');btn.innerHTML='<div class="sp"></div>';btn.disabled=true
   try{
+    let res
     if(deleteTarget.tokens.length===1){
-      await fetch(`${W}/api/admin/albums/${deleteTarget.tokens[0]}${deleteDrive?'?deleteDrive=true':''}`,{method:'DELETE',headers:{Authorization:`Bearer ${tok}`}})
+      res=await fetch(`${W}/api/admin/albums/${deleteTarget.tokens[0]}${deleteDrive?'?deleteDrive=true':''}`,{method:'DELETE',headers:{Authorization:`Bearer ${tok}`}})
     }else{
-      await fetch(`${W}/api/admin/albums`,{method:'DELETE',headers:{Authorization:`Bearer ${tok}`,'Content-Type':'application/json'},body:JSON.stringify({tokens:deleteTarget.tokens,deleteDrive})})
+      res=await fetch(`${W}/api/admin/albums`,{method:'DELETE',headers:{Authorization:`Bearer ${tok}`,'Content-Type':'application/json'},body:JSON.stringify({tokens:deleteTarget.tokens,deleteDrive})})
     }
-    closeDelete();cancelBulk();await loadAlbums()
+    if(!res.ok){const d=await res.json();throw new Error(d.error||'Error')}
+    closeDelete();cancelBulk()
+    const delToks=new Set(deleteTarget.tokens)
+    albums=albums.filter(a=>!delToks.has(a.token));applyFilter()
     showToast(deleteTarget.bulk?`${deleteTarget.tokens.length}件を削除しました`:'削除しました')
-  }catch{showToast('削除に失敗しました')}
+    loadAlbums()
+  }catch(e){showToast(`削除に失敗しました: ${e.message}`)}
   finally{btn.innerHTML='削除する';btn.disabled=false}
 }
 
