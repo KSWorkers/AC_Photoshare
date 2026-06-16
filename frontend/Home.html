@@ -9,7 +9,8 @@
 :root{--bg:#fafaf9;--sur:#fff;--bd:rgba(0,0,0,.08);--bdm:rgba(0,0,0,.14);--tx:#1a1a18;--mt:#6b6b67;--dg:#c0392b;--r:10px;--rl:16px;}
 body{font-family:-apple-system,'Hiragino Sans',sans-serif;background:var(--bg);color:var(--tx);min-height:100vh;}
 .hd{background:var(--sur);border-bottom:1px solid var(--bd);padding:0 20px;height:52px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;}
-.logo{font-size:14px;font-weight:600;letter-spacing:.02em;}.logo span{color:var(--mt);font-weight:400;}
+.logo{font-size:14px;font-weight:600;letter-spacing:.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}.logo span{color:var(--mt);font-weight:400;}
+@media(max-width:600px){.logo{font-size:12px;}.logo .logo-sub{display:none;}.btn-sm{padding:5px 8px;font-size:11px;}}
 .btn{text-decoration:none;font-weight:normal;display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;border:none;transition:background .15s;white-space:nowrap;}
 .btn-p{background:var(--tx);color:#fff;}.btn-p:hover{background:#333;}
 .btn-s{background:transparent;color:var(--tx);border:1px solid var(--bdm);}.btn-s:hover{background:var(--bg);}
@@ -83,7 +84,7 @@ body{font-family:-apple-system,'Hiragino Sans',sans-serif;background:var(--bg);c
 </head>
 <body>
 <header class="hd">
-  <div class="logo">Alcyone PhotoShare <span>Photo</span> — 管理画面</div>
+  <div class="logo">Alcyone PhotoShare <span>Photo<span class="logo-sub"> — 管理画面</span></span></div>
   <div style="display:flex;gap:8px;align-items:center;">
     <button class="btn btn-s btn-sm" onclick="openSettings()" style="display:none;" id="settingsBtn">⚙️ 設定</button>
     <button class="btn btn-s btn-sm" id="bulkBtn" onclick="toggleBulk()" style="display:none;">まとめて選択</button>
