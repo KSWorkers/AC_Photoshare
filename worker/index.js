@@ -443,52 +443,72 @@ export default {
         return new Response(blob,{headers:{'Content-Type':imgRes.headers.get('Content-Type')||'image/jpeg','Content-Disposition':disp,'Cache-Control':'private, max-age=3600',...CORS}})
       }
 
-      // ══ お客さんアップロード ストリーミング（大容量動画用）══
-      const pubStreamMatch=path.match(/^\/api\/album\/([a-z0-9]+)\/upload\/stream$/)
-      if(pubStreamMatch&&req.method==='POST'){
-        const t=pubStreamMatch[1],album=await getAlbum(env,t)
+      // ══ お客さんアップロード チャンク転送（大容量動画用）══
+      const pubChunkMatch=path.match(/^\/api\/album\/([a-z0-9]+)\/upload\/chunk$/)
+      if(pubChunkMatch&&req.method==='POST'){
+        const t=pubChunkMatch[1],album=await getAlbum(env,t)
         if(!album)return errR('Not found',404)
         if(album.published===false)return errR('Not published',403)
         if(album.expiresAt&&new Date(album.expiresAt)<new Date())return errR('Expired',410)
         if(!album.allowCustomerUpload)return errR('Upload not allowed',403)
-        const name=decodeURIComponent(req.headers.get('X-File-Name')||'upload')
+        const sessionUri=req.headers.get('X-Session-Uri')
+        const contentRange=req.headers.get('X-Content-Range')
         const mimeType=req.headers.get('Content-Type')||'application/octet-stream'
-        const size=req.headers.get('Content-Length')
-        const at=await getAccessToken(env,false)
-        const sesRes=await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&supportsAllDrives=true',{
-          method:'POST',
-          headers:{Authorization:`Bearer ${at}`,'Content-Type':'application/json; charset=UTF-8','X-Upload-Content-Type':mimeType,...(size?{'X-Upload-Content-Length':size}:{})},
-          body:JSON.stringify({name,parents:[album.folderId]})
-        })
-        if(!sesRes.ok)throw new Error(`Session: ${await sesRes.text()}`)
-        const sessionUri=sesRes.headers.get('Location')
-        const upRes=await fetch(sessionUri,{method:'PUT',headers:{'Content-Type':mimeType,...(size?{'Content-Length':size}:{})},body:req.body,duplex:'half'})
-        if(!upRes.ok)throw new Error(`Upload: ${await upRes.text()}`)
-        const r=await upRes.json()
-        return jsonR({ok:true,id:r.id,name:r.name})
+        if(!sessionUri||!contentRange)return errR('Missing headers',400)
+        const chunkRes=await fetch(sessionUri,{method:'PUT',headers:{'Content-Range':contentRange,'Content-Type':mimeType},body:req.body})
+        if(chunkRes.status===308)return jsonR({status:'continue'})
+        if(chunkRes.status===200||chunkRes.status===201){const r=await chunkRes.json();return jsonR({status:'complete',id:r.id,name:r.name})}
+        throw new Error(`Chunk: ${chunkRes.status} ${await chunkRes.text()}`)
       }
 
-      // ══ 管理者アップロード ストリーミング（大容量動画用）══
-      const adminStreamMatch=path.match(/^\/api\/admin\/albums\/([a-z0-9]+)\/upload\/stream$/)
-      if(adminStreamMatch&&req.method==='POST'){
-        if(!await isAdmin(req,env))return errR('Unauthorized',401)
-        const t=adminStreamMatch[1],album=await getAlbum(env,t)
+      // ══ お客さんアップロード セッション開始（大容量動画用）══
+      const pubSessionMatch2=path.match(/^\/api\/album\/([a-z0-9]+)\/upload\/session$/)
+      if(pubSessionMatch2&&req.method==='POST'){
+        const t=pubSessionMatch2[1],album=await getAlbum(env,t)
         if(!album)return errR('Not found',404)
-        const name=decodeURIComponent(req.headers.get('X-File-Name')||'upload')
-        const mimeType=req.headers.get('Content-Type')||'application/octet-stream'
-        const size=req.headers.get('Content-Length')
+        if(album.published===false)return errR('Not published',403)
+        if(album.expiresAt&&new Date(album.expiresAt)<new Date())return errR('Expired',410)
+        if(!album.allowCustomerUpload)return errR('Upload not allowed',403)
+        const{name,mimeType,size}=await req.json()
         const at=await getAccessToken(env,false)
         const sesRes=await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&supportsAllDrives=true',{
           method:'POST',
-          headers:{Authorization:`Bearer ${at}`,'Content-Type':'application/json; charset=UTF-8','X-Upload-Content-Type':mimeType,...(size?{'X-Upload-Content-Length':size}:{})},
+          headers:{Authorization:`Bearer ${at}`,'Content-Type':'application/json; charset=UTF-8','X-Upload-Content-Type':mimeType,'X-Upload-Content-Length':String(size)},
           body:JSON.stringify({name,parents:[album.folderId]})
         })
         if(!sesRes.ok)throw new Error(`Session: ${await sesRes.text()}`)
-        const sessionUri=sesRes.headers.get('Location')
-        const upRes=await fetch(sessionUri,{method:'PUT',headers:{'Content-Type':mimeType,...(size?{'Content-Length':size}:{})},body:req.body,duplex:'half'})
-        if(!upRes.ok)throw new Error(`Upload: ${await upRes.text()}`)
-        const r=await upRes.json()
-        return jsonR({ok:true,id:r.id,name:r.name})
+        return jsonR({sessionUri:sesRes.headers.get('Location')})
+      }
+
+      // ══ 管理者アップロード チャンク転送（大容量動画用）══
+      const adminChunkMatch=path.match(/^\/api\/admin\/albums\/([a-z0-9]+)\/upload\/chunk$/)
+      if(adminChunkMatch&&req.method==='POST'){
+        if(!await isAdmin(req,env))return errR('Unauthorized',401)
+        const sessionUri=req.headers.get('X-Session-Uri')
+        const contentRange=req.headers.get('X-Content-Range')
+        const mimeType=req.headers.get('Content-Type')||'application/octet-stream'
+        if(!sessionUri||!contentRange)return errR('Missing headers',400)
+        const chunkRes=await fetch(sessionUri,{method:'PUT',headers:{'Content-Range':contentRange,'Content-Type':mimeType},body:req.body})
+        if(chunkRes.status===308)return jsonR({status:'continue'})
+        if(chunkRes.status===200||chunkRes.status===201){const r=await chunkRes.json();return jsonR({status:'complete',id:r.id,name:r.name})}
+        throw new Error(`Chunk: ${chunkRes.status} ${await chunkRes.text()}`)
+      }
+
+      // ══ 管理者アップロード セッション開始（大容量動画用）══
+      const adminSessionMatch2=path.match(/^\/api\/admin\/albums\/([a-z0-9]+)\/upload\/session$/)
+      if(adminSessionMatch2&&req.method==='POST'){
+        if(!await isAdmin(req,env))return errR('Unauthorized',401)
+        const t=adminSessionMatch2[1],album=await getAlbum(env,t)
+        if(!album)return errR('Not found',404)
+        const{name,mimeType,size}=await req.json()
+        const at=await getAccessToken(env,false)
+        const sesRes=await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&supportsAllDrives=true',{
+          method:'POST',
+          headers:{Authorization:`Bearer ${at}`,'Content-Type':'application/json; charset=UTF-8','X-Upload-Content-Type':mimeType,'X-Upload-Content-Length':String(size)},
+          body:JSON.stringify({name,parents:[album.folderId]})
+        })
+        if(!sesRes.ok)throw new Error(`Session: ${await sesRes.text()}`)
+        return jsonR({sessionUri:sesRes.headers.get('Location')})
       }
 
       // ══ お客さんアップロード（公開）══════════════════
