@@ -994,20 +994,42 @@ async function uploadFiles(files){
   for(const f of files){
     const key=f.name+f.size
     const item=document.createElement('div')
-    item.style.cssText='display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--bg);border:1px solid var(--bdm);border-radius:8px;font-size:13px;'
-    item.innerHTML=`<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${f.name}</span><span class="sp-sm" id="sp_${key}"></span><span id="st_${key}" style="color:var(--mt);font-size:12px;">待機中</span>`
+    item.style.cssText='display:flex;flex-direction:column;gap:4px;padding:8px 12px;background:var(--bg);border:1px solid var(--bdm);border-radius:8px;font-size:13px;'
+    const isVideo=f.type.startsWith('video/')
+    const sizeStr=f.size>1048576?`${(f.size/1048576).toFixed(1)}MB`:`${Math.round(f.size/1024)}KB`
+    item.innerHTML=`<div style="display:flex;align-items:center;gap:8px;"><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${f.name}</span><span style="color:var(--mt);font-size:11px;">${isVideo?'🎬':'🖼'} ${sizeStr}</span><span id="st_${key}" style="color:var(--mt);font-size:12px;">待機中</span></div><div id="pb_${key}" style="display:none;height:3px;background:var(--bdm);border-radius:2px;overflow:hidden;"><div id="pbi_${key}" style="height:100%;background:var(--tx);width:0%;transition:width .3s;"></div></div>`
     list.appendChild(item)
     items[key]={f,item}
   }
   for(const[key,{f}]of Object.entries(items)){
-    document.getElementById(`st_${key}`).textContent='アップロード中...'
+    const st=document.getElementById(`st_${key}`)
+    const pb=document.getElementById(`pb_${key}`)
+    const pbi=document.getElementById(`pbi_${key}`)
+    if(st)st.textContent='アップロード中...'
     try{
-      const fd=new FormData();fd.append('file',f)
-      const res=await fetch(`${W}/api/admin/albums/${uploadAlbumToken}/upload`,{method:'POST',headers:{Authorization:`Bearer ${tok}`},body:fd})
-      document.getElementById(`sp_${key}`)?.remove()
-      if(res.ok){const st=document.getElementById(`st_${key}`);st.textContent='✅ 完了';st.style.color='#1a7a3c'}
-      else throw new Error()
-    }catch{document.getElementById(`sp_${key}`)?.remove();const st=document.getElementById(`st_${key}`);st.textContent='❌ 失敗';st.style.color='#c0392b'}
+      const LARGE=10*1024*1024
+      if(f.size>LARGE){
+        if(pb)pb.style.display='block'
+        const sesRes=await fetch(`${W}/api/admin/albums/${uploadAlbumToken}/upload/session`,{method:'POST',headers:{Authorization:`Bearer ${tok}`,'Content-Type':'application/json'},body:JSON.stringify({name:f.name,mimeType:f.type||'application/octet-stream',size:f.size})})
+        if(!sesRes.ok)throw new Error()
+        const{sessionUri}=await sesRes.json()
+        await new Promise((resolve,reject)=>{
+          const xhr=new XMLHttpRequest()
+          xhr.open('PUT',sessionUri)
+          xhr.setRequestHeader('Content-Type',f.type||'application/octet-stream')
+          xhr.upload.onprogress=e=>{if(e.lengthComputable&&pbi)pbi.style.width=Math.round(e.loaded/e.total*100)+'%'}
+          xhr.onload=()=>xhr.status<300||xhr.status===308?resolve():reject()
+          xhr.onerror=reject
+          xhr.send(f)
+        })
+      }else{
+        const fd=new FormData();fd.append('file',f)
+        const res=await fetch(`${W}/api/admin/albums/${uploadAlbumToken}/upload`,{method:'POST',headers:{Authorization:`Bearer ${tok}`},body:fd})
+        if(!res.ok)throw new Error()
+      }
+      if(st){st.textContent='✅ 完了';st.style.color='#1a7a3c'}
+      if(pbi)pbi.style.width='100%'
+    }catch{if(st){st.textContent='❌ 失敗';st.style.color='#c0392b'}}
   }
   await loadAlbums()
 }

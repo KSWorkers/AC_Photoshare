@@ -469,6 +469,25 @@ export default {
         return jsonR({ok:true,id:r.id,name:r.name})
       }
 
+      // ══ お客さんアップロード Resumableセッション開始 ══
+      const pubSessionMatch=path.match(/^\/api\/album\/([a-z0-9]+)\/upload\/session$/)
+      if(pubSessionMatch&&req.method==='POST'){
+        const t=pubSessionMatch[1],album=await getAlbum(env,t)
+        if(!album)return errR('Not found',404)
+        if(album.published===false)return errR('Not published',403)
+        if(album.expiresAt&&new Date(album.expiresAt)<new Date())return errR('Expired',410)
+        if(!album.allowCustomerUpload)return errR('Upload not allowed',403)
+        const{name,mimeType,size}=await req.json()
+        const at=await getAccessToken(env,false)
+        const res=await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&supportsAllDrives=true',{
+          method:'POST',
+          headers:{Authorization:`Bearer ${at}`,'Content-Type':'application/json; charset=UTF-8','X-Upload-Content-Type':mimeType,'X-Upload-Content-Length':String(size)},
+          body:JSON.stringify({name,parents:[album.folderId]})
+        })
+        if(!res.ok)throw new Error(`Session: ${await res.text()}`)
+        return jsonR({sessionUri:res.headers.get('Location')})
+      }
+
       // ══ アップロード ══════════════════════════════════
       const uploadMatch=path.match(/^\/api\/admin\/albums\/([a-z0-9]+)\/upload$/)
       if(uploadMatch&&req.method==='POST'){
@@ -491,6 +510,23 @@ export default {
         if(!res.ok)throw new Error(`Drive upload: ${await res.text()}`)
         const r=await res.json()
         return jsonR({ok:true,id:r.id,name:r.name})
+      }
+
+      // ══ 管理者アップロード Resumableセッション開始 ══
+      const adminSessionMatch=path.match(/^\/api\/admin\/albums\/([a-z0-9]+)\/upload\/session$/)
+      if(adminSessionMatch&&req.method==='POST'){
+        if(!await isAdmin(req,env))return errR('Unauthorized',401)
+        const t=adminSessionMatch[1],album=await getAlbum(env,t)
+        if(!album)return errR('Not found',404)
+        const{name,mimeType,size}=await req.json()
+        const at=await getAccessToken(env,false)
+        const res=await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&supportsAllDrives=true',{
+          method:'POST',
+          headers:{Authorization:`Bearer ${at}`,'Content-Type':'application/json; charset=UTF-8','X-Upload-Content-Type':mimeType,'X-Upload-Content-Length':String(size)},
+          body:JSON.stringify({name,parents:[album.folderId]})
+        })
+        if(!res.ok)throw new Error(`Session: ${await res.text()}`)
+        return jsonR({sessionUri:res.headers.get('Location')})
       }
 
       return errR('Not found',404)

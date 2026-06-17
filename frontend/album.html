@@ -298,9 +298,9 @@ body{font-family:-apple-system,'Hiragino Sans',sans-serif;background:var(--bg);c
     <div id="custUploadBody">
       <label style="display:block;border:2px dashed rgba(0,0,0,.14);border-radius:10px;padding:24px;text-align:center;cursor:pointer;margin-bottom:12px;">
         <div style="font-size:24px;margin-bottom:4px;">📁</div>
-        <div style="font-size:14px;font-weight:500;margin-bottom:2px;">タップして写真を選択</div>
-        <div style="font-size:12px;color:var(--muted);">JPG・PNG・HEICなど</div>
-        <input type="file" multiple accept="image/*" id="custFileInput" style="display:none;" onchange="onCustFiles()">
+        <div style="font-size:14px;font-weight:500;margin-bottom:2px;">タップして写真・動画を選択</div>
+        <div style="font-size:12px;color:var(--muted);">JPG・PNG・HEIC・MP4・MOVなど</div>
+        <input type="file" multiple accept="image/*,video/*" id="custFileInput" style="display:none;" onchange="onCustFiles()">
       </label>
       <div id="custUploadList" style="display:grid;gap:6px;max-height:180px;overflow-y:auto;margin-bottom:12px;"></div>
     </div>
@@ -605,26 +605,49 @@ async function uploadCustFiles(files){
   for(const f of files){
     const key=f.name+f.size
     const item=document.createElement('div')
-    item.style.cssText='display:flex;align-items:center;gap:8px;padding:7px 10px;background:#f5f5f3;border-radius:8px;font-size:13px;'
-    item.innerHTML=`<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${f.name}</span><span id="cst_${key}" style="color:var(--muted);font-size:12px;flex-shrink:0;">待機中</span>`
+    item.style.cssText='display:flex;flex-direction:column;gap:4px;padding:7px 10px;background:#f5f5f3;border-radius:8px;font-size:13px;'
+    const isVideo=f.type.startsWith('video/')
+    const sizeStr=f.size>1048576?`${(f.size/1048576).toFixed(1)}MB`:`${Math.round(f.size/1024)}KB`
+    item.innerHTML=`<div style="display:flex;align-items:center;gap:8px;"><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${f.name}</span><span style="color:var(--muted);font-size:11px;">${isVideo?'🎬':'🖼'} ${sizeStr}</span><span id="cst_${key}" style="color:var(--muted);font-size:12px;flex-shrink:0;">待機中</span></div><div id="cpb_${key}" style="display:none;height:3px;background:#e0ddd8;border-radius:2px;overflow:hidden;"><div id="cpbi_${key}" style="height:100%;background:#8b7a38;width:0%;transition:width .3s;"></div></div>`
     list.appendChild(item)
     items[key]=f
   }
   let done=0,errors=0
   for(const[key,f]of Object.entries(items)){
     const st=document.getElementById(`cst_${key}`)
+    const pb=document.getElementById(`cpb_${key}`)
+    const pbi=document.getElementById(`cpbi_${key}`)
     if(st)st.textContent='送信中...'
     try{
-      const fd=new FormData();fd.append('file',f)
-      const res=await fetch(`${W}/api/album/${token}/upload`,{method:'POST',body:fd})
-      if(res.ok){done++;if(st){st.textContent='✅';st.style.color='#1a7a3c'}}
-      else throw new Error()
+      const LARGE=10*1024*1024
+      if(f.size>LARGE){
+        if(pb)pb.style.display='block'
+        const sesRes=await fetch(`${W}/api/album/${token}/upload/session`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:f.name,mimeType:f.type||'application/octet-stream',size:f.size})})
+        if(!sesRes.ok)throw new Error()
+        const{sessionUri}=await sesRes.json()
+        await new Promise((resolve,reject)=>{
+          const xhr=new XMLHttpRequest()
+          xhr.open('PUT',sessionUri)
+          xhr.setRequestHeader('Content-Type',f.type||'application/octet-stream')
+          xhr.upload.onprogress=e=>{if(e.lengthComputable&&pbi)pbi.style.width=Math.round(e.loaded/e.total*100)+'%'}
+          xhr.onload=()=>xhr.status<300||xhr.status===308?resolve():reject()
+          xhr.onerror=reject
+          xhr.send(f)
+        })
+      }else{
+        const fd=new FormData();fd.append('file',f)
+        const res=await fetch(`${W}/api/album/${token}/upload`,{method:'POST',body:fd})
+        if(!res.ok)throw new Error()
+      }
+      done++
+      if(st){st.textContent='✅';st.style.color='#1a7a3c'}
+      if(pbi)pbi.style.width='100%'
     }catch{errors++;if(st){st.textContent='❌';st.style.color='#c0392b'}}
   }
-  document.getElementById('custUploadTtl').textContent=errors?`完了（${done}枚成功・${errors}枚失敗）`:`✅ ${done}枚を追加しました`
+  document.getElementById('custUploadTtl').textContent=errors?`完了（${done}件成功・${errors}件失敗）`:`✅ ${done}件を追加しました`
   custUploading=false
   document.getElementById('custCloseBtn').disabled=false
-  if(done>0)showToast(`${done}枚の写真を追加しました`)
+  if(done>0)showToast(`${done}件を追加しました`)
 }
 
 if(!token||token==='album')showErr('notfound')
