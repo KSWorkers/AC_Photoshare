@@ -622,15 +622,13 @@ async function uploadCustFiles(files){
       const LARGE=10*1024*1024
       if(f.size>LARGE){
         if(pb)pb.style.display='block'
-        const sesRes=await fetch(`${W}/api/album/${token}/upload/session`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:f.name,mimeType:f.type||'application/octet-stream',size:f.size})})
-        if(!sesRes.ok)throw new Error()
-        const{sessionUri}=await sesRes.json()
         await new Promise((resolve,reject)=>{
           const xhr=new XMLHttpRequest()
-          xhr.open('PUT',sessionUri)
+          xhr.open('POST',`${W}/api/album/${token}/upload/stream`)
+          xhr.setRequestHeader('X-File-Name',encodeURIComponent(f.name))
           xhr.setRequestHeader('Content-Type',f.type||'application/octet-stream')
           xhr.upload.onprogress=e=>{if(e.lengthComputable&&pbi)pbi.style.width=Math.round(e.loaded/e.total*100)+'%'}
-          xhr.onload=()=>xhr.status<300||xhr.status===308?resolve():reject()
+          xhr.onload=()=>xhr.status===200?resolve():reject()
           xhr.onerror=reject
           xhr.send(f)
         })
