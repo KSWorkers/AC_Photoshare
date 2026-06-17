@@ -619,6 +619,7 @@ async function uploadCustFiles(files){
     const pbi=document.getElementById(`cpbi_${key}`)
     if(st)st.textContent='送信中...'
     try{
+      let uploadedId=null
       const LARGE=10*1024*1024
       if(f.size>LARGE){
         if(pb)pb.style.display='block'
@@ -636,22 +637,41 @@ async function uploadCustFiles(files){
           const d=await cRes.json()
           offset=end
           if(pbi)pbi.style.width=Math.round(offset/f.size*100)+'%'
-          if(d.status==='complete')break
+          if(d.status==='complete'){uploadedId=d.id;break}
         }
       }else{
         const fd=new FormData();fd.append('file',f)
         const res=await fetch(`${W}/api/album/${token}/upload`,{method:'POST',body:fd})
         if(!res.ok)throw new Error()
+        const d=await res.json();uploadedId=d.id
       }
       done++
-      if(st){st.textContent='✅';st.style.color='#1a7a3c'}
+      if(uploadedId){
+        const s=JSON.parse(sessionStorage.getItem(`uploads_${token}`)||'[]')
+        s.push(uploadedId);sessionStorage.setItem(`uploads_${token}`,JSON.stringify(s))
+        if(st)st.innerHTML=`<button onclick="deleteCustFile('${uploadedId}',this)" style="font-size:11px;padding:2px 6px;border:1px solid rgba(192,57,43,.3);border-radius:4px;background:transparent;color:#c0392b;cursor:pointer;">削除</button>`
+      }else{if(st)st.innerHTML='<span style="color:#1a7a3c;">✅</span>'}
       if(pbi)pbi.style.width='100%'
-    }catch{errors++;if(st){st.textContent='❌';st.style.color='#c0392b'}}
+    }catch{errors++;if(st)st.innerHTML='<span style="color:#c0392b;">❌</span>'}
   }
   document.getElementById('custUploadTtl').textContent=errors?`完了（${done}件成功・${errors}件失敗）`:`✅ ${done}件を追加しました`
   custUploading=false
   document.getElementById('custCloseBtn').disabled=false
   if(done>0)showToast(`${done}件を追加しました`)
+}
+
+async function deleteCustFile(fileId,btn){
+  if(!confirm('このファイルを削除しますか？'))return
+  btn.disabled=true;btn.textContent='削除中...'
+  const res=await fetch(`${W}/api/album/${token}/files/${fileId}`,{method:'DELETE'})
+  if(res.ok){
+    const row=document.getElementById(`cuf_${fileId}`)
+    if(row)row.remove()
+    showToast('削除しました')
+    const s=sessionStorage.getItem(`uploads_${token}`)
+    if(s){const arr=JSON.parse(s).filter(id=>id!==fileId);sessionStorage.setItem(`uploads_${token}`,JSON.stringify(arr))}
+  }else{btn.disabled=false;btn.textContent='削除';showToast('削除に失敗しました')}
+}
 }
 
 if(!token||token==='album')showErr('notfound')

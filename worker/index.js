@@ -455,13 +455,14 @@ export default {
         const contentRange=req.headers.get('X-Content-Range')
         const mimeType=req.headers.get('Content-Type')||'application/octet-stream'
         if(!sessionUri||!contentRange)return errR('Missing headers',400)
-        const chunkRes=await fetch(sessionUri,{method:'PUT',headers:{'Content-Range':contentRange,'Content-Type':mimeType},body:req.body})
+        const buf=await req.arrayBuffer()
+        const chunkRes=await fetch(sessionUri,{method:'PUT',headers:{'Content-Range':contentRange,'Content-Type':mimeType,'Content-Length':String(buf.byteLength)},body:buf})
         if(chunkRes.status===308)return jsonR({status:'continue'})
         if(chunkRes.status===200||chunkRes.status===201){const r=await chunkRes.json();return jsonR({status:'complete',id:r.id,name:r.name})}
         throw new Error(`Chunk: ${chunkRes.status} ${await chunkRes.text()}`)
       }
 
-      // ══ お客さんアップロード セッション開始（大容量動画用）══
+      // ══ お客さんアップロード セッション開始 ══
       const pubSessionMatch2=path.match(/^\/api\/album\/([a-z0-9]+)\/upload\/session$/)
       if(pubSessionMatch2&&req.method==='POST'){
         const t=pubSessionMatch2[1],album=await getAlbum(env,t)
@@ -480,7 +481,21 @@ export default {
         return jsonR({sessionUri:sesRes.headers.get('Location')})
       }
 
-      // ══ 管理者アップロード チャンク転送（大容量動画用）══
+      // ══ お客さんファイル削除 ══
+      const pubDelFileMatch=path.match(/^\/api\/album\/([a-z0-9]+)\/files\/([^/]+)$/)
+      if(pubDelFileMatch&&req.method==='DELETE'){
+        const t=pubDelFileMatch[1],fileId=pubDelFileMatch[2]
+        const album=await getAlbum(env,t)
+        if(!album)return errR('Not found',404)
+        if(album.published===false)return errR('Not published',403)
+        const at=await getAccessToken(env,false)
+        const info=await driveReq(`/files/${fileId}?fields=parents&supportsAllDrives=true`,at)
+        if(!info.parents?.includes(album.folderId))return errR('Forbidden',403)
+        await deleteFile(fileId,at)
+        return jsonR({ok:true})
+      }
+
+      // ══ 管理者アップロード チャンク転送 ══
       const adminChunkMatch=path.match(/^\/api\/admin\/albums\/([a-z0-9]+)\/upload\/chunk$/)
       if(adminChunkMatch&&req.method==='POST'){
         if(!await isAdmin(req,env))return errR('Unauthorized',401)
@@ -488,13 +503,14 @@ export default {
         const contentRange=req.headers.get('X-Content-Range')
         const mimeType=req.headers.get('Content-Type')||'application/octet-stream'
         if(!sessionUri||!contentRange)return errR('Missing headers',400)
-        const chunkRes=await fetch(sessionUri,{method:'PUT',headers:{'Content-Range':contentRange,'Content-Type':mimeType},body:req.body})
+        const buf=await req.arrayBuffer()
+        const chunkRes=await fetch(sessionUri,{method:'PUT',headers:{'Content-Range':contentRange,'Content-Type':mimeType,'Content-Length':String(buf.byteLength)},body:buf})
         if(chunkRes.status===308)return jsonR({status:'continue'})
         if(chunkRes.status===200||chunkRes.status===201){const r=await chunkRes.json();return jsonR({status:'complete',id:r.id,name:r.name})}
         throw new Error(`Chunk: ${chunkRes.status} ${await chunkRes.text()}`)
       }
 
-      // ══ 管理者アップロード セッション開始（大容量動画用）══
+      // ══ 管理者アップロード セッション開始 ══
       const adminSessionMatch2=path.match(/^\/api\/admin\/albums\/([a-z0-9]+)\/upload\/session$/)
       if(adminSessionMatch2&&req.method==='POST'){
         if(!await isAdmin(req,env))return errR('Unauthorized',401)
@@ -509,6 +525,27 @@ export default {
         })
         if(!sesRes.ok)throw new Error(`Session: ${await sesRes.text()}`)
         return jsonR({sessionUri:sesRes.headers.get('Location')})
+      }
+
+      // ══ 管理者ファイル一覧 ══
+      const adminFilesMatch=path.match(/^\/api\/admin\/albums\/([a-z0-9]+)\/files$/)
+      if(adminFilesMatch&&req.method==='GET'){
+        if(!await isAdmin(req,env))return errR('Unauthorized',401)
+        const t=adminFilesMatch[1],album=await getAlbum(env,t)
+        if(!album)return errR('Not found',404)
+        const at=await getAccessToken(env,false)
+        const[photos,videos]=await Promise.all([listPhotos(album.folderId,at),listVideos(album.folderId,at)])
+        return jsonR({photos,videos})
+      }
+
+      // ══ 管理者ファイル削除 ══
+      const adminDelFileMatch=path.match(/^\/api\/admin\/albums\/([a-z0-9]+)\/files\/([^/]+)$/)
+      if(adminDelFileMatch&&req.method==='DELETE'){
+        if(!await isAdmin(req,env))return errR('Unauthorized',401)
+        const fileId=adminDelFileMatch[2]
+        const at=await getAccessToken(env,false)
+        await deleteFile(fileId,at)
+        return jsonR({ok:true})
       }
 
       // ══ お客さんアップロード（公開）══════════════════

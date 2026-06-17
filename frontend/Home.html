@@ -353,6 +353,22 @@ body{font-family:-apple-system,'Hiragino Sans',sans-serif;background:var(--bg);c
   </div>
 </div>
 
+<!-- ファイル管理モーダル -->
+<div class="mo" id="moFiles" onclick="if(event.target===this)closeFiles()">
+  <div class="md" style="max-width:560px;">
+    <div class="mh">ファイル管理</div>
+    <div class="mb" style="gap:12px;">
+      <div style="display:flex;gap:8px;">
+        <button class="ft" id="ftab-photo" onclick="switchFtab('photo')" style="">写真</button>
+        <button class="ft on" id="ftab-video" onclick="switchFtab('video')">動画</button>
+      </div>
+      <div id="fileListWrap" style="max-height:55vh;overflow-y:auto;display:grid;gap:8px;"></div>
+      <div id="fileListLoad" style="text-align:center;color:var(--mt);font-size:13px;">読み込み中...</div>
+    </div>
+    <div class="mf"><button class="btn btn-s" onclick="closeFiles()">閉じる</button></div>
+  </div>
+</div>
+
 <!-- QRコードモーダル -->
 <div class="mo" id="moQr" onclick="if(event.target===this)closeQr()">
   <div class="md" style="max-width:400px;">
@@ -509,6 +525,7 @@ function renderGrid(){
           <div style="display:flex;gap:5px;">
             <a class="btn btn-s btn-sm" href="${url}" target="_blank" style="flex:1;justify-content:center;">アルバムを開く</a>
             <button class="btn btn-s btn-sm" onclick="openUpload('${a.token}')">アップロード</button>
+            <button class="btn btn-s btn-sm" onclick="openFiles('${a.token}')">ファイル管理</button>
             <button class="btn btn-s btn-sm" onclick="openSettingsPopup('${a.token}',event)" style="padding:5px 10px;" title="設定">⚙️</button>
           </div>
         </div>
@@ -987,6 +1004,48 @@ let uploadAlbumToken=''
 function openUpload(albumToken){uploadAlbumToken=albumToken;document.getElementById('uploadList').innerHTML='';document.getElementById('uploadFileInput').value='';document.getElementById('moUpload').classList.add('on')}
 function closeUpload(){document.getElementById('moUpload').classList.remove('on')}
 function onFilesSelected(){const files=Array.from(document.getElementById('uploadFileInput').files);if(!files.length)return;uploadFiles(files)}
+
+// ─── ファイル管理 ─────────────────────────────────────
+let filesToken='',filesData={photos:[],videos:[]},curFtab='photo'
+async function openFiles(t){
+  filesToken=t
+  document.getElementById('moFiles').classList.add('on')
+  document.getElementById('fileListLoad').style.display='block'
+  document.getElementById('fileListWrap').innerHTML=''
+  const res=await fetch(`${W}/api/admin/albums/${t}/files`,{headers:{Authorization:`Bearer ${tok}`}})
+  if(!res.ok){document.getElementById('fileListLoad').textContent='読み込み失敗';return}
+  filesData=await res.json()
+  document.getElementById('fileListLoad').style.display='none'
+  switchFtab(filesData.videos.length>0?'video':'photo')
+}
+function closeFiles(){document.getElementById('moFiles').classList.remove('on')}
+function switchFtab(tab){
+  curFtab=tab
+  document.getElementById('ftab-photo').className='ft'+(tab==='photo'?' on':'')
+  document.getElementById('ftab-video').className='ft'+(tab==='video'?' on':'')
+  renderFileList()
+}
+function renderFileList(){
+  const list=document.getElementById('fileListWrap')
+  const items=curFtab==='photo'?filesData.photos:filesData.videos
+  if(!items.length){list.innerHTML=`<div style="color:var(--mt);font-size:13px;text-align:center;padding:20px 0;">${curFtab==='photo'?'写真':'動画'}がありません</div>`;return}
+  list.innerHTML=items.map(f=>{
+    const sizeStr=f.size?`${(Number(f.size)/1048576).toFixed(1)}MB`:''
+    const thumb=f.thumbnailLink?`<img src="${f.thumbnailLink}" style="width:52px;height:40px;object-fit:cover;border-radius:4px;flex-shrink:0;">`:`<div style="width:52px;height:40px;background:var(--bg);border-radius:4px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:18px;">${curFtab==='video'?'🎬':'🖼'}</div>`
+    return `<div style="display:flex;align-items:center;gap:10px;padding:8px 10px;background:var(--bg);border:1px solid var(--bd);border-radius:8px;" id="fi_${f.id}">${thumb}<span style="flex:1;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${f.name}</span><span style="font-size:11px;color:var(--mt);flex-shrink:0;">${sizeStr}</span><button class="btn btn-d btn-sm" onclick="deleteMediaFile('${f.id}')" style="flex-shrink:0;">削除</button></div>`
+  }).join('')
+}
+async function deleteMediaFile(fileId){
+  if(!confirm('このファイルを削除しますか？'))return
+  const el=document.getElementById(`fi_${fileId}`)
+  if(el)el.style.opacity='0.4'
+  const res=await fetch(`${W}/api/admin/albums/${filesToken}/files/${fileId}`,{method:'DELETE',headers:{Authorization:`Bearer ${tok}`}})
+  if(res.ok){
+    filesData.photos=filesData.photos.filter(f=>f.id!==fileId)
+    filesData.videos=filesData.videos.filter(f=>f.id!==fileId)
+    renderFileList();showToast('削除しました')
+  }else{if(el)el.style.opacity='1';showToast('削除に失敗しました')}
+}
 
 async function uploadFiles(files){
   const list=document.getElementById('uploadList')
