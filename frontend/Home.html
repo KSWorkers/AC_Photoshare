@@ -362,8 +362,14 @@ body{font-family:-apple-system,'Hiragino Sans',sans-serif;background:var(--bg);c
         <button class="btn btn-s btn-sm" id="qrTabPlain" onclick="setQrMode('plain')" style="font-size:12px;">QRのみ</button>
         <button class="btn btn-p btn-sm" id="qrTabCard" onclick="setQrMode('card')" style="font-size:12px;">デザインカード</button>
       </div>
+      <div id="qrCardLabelWrap" style="display:none;width:100%;">
+        <div class="fd" style="gap:4px;">
+          <label style="font-size:12px;">カード表示名（アルバム名・フォルダ名は変わりません）</label>
+          <input type="text" id="qrCardLabel" style="font-size:13px;" placeholder="アルバム名" oninput="renderQrCard()">
+        </div>
+      </div>
       <div id="qrCanvas" style="display:flex;justify-content:center;"></div>
-      <canvas id="qrCardCanvas" style="display:none;border-radius:12px;max-width:100%;"></canvas>
+      <canvas id="qrCardCanvas" style="display:none;border-radius:4px;max-width:100%;"></canvas>
       <div style="font-size:11px;color:var(--mt);word-break:break-all;text-align:center;" id="qrUrl"></div>
     </div>
     <div class="mf"><button class="btn btn-s" onclick="closeQr()">閉じる</button><button class="btn btn-p" onclick="downloadQr()">ダウンロード</button></div>
@@ -1044,6 +1050,7 @@ function showQr(url,name,e){
   e.stopPropagation()
   qrCurrentUrl=url;qrCurrentName=name
   document.getElementById('qrUrl').textContent=url
+  document.getElementById('qrCardLabel').value=name
   const wrap=document.getElementById('qrCanvas')
   wrap.innerHTML=''
   qrInstance=new QRCode(wrap,{text:url,width:200,height:200,correctLevel:QRCode.CorrectLevel.M})
@@ -1055,6 +1062,7 @@ function setQrMode(mode){
   document.getElementById('qrTabPlain').className=`btn btn-sm ${mode==='plain'?'btn-p':'btn-s'}`;document.getElementById('qrTabPlain').style.fontSize='12px'
   document.getElementById('qrTabCard').className=`btn btn-sm ${mode==='card'?'btn-p':'btn-s'}`;document.getElementById('qrTabCard').style.fontSize='12px'
   document.getElementById('qrCanvas').style.display=mode==='plain'?'flex':'none'
+  document.getElementById('qrCardLabelWrap').style.display=mode==='card'?'block':'none'
   const cc=document.getElementById('qrCardCanvas')
   cc.style.display=mode==='card'?'block':'none'
   if(mode==='card')renderQrCard()
@@ -1075,11 +1083,11 @@ function renderQrCard(){
   // 英字小ラベル
   ctx.font='300 9px Georgia,"Times New Roman",serif'
   ctx.fillStyle='#8b7a38';ctx.letterSpacing='0.2em'
-  ctx.fillText('A L C Y O N E   C O U R T   S A N O',W/2,36)
+  ctx.fillText('A L C Y O N E   C O U R T .   S A N O',W/2,36)
   // メインタイトル
   ctx.font='500 22px Georgia,"Times New Roman",serif'
   ctx.fillStyle='#2c2418'
-  ctx.fillText('PhotoShare',W/2,66)
+  ctx.fillText('ShareGraph',W/2,66)
   // 英字サブ
   ctx.font='300 9px Georgia,"Times New Roman",serif'
   ctx.fillStyle='#8b7a38'
@@ -1099,7 +1107,7 @@ function renderQrCard(){
   // アルバム名
   ctx.font='500 15px Georgia,"Times New Roman",serif'
   ctx.fillStyle='#2c2418';ctx.textAlign='center'
-  const nameStr=qrCurrentName||'アルバム'
+  const nameStr=document.getElementById('qrCardLabel').value||qrCurrentName||'アルバム'
   wrapText(ctx,nameStr,W/2,qy+qrSize+40,W-pad*2,22)
   // スキャン案内
   ctx.font='300 10px Georgia,"Times New Roman",serif'
@@ -1117,7 +1125,7 @@ function renderQrCard(){
   // コピーライト
   ctx.font='300 8px Georgia,"Times New Roman",serif'
   ctx.fillStyle='rgba(139,122,56,0.7)';ctx.textAlign='center'
-  ctx.fillText('© Alcyone Court Sano',W/2,H-16)
+  ctx.fillText('© Alcyone Court. Sano',W/2,H-16)
 }
 function roundRect(ctx,x,y,w,h,r){ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);ctx.arcTo(x+w,y,x+w,y+r,r);ctx.lineTo(x+w,y+h-r);ctx.arcTo(x+w,y+h,x+w-r,y+h,r);ctx.lineTo(x+r,y+h);ctx.arcTo(x,y+h,x,y+h-r,r);ctx.lineTo(x,y+r);ctx.arcTo(x,y,x+r,y,r);ctx.closePath()}
 function wrapText(ctx,text,x,y,maxW,lineH){const words=text.split('');let line='';for(const c of words){const t=line+c;if(ctx.measureText(t).width>maxW&&line){ctx.fillText(line,x,y);line=c;y+=lineH}else line=t}if(line)ctx.fillText(line,x,y)}
