@@ -1062,69 +1062,62 @@ function setQrMode(mode){
 function renderQrCard(){
   const qrEl=document.getElementById('qrCanvas').querySelector('canvas')||document.getElementById('qrCanvas').querySelector('img')
   if(!qrEl)return
-  const W=400,H=560,pad=36,qrSize=200
+  const W=400,H=560,pad=40,qrSize=200
   const cc=document.getElementById('qrCardCanvas')
   cc.width=W;cc.height=H
   const ctx=cc.getContext('2d')
-  // 背景：クリーム～アイボリーのグラデーション
-  const grad=ctx.createLinearGradient(0,0,0,H)
-  grad.addColorStop(0,'#faf8f3');grad.addColorStop(1,'#f2ede2')
-  ctx.fillStyle=grad
-  ctx.fillRect(0,0,W,H)
-  // 外枠（ゴールド二重線）
-  ctx.strokeStyle='#c9a84c';ctx.lineWidth=1.5
-  ctx.strokeRect(14,14,W-28,H-28)
-  ctx.strokeStyle='rgba(201,168,76,0.4)';ctx.lineWidth=0.8
-  ctx.strokeRect(20,20,W-40,H-40)
-  // ロゴエリア上部
-  ctx.fillStyle='#c9a84c';ctx.textAlign='center'
-  // 装飾ライン
-  ctx.lineWidth=0.8;ctx.strokeStyle='#c9a84c'
-  const lx1=W/2-70,lx2=W/2+70,ly=54
-  ctx.beginPath();ctx.moveTo(lx1,ly);ctx.lineTo(lx2,ly);ctx.stroke()
-  ctx.beginPath();ctx.arc(W/2,ly,3,0,Math.PI*2);ctx.fillStyle='#c9a84c';ctx.fill()
-  // ブランド名（英字）
-  ctx.font='italic 11px Georgia,"Times New Roman",serif'
-  ctx.fillStyle='#8b6914';ctx.textAlign='center'
-  ctx.fillText('Alcyone Court Sano',W/2,44)
-  // PhotoShare
-  ctx.font='700 18px Georgia,"Times New Roman",serif'
+  // 背景：温かいクリーム
+  ctx.fillStyle='#faf8f2';ctx.fillRect(0,0,W,H)
+  // 上部ベージュ帯
+  ctx.fillStyle='#f0ebe0';ctx.fillRect(0,0,W,108)
+  // ブランド名エリア
+  ctx.textAlign='center'
+  // 英字小ラベル
+  ctx.font='300 9px Georgia,"Times New Roman",serif'
+  ctx.fillStyle='#8b7a38';ctx.letterSpacing='0.2em'
+  ctx.fillText('A L C Y O N E   C O U R T   S A N O',W/2,36)
+  // メインタイトル
+  ctx.font='500 22px Georgia,"Times New Roman",serif'
   ctx.fillStyle='#2c2418'
-  ctx.fillText('PhotoShare',W/2,78)
-  // 装飾ライン下
-  ctx.lineWidth=0.8;ctx.strokeStyle='#c9a84c'
-  ctx.beginPath();ctx.moveTo(lx1,90);ctx.lineTo(lx2,90);ctx.stroke()
-  ctx.beginPath();ctx.arc(W/2,90,3,0,Math.PI*2);ctx.fillStyle='#c9a84c';ctx.fill()
-  // QR枠（ゴールドボーダー）
-  const qx=(W-qrSize)/2,qy=112
+  ctx.fillText('PhotoShare',W/2,66)
+  // 英字サブ
+  ctx.font='300 9px Georgia,"Times New Roman",serif'
+  ctx.fillStyle='#8b7a38'
+  ctx.fillText('— PHOTO  DELIVERY  SERVICE —',W/2,88)
+  // 区切り線（オリーブゴールド）
+  ctx.strokeStyle='#8b7a38';ctx.lineWidth=0.8
+  ctx.beginPath();ctx.moveTo(pad,108);ctx.lineTo(W-pad,108);ctx.stroke()
+  // QR枠（シャドウ + 細ボーダー）
+  const qx=(W-qrSize)/2,qy=128
+  ctx.shadowColor='rgba(44,36,24,0.10)';ctx.shadowBlur=16;ctx.shadowOffsetY=4
   ctx.fillStyle='#ffffff'
-  ctx.shadowColor='rgba(0,0,0,0.08)';ctx.shadowBlur=12;ctx.shadowOffsetY=4
-  ctx.beginPath();roundRect(ctx,qx-14,qy-14,qrSize+28,qrSize+28,4);ctx.fill()
+  ctx.beginPath();roundRect(ctx,qx-14,qy-14,qrSize+28,qrSize+28,3);ctx.fill()
   ctx.shadowBlur=0;ctx.shadowOffsetY=0
-  ctx.strokeStyle='#c9a84c';ctx.lineWidth=1
-  ctx.beginPath();roundRect(ctx,qx-14,qy-14,qrSize+28,qrSize+28,4);ctx.stroke()
+  ctx.strokeStyle='rgba(139,122,56,0.3)';ctx.lineWidth=0.8
+  ctx.beginPath();roundRect(ctx,qx-14,qy-14,qrSize+28,qrSize+28,3);ctx.stroke()
   ctx.drawImage(qrEl,qx,qy,qrSize,qrSize)
   // アルバム名
-  ctx.font='600 16px Georgia,"Times New Roman",serif'
+  ctx.font='500 15px Georgia,"Times New Roman",serif'
   ctx.fillStyle='#2c2418';ctx.textAlign='center'
   const nameStr=qrCurrentName||'アルバム'
-  wrapText(ctx,nameStr,W/2,qy+qrSize+42,W-pad*2,22)
-  // 区切り装飾
-  const dy=qy+qrSize+72
-  ctx.strokeStyle='rgba(201,168,76,0.5)';ctx.lineWidth=0.8
-  ctx.beginPath();ctx.moveTo(pad+20,dy);ctx.lineTo(W-pad-20,dy);ctx.stroke()
+  wrapText(ctx,nameStr,W/2,qy+qrSize+40,W-pad*2,22)
   // スキャン案内
-  ctx.font='11px Georgia,"Times New Roman",serif'
-  ctx.fillStyle='#8b6914';ctx.textAlign='center'
-  ctx.fillText('— QRコードをスキャンしてください —',W/2,dy+18)
+  ctx.font='300 10px Georgia,"Times New Roman",serif'
+  ctx.fillStyle='#8b7a38';ctx.textAlign='center'
+  ctx.fillText('QRコードをスキャンしてください',W/2,qy+qrSize+68)
+  // 下部区切り線
+  const dy=H-56
+  ctx.strokeStyle='#8b7a38';ctx.lineWidth=0.8
+  ctx.beginPath();ctx.moveTo(pad,dy);ctx.lineTo(W-pad,dy);ctx.stroke()
   // URL
-  ctx.font='9px "Courier New",monospace'
-  ctx.fillStyle='rgba(44,36,24,0.4)';ctx.textAlign='center'
+  ctx.font='8px "Courier New",monospace'
+  ctx.fillStyle='rgba(44,36,24,0.35)';ctx.textAlign='center'
   const shortUrl=qrCurrentUrl.replace(/^https?:\/\//,'')
-  ctx.fillText(shortUrl,W/2,H-26,W-pad*2)
-  // 下部ゴールドライン
-  ctx.strokeStyle='#c9a84c';ctx.lineWidth=1
-  ctx.beginPath();ctx.moveTo(pad,H-38);ctx.lineTo(W-pad,H-38);ctx.stroke()
+  ctx.fillText(shortUrl,W/2,dy+16,W-pad*2)
+  // コピーライト
+  ctx.font='300 8px Georgia,"Times New Roman",serif'
+  ctx.fillStyle='rgba(139,122,56,0.7)';ctx.textAlign='center'
+  ctx.fillText('© Alcyone Court Sano',W/2,H-16)
 }
 function roundRect(ctx,x,y,w,h,r){ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);ctx.arcTo(x+w,y,x+w,y+r,r);ctx.lineTo(x+w,y+h-r);ctx.arcTo(x+w,y+h,x+w-r,y+h,r);ctx.lineTo(x+r,y+h);ctx.arcTo(x,y+h,x,y+h-r,r);ctx.lineTo(x,y+r);ctx.arcTo(x,y,x+r,y,r);ctx.closePath()}
 function wrapText(ctx,text,x,y,maxW,lineH){const words=text.split('');let line='';for(const c of words){const t=line+c;if(ctx.measureText(t).width>maxW&&line){ctx.fillText(line,x,y);line=c;y+=lineH}else line=t}if(line)ctx.fillText(line,x,y)}
