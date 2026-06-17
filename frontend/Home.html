@@ -1082,7 +1082,9 @@ function renderQrCard(){
   ctx.fillText('A L C Y O N E   C O U R T .   S A N O',W/2,30)
   ctx.font='500 21px Georgia,"Times New Roman",serif'
   ctx.fillStyle='#2c2418'
+  ctx.letterSpacing='0.08em'
   ctx.fillText('ShareGraph',W/2,58)
+  ctx.letterSpacing='0'
   ctx.font='300 9px Georgia,"Times New Roman",serif'
   ctx.fillStyle='#8b7a38'
   ctx.fillText('— PHOTO  SHARING  SERVICE —',W/2,80)
@@ -1099,10 +1101,12 @@ function renderQrCard(){
   ctx.strokeStyle='rgba(139,122,56,0.3)';ctx.lineWidth=0.8
   ctx.beginPath();roundRect(ctx,qx-frameP,qy-frameP,qrSize+frameP*2,qrSize+frameP*2,3);ctx.stroke()
   ctx.drawImage(qrEl,qx,qy,qrSize,qrSize)
-  ctx.font='500 14px Georgia,"Times New Roman",serif'
+  ctx.font='500 21px Georgia,"Times New Roman",serif'
   ctx.fillStyle='#2c2418';ctx.textAlign='center'
+  ctx.letterSpacing='0.08em'
   const nameStr=document.getElementById('qrCardLabel').value||qrCurrentName||'アルバム'
-  wrapText(ctx,nameStr,W/2,qy+qrSize+frameP+16,W-pad*2,20)
+  wrapText(ctx,nameStr,W/2,qy+qrSize+frameP+20,W-pad*2,26)
+  ctx.letterSpacing='0'
   ctx.font='300 9px Georgia,"Times New Roman",serif'
   ctx.fillStyle='#8b7a38';ctx.textAlign='center'
   ctx.fillText('QRコードをスキャンしてください',W/2,qy+qrSize+frameP+36)
