@@ -1070,7 +1070,7 @@ function setQrMode(mode){
 function renderQrCard(){
   const qrEl=document.getElementById('qrCanvas').querySelector('canvas')||document.getElementById('qrCanvas').querySelector('img')
   if(!qrEl)return
-  const W=400,H=480,pad=40,qrSize=196,headerH=100,footerH=48
+  const W=400,H=Math.round(W*91/55),pad=40,qrSize=220,headerH=110,footerH=52
   const cc=document.getElementById('qrCardCanvas')
   cc.width=W;cc.height=H
   const ctx=cc.getContext('2d')
@@ -1079,19 +1079,19 @@ function renderQrCard(){
   ctx.textAlign='center'
   ctx.font='300 9px Georgia,"Times New Roman",serif'
   ctx.fillStyle='#8b7a38'
-  ctx.fillText('A L C Y O N E   C O U R T .   S A N O',W/2,30)
+  ctx.fillText('A L C Y O N E   C O U R T .   S A N O',W/2,33)
   ctx.font='500 21px Georgia,"Times New Roman",serif'
   ctx.fillStyle='#2c2418'
   ctx.letterSpacing='0.08em'
-  ctx.fillText('ShareGraph',W/2,58)
+  ctx.fillText('ShareGraph',W/2,63)
   ctx.letterSpacing='0'
   ctx.font='300 9px Georgia,"Times New Roman",serif'
   ctx.fillStyle='#8b7a38'
-  ctx.fillText('— PHOTO  SHARING  SERVICE —',W/2,80)
+  ctx.fillText('— PHOTO  SHARING  SERVICE —',W/2,86)
   ctx.strokeStyle='#8b7a38';ctx.lineWidth=0.8
   ctx.beginPath();ctx.moveTo(pad,headerH);ctx.lineTo(W-pad,headerH);ctx.stroke()
   // QRブロック（name+scan含む）を上下中央に配置
-  const frameP=12,blockH=(qrSize+frameP*2)+14+20+18
+  const frameP=14,blockH=(qrSize+frameP*2)+18+28+18
   const qy=headerH+Math.round((H-headerH-footerH-blockH)/2)+frameP
   const qx=(W-qrSize)/2
   ctx.shadowColor='rgba(44,36,24,0.10)';ctx.shadowBlur=14;ctx.shadowOffsetY=3
@@ -1105,11 +1105,11 @@ function renderQrCard(){
   ctx.fillStyle='#2c2418';ctx.textAlign='center'
   ctx.letterSpacing='0.08em'
   const nameStr=document.getElementById('qrCardLabel').value||qrCurrentName||'アルバム'
-  wrapText(ctx,nameStr,W/2,qy+qrSize+frameP+20,W-pad*2,26)
+  wrapText(ctx,nameStr,W/2,qy+qrSize+frameP+24,W-pad*2,28)
   ctx.letterSpacing='0'
   ctx.font='300 9px Georgia,"Times New Roman",serif'
   ctx.fillStyle='#8b7a38';ctx.textAlign='center'
-  ctx.fillText('QRコードをスキャンしてください',W/2,qy+qrSize+frameP+36)
+  ctx.fillText('QRコードをスキャンしてください',W/2,qy+qrSize+frameP+52)
   // フッター
   const dy=H-footerH+4
   ctx.strokeStyle='#8b7a38';ctx.lineWidth=0.8
