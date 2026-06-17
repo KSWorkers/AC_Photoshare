@@ -369,7 +369,7 @@ body{font-family:-apple-system,'Hiragino Sans',sans-serif;background:var(--bg);c
         </div>
       </div>
       <div id="qrCanvas" style="display:flex;justify-content:center;"></div>
-      <canvas id="qrCardCanvas" style="display:none;border-radius:4px;max-width:100%;"></canvas>
+      <canvas id="qrCardCanvas" style="display:none;border-radius:4px;max-width:100%;margin:0 auto;"></canvas>
       <div style="font-size:11px;color:var(--mt);word-break:break-all;text-align:center;" id="qrUrl"></div>
     </div>
     <div class="mf"><button class="btn btn-s" onclick="closeQr()">閉じる</button><button class="btn btn-p" onclick="downloadQr()">ダウンロード</button></div>
@@ -1091,7 +1091,7 @@ function renderQrCard(){
   // 英字サブ
   ctx.font='300 9px Georgia,"Times New Roman",serif'
   ctx.fillStyle='#8b7a38'
-  ctx.fillText('— PHOTO  DELIVERY  SERVICE —',W/2,88)
+  ctx.fillText('— PHOTO  SHARING  SERVICE —',W/2,88)
   // 区切り線（オリーブゴールド）
   ctx.strokeStyle='#8b7a38';ctx.lineWidth=0.8
   ctx.beginPath();ctx.moveTo(pad,108);ctx.lineTo(W-pad,108);ctx.stroke()
