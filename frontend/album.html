@@ -464,8 +464,9 @@ function renderGrid() {
     if(row.length)rows.push([...row])
     grid.innerHTML=rows.map(r=>{const tg=(r.length-1)*gap,tw=r.reduce((s,p)=>s+p._w,0),sc=(cw-tg)/tw,rh=Math.round(th*sc);return`<div class="grow">${r.map(p=>`<div class="gi" id="gi${p._i}" style="width:${Math.round(p._w*sc)}px;height:${rh}px;" onclick="onClick(${p._i},event)"><img src="${p.thumb}" loading="lazy"><div class="gi-ck"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></div></div>`).join('')}</div>`}).join('')
   }
+  if(selMode){grid.classList.add('sel-mode');selIds.forEach(i=>document.getElementById(`gi${i}`)?.classList.add('sel'))}
 }
-window.addEventListener('resize',()=>{if(photos.length)renderGrid()})
+window.addEventListener('resize',()=>{if(photos.length&&!selMode)renderGrid()})
 
 // スクロール中のクリック誤検知を防ぐタッチ追跡
 let _touchStartY=0, _touchStartX=0, _touchScrolled=false
