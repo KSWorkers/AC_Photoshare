@@ -647,13 +647,25 @@ function openCustUpload(){
 }
 function closeCustUpload(){if(custUploading)return;document.getElementById('custUploadModal').classList.remove('on')}
 function onCustFiles(){const files=Array.from(document.getElementById('custFileInput').files);if(!files.length)return;uploadCustFiles(files)}
+function fileKey(f){return`${f.name}|${f.size}|${f.lastModified}`}
 async function uploadCustFiles(files){
   custUploading=true
   document.getElementById('custCloseBtn').disabled=true
   const list=document.getElementById('custUploadList')
+  const uploadedKeys=JSON.parse(sessionStorage.getItem(`upload_keys_${token}`)||'[]')
   const items={}
+  let skipped=0
   for(const f of files){
+    const fk=fileKey(f)
     const key=f.name+f.size
+    if(uploadedKeys.includes(fk)){
+      const item=document.createElement('div')
+      item.style.cssText='display:flex;align-items:center;gap:8px;padding:7px 10px;background:#f5f5f3;border-radius:8px;font-size:13px;'
+      item.innerHTML=`<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${f.name}</span><span style="color:#c0392b;font-size:12px;flex-shrink:0;">⚠️ 送信済み</span>`
+      list.appendChild(item)
+      skipped++
+      continue
+    }
     const item=document.createElement('div')
     item.style.cssText='display:flex;flex-direction:column;gap:4px;padding:7px 10px;background:#f5f5f3;border-radius:8px;font-size:13px;'
     const isVideo=f.type.startsWith('video/')
@@ -699,12 +711,17 @@ async function uploadCustFiles(files){
       if(uploadedId){
         const s=JSON.parse(sessionStorage.getItem(`uploads_${token}`)||'[]')
         s.push(uploadedId);sessionStorage.setItem(`uploads_${token}`,JSON.stringify(s))
+        const ks=JSON.parse(sessionStorage.getItem(`upload_keys_${token}`)||'[]')
+        ks.push(fileKey(f));sessionStorage.setItem(`upload_keys_${token}`,JSON.stringify(ks))
+        const km=JSON.parse(sessionStorage.getItem(`upload_keymap_${token}`)||'{}')
+        km[uploadedId]=fileKey(f);sessionStorage.setItem(`upload_keymap_${token}`,JSON.stringify(km))
         if(st)st.innerHTML=`<button onclick="deleteCustFile('${uploadedId}',this)" style="font-size:11px;padding:2px 6px;border:1px solid rgba(192,57,43,.3);border-radius:4px;background:transparent;color:#c0392b;cursor:pointer;">削除</button>`
       }else{if(st)st.innerHTML='<span style="color:#1a7a3c;">✅</span>'}
       if(pbi)pbi.style.width='100%'
     }catch{errors++;if(st)st.innerHTML='<span style="color:#c0392b;">❌</span>'}
   }
-  document.getElementById('custUploadTtl').textContent=errors?`完了（${done}件成功・${errors}件失敗）`:`✅ ${done}件を追加しました`
+  const skipMsg=skipped?`・${skipped}件スキップ`:''
+  document.getElementById('custUploadTtl').textContent=errors?`完了（${done}件成功・${errors}件失敗${skipMsg}）`:skipped&&!done?`${skipped}件はすでに送信済みです`:`✅ ${done}件を追加しました${skipMsg}`
   custUploading=false
   document.getElementById('custCloseBtn').disabled=false
   if(done>0)showToast(`${done}件を追加しました`)
@@ -720,6 +737,9 @@ async function deleteCurrent(){
     photos.splice(cur,1)
     const s=JSON.parse(sessionStorage.getItem(`uploads_${token}`)||'[]')
     sessionStorage.setItem(`uploads_${token}`,JSON.stringify(s.filter(id=>id!==p.id)))
+    const km=JSON.parse(sessionStorage.getItem(`upload_keymap_${token}`)||'{}')
+    const ks=JSON.parse(sessionStorage.getItem(`upload_keys_${token}`)||'[]')
+    if(km[p.id]){sessionStorage.setItem(`upload_keys_${token}`,JSON.stringify(ks.filter(k=>k!==km[p.id])));delete km[p.id];sessionStorage.setItem(`upload_keymap_${token}`,JSON.stringify(km))}
     if(photos.length===0){closeLb();renderGrid();return}
     if(cur>=photos.length)cur=photos.length-1
     updLb();renderGrid()
@@ -740,6 +760,9 @@ async function deleteCustFile(fileId,btn){
     showToast('削除しました')
     const s=sessionStorage.getItem(`uploads_${token}`)
     if(s){const arr=JSON.parse(s).filter(id=>id!==fileId);sessionStorage.setItem(`uploads_${token}`,JSON.stringify(arr))}
+    const km=JSON.parse(sessionStorage.getItem(`upload_keymap_${token}`)||'{}')
+    const ks=JSON.parse(sessionStorage.getItem(`upload_keys_${token}`)||'[]')
+    if(km[fileId]){sessionStorage.setItem(`upload_keys_${token}`,JSON.stringify(ks.filter(k=>k!==km[fileId])));delete km[fileId];sessionStorage.setItem(`upload_keymap_${token}`,JSON.stringify(km))}
   }else{btn.disabled=false;btn.textContent='削除';showToast('削除に失敗しました')}
 }
 
