@@ -694,8 +694,18 @@ async function uploadCustFiles(files){
         const cr=`bytes ${offset}-${end-1}/${f.size}`
         const cRes=await fetch(sessionUri,{method:'PUT',headers:{'Content-Type':f.type||'application/octet-stream','Content-Length':String(chunk.size),'Content-Range':cr},body:chunk})
         if(cRes.status===308){offset=end;if(pbi)pbi.style.width=Math.round(end/f.size*100)+'%';continue}
-        if(cRes.status===200||cRes.status===201){const r=await cRes.json();uploadedId=r.id;break}
+        if(cRes.status===200||cRes.status===201){
+          try{const r=await cRes.json();uploadedId=r.id}catch{}
+          break
+        }
         throw new Error(`Upload failed: ${cRes.status}`)
+      }
+      // レスポンス読み取り失敗時はWorkerにIDを問い合わせ
+      if(!uploadedId){
+        try{
+          const idRes=await fetch(`${W}/api/album/${token}/upload/lookup`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:f.name})})
+          if(idRes.ok){const d=await idRes.json();uploadedId=d.id}
+        }catch{}
       }
       done++
       if(uploadedId){

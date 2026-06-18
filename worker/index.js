@@ -484,6 +484,22 @@ export default {
       }
 
       // ══ お客さんファイル削除 ══
+      // ══ アップロード後ファイルID照合 ══
+      const pubLookupMatch=path.match(/^\/api\/album\/([a-z0-9]+)\/upload\/lookup$/)
+      if(pubLookupMatch&&req.method==='POST'){
+        const t=pubLookupMatch[1],album=await getAlbum(env,t)
+        if(!album)return errR('Not found',404)
+        if(!album.allowCustomerUpload)return errR('Upload not allowed',403)
+        const{name}=await req.json()
+        if(!name)return errR('name required',400)
+        const at=await getAccessToken(env,false)
+        const q=encodeURIComponent(`'${album.folderId}' in parents and name='${name.replace(/'/g,"\\'")}' and trashed=false`)
+        const r=await driveReq(`/files?q=${q}&fields=files(id,name)&supportsAllDrives=true&includeItemsFromAllDrives=true&orderBy=createdTime desc&pageSize=1`,at)
+        const file=r.files?.[0]
+        if(!file)return errR('Not found',404)
+        return jsonR({id:file.id,name:file.name})
+      }
+
       const pubDelFileMatch=path.match(/^\/api\/album\/([a-z0-9]+)\/files\/([^/]+)$/)
       if(pubDelFileMatch&&req.method==='DELETE'){
         const t=pubDelFileMatch[1],fileId=pubDelFileMatch[2]
