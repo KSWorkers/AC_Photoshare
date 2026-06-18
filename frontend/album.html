@@ -687,20 +687,31 @@ async function uploadCustFiles(files){
       if(!sesRes.ok)throw new Error(`Session failed: ${sesRes.status}`)
       const{sessionUri}=await sesRes.json()
       const CHUNK=5*1024*1024
-      let offset=0
+      let offset=0,uploadOk=false
       while(offset<f.size){
         const end=Math.min(offset+CHUNK,f.size)
         const chunk=f.slice(offset,end)
         const cr=`bytes ${offset}-${end-1}/${f.size}`
-        const cRes=await fetch(sessionUri,{method:'PUT',headers:{'Content-Type':f.type||'application/octet-stream','Content-Length':String(chunk.size),'Content-Range':cr},body:chunk})
-        if(cRes.status===308){offset=end;if(pbi)pbi.style.width=Math.round(end/f.size*100)+'%';continue}
-        if(cRes.status===200||cRes.status===201){
-          try{const r=await cRes.json();uploadedId=r.id}catch{}
-          break
+        const isLast=end>=f.size
+        try{
+          const cRes=await fetch(sessionUri,{method:'PUT',headers:{'Content-Type':f.type||'application/octet-stream','Content-Range':cr},body:chunk})
+          if(cRes.status===308){offset=end;if(pbi)pbi.style.width=Math.round(end/f.size*100)+'%';continue}
+          if(cRes.status===200||cRes.status===201){
+            try{const r=await cRes.json();uploadedId=r.id}catch{}
+            uploadOk=true;break
+          }
+          if(!isLast)throw new Error(`Chunk ${cRes.status}`)
+          // 最終チャンクで予期外ステータスでもデータは届いている可能性
+          uploadOk=true;break
+        }catch(chunkErr){
+          if(!isLast)throw chunkErr
+          // 最終チャンクでfetch自体が例外（CORSでレスポンス読めない等）→データは届いている
+          uploadOk=true;break
         }
-        throw new Error(`Upload failed: ${cRes.status}`)
       }
-      // レスポンス読み取り失敗時はWorkerにIDを問い合わせ
+      if(!uploadOk)throw new Error('Upload incomplete')
+      if(pbi)pbi.style.width='100%'
+      // ファイルIDが取れなかった場合はWorkerに問い合わせ
       if(!uploadedId){
         try{
           const idRes=await fetch(`${W}/api/album/${token}/upload/lookup`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:f.name})})

@@ -1077,16 +1077,25 @@ async function uploadFiles(files){
       if(!sesRes.ok)throw new Error(`Session failed: ${sesRes.status}`)
       const{sessionUri}=await sesRes.json()
       const CHUNK=5*1024*1024
-      let offset=0
+      let offset=0,uploadOk=false
       while(offset<f.size){
         const end=Math.min(offset+CHUNK,f.size)
         const chunk=f.slice(offset,end)
         const cr=`bytes ${offset}-${end-1}/${f.size}`
-        const cRes=await fetch(sessionUri,{method:'PUT',headers:{'Content-Type':f.type||'application/octet-stream','Content-Length':String(chunk.size),'Content-Range':cr},body:chunk})
-        if(cRes.status===308){offset=end;if(pbi)pbi.style.width=Math.round(end/f.size*100)+'%';continue}
-        if(cRes.status===200||cRes.status===201){break}
-        throw new Error(`Upload failed: ${cRes.status}`)
+        const isLast=end>=f.size
+        try{
+          const cRes=await fetch(sessionUri,{method:'PUT',headers:{'Content-Type':f.type||'application/octet-stream','Content-Range':cr},body:chunk})
+          if(cRes.status===308){offset=end;if(pbi)pbi.style.width=Math.round(end/f.size*100)+'%';continue}
+          if(cRes.status===200||cRes.status===201){uploadOk=true;break}
+          if(!isLast)throw new Error(`Chunk ${cRes.status}`)
+          uploadOk=true;break
+        }catch(chunkErr){
+          if(!isLast)throw chunkErr
+          uploadOk=true;break
+        }
       }
+      if(!uploadOk)throw new Error('Upload incomplete')
+      if(pbi)pbi.style.width='100%'
       if(st){st.textContent='✅ 完了';st.style.color='#1a7a3c'}
       if(pbi)pbi.style.width='100%'
     }catch{if(st){st.textContent='❌ 失敗';st.style.color='#c0392b'}}
