@@ -650,7 +650,9 @@ async function saveEdit(){
     }
     const r=await fetch(`${W}/api/admin/albums/${editTok}`,{method:'PATCH',headers:{Authorization:`Bearer ${tok}`,'Content-Type':'application/json'},body:JSON.stringify(body)})
     if(!r.ok){const d=await r.json();throw new Error(d.error||'Error')}
-    closeEdit();await loadAlbums();showToast('設定を保存しました')
+    const a=albums.find(x=>x.token===editTok)
+    if(a){Object.assign(a,body);if(!('updatedAt'in body))a.updatedAt=new Date().toISOString()}
+    closeEdit();applyFilter();showToast('設定を保存しました')
   }catch(e){showToast(`保存に失敗しました: ${e.message}`)}
   finally{btn.innerHTML='保存';btn.disabled=false}
 }
@@ -725,8 +727,11 @@ async function saveThumb(){
   const btn=document.getElementById('thumbSaveBtn');btn.innerHTML='<div class="sp"></div>';btn.disabled=true
   const body=thumbTab==='pc'?{coverId:selectedCoverId}:{coverIdMobile:selectedCoverId}
   try{
-    await fetch(`${W}/api/admin/albums/${thumbToken}`,{method:'PATCH',headers:{Authorization:`Bearer ${tok}`,'Content-Type':'application/json'},body:JSON.stringify(body)})
-    closeThumb();await loadAlbums();showToast(thumbTab==='pc'?'PC用サムネイルを変更しました':'スマホ用サムネイルを変更しました')
+    const res=await fetch(`${W}/api/admin/albums/${thumbToken}`,{method:'PATCH',headers:{Authorization:`Bearer ${tok}`,'Content-Type':'application/json'},body:JSON.stringify(body)})
+    if(!res.ok)throw new Error()
+    const a=albums.find(x=>x.token===thumbToken)
+    if(a){if(thumbTab==='pc')a.coverId=selectedCoverId;else a.coverIdMobile=selectedCoverId}
+    closeThumb();renderGrid();showToast(thumbTab==='pc'?'PC用サムネイルを変更しました':'スマホ用サムネイルを変更しました')
   }catch{showToast('保存に失敗しました')}
   finally{btn.innerHTML='選択して保存';btn.disabled=false}
 }

@@ -211,8 +211,8 @@ export default {
         const albums=await listAlbums(env)
         const at=await getAccessToken(env,true)
         const enriched=await Promise.all(albums.map(async a=>{
-          try{const[photos,videos]=await Promise.all([listPhotos(a.folderId,at),listVideos(a.folderId,at)]);const totalSize=photos.reduce((s,f)=>s+parseInt(f.size||0),0);return{...a,count:photos.length,videoCount:videos.length,totalSize,totalSizeLabel:fmtSize(totalSize),coverId:a.coverId||photos[0]?.id||null}}
-          catch{return{...a,count:0,videoCount:0,totalSize:0,totalSizeLabel:'0 B',coverId:null}}
+          try{const photos=await listPhotos(a.folderId,at);const totalSize=photos.reduce((s,f)=>s+parseInt(f.size||0),0);return{...a,count:photos.length,totalSize,totalSizeLabel:fmtSize(totalSize),coverId:a.coverId||photos[0]?.id||null}}
+          catch{return{...a,count:0,totalSize:0,totalSizeLabel:'0 B',coverId:null}}
         }))
         return jsonR({albums:enriched})
       }
