@@ -456,8 +456,8 @@ export default {
         const contentRange=req.headers.get('X-Content-Range')
         const mimeType=req.headers.get('Content-Type')||'application/octet-stream'
         if(!sessionUri||!contentRange)return errR('Missing headers',400)
-        const buf=await req.arrayBuffer()
-        const chunkRes=await fetch(sessionUri,{method:'PUT',headers:{'Content-Range':contentRange,'Content-Type':mimeType,'Content-Length':String(buf.byteLength)},body:buf})
+        const contentLength=req.headers.get('Content-Length')||'0'
+        const chunkRes=await fetch(sessionUri,{method:'PUT',headers:{'Content-Range':contentRange,'Content-Type':mimeType,'Content-Length':contentLength},body:req.body,duplex:'half'})
         if(chunkRes.status===308)return jsonR({status:'continue'})
         if(chunkRes.status===200||chunkRes.status===201){const r=await chunkRes.json();return jsonR({status:'complete',id:r.id,name:r.name})}
         throw new Error(`Chunk: ${chunkRes.status} ${await chunkRes.text()}`)
@@ -505,8 +505,8 @@ export default {
         const contentRange=req.headers.get('X-Content-Range')
         const mimeType=req.headers.get('Content-Type')||'application/octet-stream'
         if(!sessionUri||!contentRange)return errR('Missing headers',400)
-        const buf=await req.arrayBuffer()
-        const chunkRes=await fetch(sessionUri,{method:'PUT',headers:{'Content-Range':contentRange,'Content-Type':mimeType,'Content-Length':String(buf.byteLength)},body:buf})
+        const contentLength=req.headers.get('Content-Length')||'0'
+        const chunkRes=await fetch(sessionUri,{method:'PUT',headers:{'Content-Range':contentRange,'Content-Type':mimeType,'Content-Length':contentLength},body:req.body,duplex:'half'})
         if(chunkRes.status===308)return jsonR({status:'continue'})
         if(chunkRes.status===200||chunkRes.status===201){const r=await chunkRes.json();return jsonR({status:'complete',id:r.id,name:r.name})}
         throw new Error(`Chunk: ${chunkRes.status} ${await chunkRes.text()}`)
