@@ -466,7 +466,8 @@ function renderGrid() {
   }
   if(selMode){grid.classList.add('sel-mode');selIds.forEach(i=>document.getElementById(`gi${i}`)?.classList.add('sel'))}
 }
-window.addEventListener('resize',()=>{if(photos.length&&!selMode)renderGrid()})
+let _lastRenderW=0
+window.addEventListener('resize',()=>{const w=window.innerWidth;if(photos.length&&w!==_lastRenderW){_lastRenderW=w;if(!selMode)renderGrid()}})
 
 // スクロール中のクリック誤検知を防ぐタッチ追跡
 let _touchStartY=0, _touchStartX=0, _touchScrolled=false
