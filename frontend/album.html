@@ -280,6 +280,9 @@ body{font-family:-apple-system,'Hiragino Sans',sans-serif;background:var(--bg);c
           <a class="dl-item" href="/download_guide.html" target="_blank" style="border-top:1px solid var(--border);color:var(--muted);">📖 保存方法ガイド</a>
         </div>
       </div>
+      <button class="lb-btn" id="lbDelBtn" onclick="deleteCurrent()" style="color:#ff6b6b;display:none;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>削除
+      </button>
       <button class="lb-btn" onclick="closeLb()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
     </div>
   </div>
@@ -525,6 +528,9 @@ function updLb(){
   document.getElementById('lbPrev').disabled=cur===0
   document.getElementById('lbNext').disabled=cur===photos.length-1
   document.getElementById('lbHint').innerHTML=isMobile?'保存 ▾ からサイズを選択 → 画像が開いたら長押し →「イメージを保存」':''
+  const uploaded=JSON.parse(sessionStorage.getItem(`uploads_${token}`)||'[]')
+  const delBtn=document.getElementById('lbDelBtn')
+  delBtn.style.display=uploaded.includes(p.id)?'':'none'
 }
 function lbMv(dir){
   const n=cur+dir;if(n<0||n>=photos.length)return;cur=n
@@ -677,6 +683,26 @@ async function uploadCustFiles(files){
   custUploading=false
   document.getElementById('custCloseBtn').disabled=false
   if(done>0)showToast(`${done}件を追加しました`)
+}
+
+async function deleteCurrent(){
+  const p=photos[cur]
+  if(!confirm(`「${p.name}」を削除しますか？`))return
+  const btn=document.getElementById('lbDelBtn')
+  btn.disabled=true;btn.textContent='削除中...'
+  const res=await fetch(`${W}/api/album/${token}/files/${p.id}`,{method:'DELETE'})
+  if(res.ok){
+    photos.splice(cur,1)
+    const s=JSON.parse(sessionStorage.getItem(`uploads_${token}`)||'[]')
+    sessionStorage.setItem(`uploads_${token}`,JSON.stringify(s.filter(id=>id!==p.id)))
+    if(photos.length===0){closeLb();renderGrid();return}
+    if(cur>=photos.length)cur=photos.length-1
+    updLb();renderGrid()
+    showToast('削除しました')
+  }else{
+    btn.disabled=false;btn.innerHTML='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>削除'
+    showToast('削除に失敗しました')
+  }
 }
 
 async function deleteCustFile(fileId,btn){
