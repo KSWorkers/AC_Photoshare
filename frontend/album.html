@@ -682,30 +682,20 @@ async function uploadCustFiles(files){
     if(st)st.textContent='送信中...'
     try{
       let uploadedId=null
-      const LARGE=5*1024*1024
-      if(f.size>LARGE){
-        if(pb)pb.style.display='block'
-        const sesRes=await fetch(`${W}/api/album/${token}/upload/session`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:f.name,mimeType:f.type||'application/octet-stream',size:f.size})})
-        if(!sesRes.ok)throw new Error(`Session failed: ${sesRes.status}`)
-        const{sessionUri}=await sesRes.json()
-        const CHUNK=2*1024*1024
-        let offset=0
-        while(offset<f.size){
-          const end=Math.min(offset+CHUNK,f.size)
-          const chunk=f.slice(offset,end)
-          const cr=`bytes ${offset}-${end-1}/${f.size}`
-          const cRes=await fetch(`${W}/api/album/${token}/upload/chunk`,{method:'POST',headers:{'Content-Type':f.type||'application/octet-stream','Content-Length':String(chunk.size),'X-Session-Uri':sessionUri,'X-Content-Range':cr},body:chunk})
-          if(!cRes.ok)throw new Error(`Chunk failed: ${cRes.status}`)
-          const d=await cRes.json()
-          offset=end
-          if(pbi)pbi.style.width=Math.round(offset/f.size*100)+'%'
-          if(d.status==='complete'){uploadedId=d.id;break}
-        }
-      }else{
-        const fd=new FormData();fd.append('file',f)
-        const res=await fetch(`${W}/api/album/${token}/upload`,{method:'POST',body:fd})
-        if(!res.ok)throw new Error()
-        const d=await res.json();uploadedId=d.id
+      if(pb)pb.style.display='block'
+      const sesRes=await fetch(`${W}/api/album/${token}/upload/session`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:f.name,mimeType:f.type||'application/octet-stream',size:f.size})})
+      if(!sesRes.ok)throw new Error(`Session failed: ${sesRes.status}`)
+      const{sessionUri}=await sesRes.json()
+      const CHUNK=5*1024*1024
+      let offset=0
+      while(offset<f.size){
+        const end=Math.min(offset+CHUNK,f.size)
+        const chunk=f.slice(offset,end)
+        const cr=`bytes ${offset}-${end-1}/${f.size}`
+        const cRes=await fetch(sessionUri,{method:'PUT',headers:{'Content-Type':f.type||'application/octet-stream','Content-Length':String(chunk.size),'Content-Range':cr},body:chunk})
+        if(cRes.status===308){offset=end;if(pbi)pbi.style.width=Math.round(end/f.size*100)+'%';continue}
+        if(cRes.status===200||cRes.status===201){const r=await cRes.json();uploadedId=r.id;break}
+        throw new Error(`Upload failed: ${cRes.status}`)
       }
       done++
       if(uploadedId){
