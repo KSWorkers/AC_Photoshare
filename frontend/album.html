@@ -672,7 +672,6 @@ async function deleteCustFile(fileId,btn){
     if(s){const arr=JSON.parse(s).filter(id=>id!==fileId);sessionStorage.setItem(`uploads_${token}`,JSON.stringify(arr))}
   }else{btn.disabled=false;btn.textContent='削除';showToast('削除に失敗しました')}
 }
-}
 
 if(!token||token==='album')showErr('notfound')
 else load()

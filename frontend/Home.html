@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>管理画面 | Alcyone PhotoShare</title>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
@@ -50,8 +50,7 @@ body{font-family:-apple-system,'Hiragino Sans',sans-serif;background:var(--bg);c
 .cn{font-size:14px;font-weight:600;margin-bottom:4px;}
 .cs{display:flex;gap:10px;font-size:12px;color:var(--mt);margin-bottom:4px;}
 .cm{font-size:12px;color:var(--mt);display:flex;flex-direction:column;gap:2px;margin-bottom:10px;}
-.ub{display:flex;gap:6px;align-items:center;background:var(--bg);border:1px solid var(--bd);border-radius:8px;padding:4px 4px 4px 10px;font-size:12px;margin-bottom:10px;}
-.ub span{flex:1;color:var(--mt);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.ub{display:flex;gap:6px;align-items:center;background:var(--bg);border:1px solid var(--bd);border-radius:8px;padding:4px;font-size:12px;margin-bottom:10px;}
 .ca{display:flex;gap:6px;flex-wrap:wrap;}
 .cn-new{background:var(--sur);border:1.5px dashed var(--bdm);border-radius:var(--rl);display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:240px;cursor:pointer;color:var(--mt);transition:border-color .15s,color .15s;}
 .cn-new:hover{border-color:var(--tx);color:var(--tx);}
@@ -520,13 +519,13 @@ function renderGrid(){
             ${heroOptHtml}
           </select>
         </div>
-        <div class="ub"><span>${url}</span><button class="btn btn-s btn-sm" onclick="copyUrl('${url}')">コピー</button><button class="btn btn-s btn-sm" onclick="showQr('${url}','${a.name.replace(/'/g,"\\'")}',event)" title="QRコード">QR</button></div>
+        <div class="ub"><button class="btn btn-s btn-sm" onclick="copyUrl('${url}')">コピー</button><button class="btn btn-s btn-sm" onclick="showQr('${url}','${a.name.replace(/'/g,"\\'")}',event)" title="QRコード">QR</button></div>
         <div class="ca">
-          <div style="display:flex;gap:5px;">
-            <a class="btn btn-s btn-sm" href="${url}" target="_blank" style="flex:1;justify-content:center;">アルバムを開く</a>
-            <button class="btn btn-s btn-sm" onclick="openUpload('${a.token}')">アップロード</button>
-            <button class="btn btn-s btn-sm" onclick="openFiles('${a.token}')">ファイル管理</button>
-            <button class="btn btn-s btn-sm" onclick="openSettingsPopup('${a.token}',event)" style="padding:5px 10px;" title="設定">⚙️</button>
+          <a class="btn btn-s btn-sm" href="${url}" target="_blank" style="width:100%;justify-content:center;">アルバムを開く</a>
+          <div style="display:flex;gap:5px;width:100%;">
+            <button class="btn btn-s btn-sm" onclick="openUpload('${a.token}')" style="flex:1;">アップロード</button>
+            <button class="btn btn-s btn-sm" onclick="openFiles('${a.token}')" style="flex:1;">ファイル管理</button>
+            <button class="btn btn-s btn-sm" onclick="openSettingsPopup('${a.token}',event)" style="padding:5px 10px;flex-shrink:0;" title="設定">⚙️</button>
           </div>
         </div>
       </div>
