@@ -10,7 +10,10 @@ export async function onRequestGet({ params }) {
   let hasCover = false
 
   try {
-    const res = await fetch(`${WORKER}/api/album/${token}`)
+    const controller = new AbortController()
+    const tid = setTimeout(() => controller.abort(), 2000)
+    const res = await fetch(`${WORKER}/api/album/${token}`, { signal: controller.signal })
+    clearTimeout(tid)
     if (res.ok) {
       const d = await res.json()
       if (!d.requirePassword && d.name) {

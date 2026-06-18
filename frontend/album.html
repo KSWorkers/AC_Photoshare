@@ -376,7 +376,8 @@ function showErr(type) {
 async function load(password='') {
   try {
     const qs = password ? `?pw=${encodeURIComponent(password)}` : ''
-    const res = await fetch(`${W}/api/album/${token}${qs}`)
+    const ctrl = new AbortController(); setTimeout(() => ctrl.abort(), 15000)
+    const res = await fetch(`${W}/api/album/${token}${qs}`, { signal: ctrl.signal })
     const d = await res.json()
     if (res.status===404) return showErr('notfound')
     if (res.status===410) return showErr('expired')
