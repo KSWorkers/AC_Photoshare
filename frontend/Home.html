@@ -519,13 +519,13 @@ function renderGrid(){
             ${heroOptHtml}
           </select>
         </div>
-        <div class="ub"><button class="btn btn-s btn-sm" onclick="copyUrl('${url}')">コピー</button><button class="btn btn-s btn-sm" onclick="showQr('${url}','${a.name.replace(/'/g,"\\'")}',event)" title="QRコード">QR</button></div>
+        <div class="ub"><button class="btn btn-s btn-sm" onclick="copyUrl('${url}')">URLコピー</button><button class="btn btn-s btn-sm" onclick="showQr('${url}','${a.name.replace(/'/g,"\\'")}',event)">QR表示</button></div>
         <div class="ca">
           <a class="btn btn-s btn-sm" href="${url}" target="_blank" style="width:100%;justify-content:center;">アルバムを開く</a>
           <div style="display:flex;gap:5px;width:100%;">
-            <button class="btn btn-s btn-sm" onclick="openUpload('${a.token}')" style="flex:1;">アップロード</button>
-            <button class="btn btn-s btn-sm" onclick="openFiles('${a.token}')" style="flex:1;">ファイル管理</button>
-            <button class="btn btn-s btn-sm" onclick="openSettingsPopup('${a.token}',event)" style="padding:5px 10px;flex-shrink:0;" title="設定">⚙️</button>
+            <button class="btn btn-s btn-sm" onclick="openUpload('${a.token}')" style="flex:1;justify-content:center;">アップロード</button>
+            <button class="btn btn-s btn-sm" onclick="openFiles('${a.token}')" style="flex:1;justify-content:center;">ファイル管理</button>
+            <button class="btn btn-s btn-sm" onclick="openSettingsPopup('${a.token}',event)" style="flex:1;justify-content:center;">設定</button>
           </div>
         </div>
       </div>
