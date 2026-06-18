@@ -117,14 +117,14 @@ body{font-family:-apple-system,'Hiragino Sans',sans-serif;background:var(--bg);c
 .lb-btn{background:rgba(0,0,0,.4);border:none;color:#fff;border-radius:8px;padding:8px 14px;cursor:pointer;font-size:13px;display:flex;align-items:center;gap:6px;}
 .lb-btn:hover{background:rgba(0,0,0,.6);}
 .lb-main{flex:1;display:flex;align-items:center;position:relative;}
-.lb-wrap{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:52px 52px 16px;transition:opacity .15s;}
+.lb-wrap{position:relative;display:flex;align-items:center;justify-content:center;width:100%;flex:1;transition:opacity .15s;}
 .lb-wrap img{max-width:100%;max-height:100%;object-fit:contain;display:block;}
 .lb-nav{position:absolute;top:50%;transform:translateY(-50%);background:rgba(255,255,255,.12);border:none;color:#fff;width:44px;height:44px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;}
 .lb-nav:hover{background:rgba(255,255,255,.22);}
 .lb-nav:disabled{opacity:.15;cursor:default;}
 .lb-prev{left:8px;}.lb-next{right:8px;}
 .lb-hint{position:absolute;bottom:0;left:0;right:0;padding:8px;text-align:center;font-size:12px;color:rgba(255,255,255,.5);background:linear-gradient(to top,rgba(0,0,0,.4),transparent);}
-@media(max-width:600px){.lb-wrap{padding:52px 44px 12px;}.lb-prev{left:4px;}.lb-next{right:4px;}}
+@media(max-width:600px){.lb-prev{left:4px;}.lb-next{right:4px;}}
 
 /* ローディング */
 .loading-wrap{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;}
@@ -285,10 +285,12 @@ body{font-family:-apple-system,'Hiragino Sans',sans-serif;background:var(--bg);c
   </div>
   <div class="lb-main">
     <button class="lb-nav lb-prev" id="lbPrev" onclick="lbMv(-1)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg></button>
-    <div class="lb-wrap" id="lbWrap"><img id="lbImg" src="" alt=""></div>
+    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;gap:10px;padding:52px 44px 16px;">
+      <div class="lb-wrap" id="lbWrap"><img id="lbImg" src="" alt=""></div>
+      <div id="lbHint" style="font-size:12px;color:rgba(255,255,255,.5);text-align:center;line-height:1.6;"></div>
+    </div>
     <button class="lb-nav lb-next" id="lbNext" onclick="lbMv(1)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg></button>
   </div>
-  <div class="lb-hint" id="lbHint"></div>
 </div>
 
 <!-- お客さんアップロードモーダル -->
