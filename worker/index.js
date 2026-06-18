@@ -219,12 +219,12 @@ export default {
 
       if(path==='/api/admin/albums'&&req.method==='POST'){
         if(!await isAdmin(req,env))return errR('Unauthorized',401)
-        const{name,expiresAt,password,heroText,heroFont,allowCustomerUpload}=await req.json()
+        const{name,expiresAt,password,heroText,heroFont,allowCustomerUpload,allowVideoUpload}=await req.json()
         if(!name)return errR('name required')
         const token=genToken()
         const at=await getAccessToken(env,false)
         const folder=await createFolder(buildFolderName(name),env.DRIVE_ROOT_FOLDER_ID,at)
-        const album={name,folderId:folder.id,createdAt:new Date().toISOString(),expiresAt:normalizeExpiresAt(expiresAt),password:password?await hashPassword(password):null,published:true,heroText:heroText||'Photography',heroFont:heroFont||'josefin',allowCustomerUpload:!!allowCustomerUpload}
+        const album={name,folderId:folder.id,createdAt:new Date().toISOString(),expiresAt:normalizeExpiresAt(expiresAt),password:password?await hashPassword(password):null,published:true,heroText:heroText||'Photography',heroFont:heroFont||'josefin',allowCustomerUpload:!!allowCustomerUpload,allowVideoUpload:!!allowVideoUpload}
         await saveAlbum(env,token,album)
         return jsonR({token,url:`${env.SITE_URL}/album.html?token=${token}`,folderId:folder.id,album})
       }
@@ -248,6 +248,7 @@ export default {
           heroFont:'heroFont'in body?body.heroFont:(album.heroFont??'josefin'),
           flagDefs:'flagDefs'in body?body.flagDefs:album.flagDefs,
           allowCustomerUpload:'allowCustomerUpload'in body?body.allowCustomerUpload:album.allowCustomerUpload,
+          allowVideoUpload:'allowVideoUpload'in body?body.allowVideoUpload:album.allowVideoUpload,
           updatedAt:new Date().toISOString(),
         }
         // Driveフォルダ名をリネーム
@@ -420,7 +421,7 @@ export default {
         const videoFiles=await listVideos(album.folderId,at)
         if(videoFiles.length>0){ctx.waitUntil(getAccessToken(env,false).then(rwAt=>Promise.all(videoFiles.map(v=>grantAnyoneRead(v.id,rwAt)))).catch(()=>{}))}
         const videos=videoFiles.map(v=>({id:v.id,name:v.name,thumb:v.thumbnailLink?.replace('=s220','=s400')||null,viewLink:v.webViewLink,size:parseInt(v.size||0)}))
-        return jsonR({name:album.name,expiresAt:album.expiresAt,count:photos.length,totalSize,totalSizeLabel:fmtSize(totalSize),heroText:album.heroText||'Photography',heroFont:album.heroFont||'josefin',coverId:album.coverId||null,coverIdMobile:album.coverIdMobile||null,selectToken:album.selectToken||null,allowCustomerUpload:album.allowCustomerUpload||false,photos,videos})
+        return jsonR({name:album.name,expiresAt:album.expiresAt,count:photos.length,totalSize,totalSizeLabel:fmtSize(totalSize),heroText:album.heroText||'Photography',heroFont:album.heroFont||'josefin',coverId:album.coverId||null,coverIdMobile:album.coverIdMobile||null,selectToken:album.selectToken||null,allowCustomerUpload:album.allowCustomerUpload||false,allowVideoUpload:album.allowVideoUpload||false,photos,videos})
       }
 
       // 写真DL（認証付き）
@@ -471,6 +472,7 @@ export default {
         if(album.expiresAt&&new Date(album.expiresAt)<new Date())return errR('Expired',410)
         if(!album.allowCustomerUpload)return errR('Upload not allowed',403)
         const{name,mimeType,size}=await req.json()
+        if(mimeType&&mimeType.startsWith('video/')&&!album.allowVideoUpload)return errR('Video upload not allowed',403)
         const at=await getAccessToken(env,false)
         const sesRes=await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&supportsAllDrives=true',{
           method:'POST',
@@ -559,6 +561,7 @@ export default {
         const fd=await req.formData()
         const file=fd.get('file')
         if(!file)return errR('No file',400)
+        if(file.type&&file.type.startsWith('video/')&&!album.allowVideoUpload)return errR('Video upload not allowed',403)
         const at=await getAccessToken(env,false)
         const boundary='-------314159265358979323846'
         const meta=JSON.stringify({name:file.name,parents:[album.folderId]})
@@ -583,6 +586,7 @@ export default {
         if(album.expiresAt&&new Date(album.expiresAt)<new Date())return errR('Expired',410)
         if(!album.allowCustomerUpload)return errR('Upload not allowed',403)
         const{name,mimeType,size}=await req.json()
+        if(mimeType&&mimeType.startsWith('video/')&&!album.allowVideoUpload)return errR('Video upload not allowed',403)
         const at=await getAccessToken(env,false)
         const res=await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&supportsAllDrives=true',{
           method:'POST',

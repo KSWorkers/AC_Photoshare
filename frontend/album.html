@@ -391,6 +391,7 @@ async function load(password='') {
     if (!res.ok) return showErr('error')
     pw=password; photos=d.photos
     if(d.allowCustomerUpload){const b=document.getElementById('custUploadBtn');b.style.display='flex'}
+    if(!d.allowVideoUpload){document.getElementById('custFileInput').accept='image/*'}
 
     // ヒーロー設定
     applyFont(d.heroFont||'josefin')
@@ -557,19 +558,35 @@ function renderVideos(videos) {
   const section = document.createElement('div')
   section.className = 'video-section'
   const wrap = document.getElementById('grid').parentNode
+  const uploaded=JSON.parse(sessionStorage.getItem(`uploads_${token}`)||'[]')
   section.innerHTML = `<div class="video-hd"><span>🎬</span>動画（${videos.length}件）</div>
-    <div class="video-list">${videos.map(v=>`
-      <div class="video-item" onclick="openVideoPlayer('${v.viewLink}')">
+    <div style="font-size:12px;color:var(--muted);background:#f8f6f2;border:1px solid var(--border);border-radius:8px;padding:9px 12px;margin-bottom:10px;line-height:1.7;">アップロードした動画はサムネイルが表示されるまで再生できない場合があります。しばらく経ってからページを再読み込みしてください。</div>
+    <div class="video-list" id="videoList">${videos.map(v=>{
+      const isOwn=uploaded.includes(v.id)
+      return`<div class="video-item" id="vi_${v.id}" style="position:relative;" onclick="openVideoPlayer('${v.viewLink}')">
         ${v.thumb?`<img class="video-thumb" src="${v.thumb}" alt="">`:'<div class="video-thumb-ph">🎬</div>'}
         <div class="video-info">
           <div class="video-name">${v.name}</div>
           ${v.size?`<div class="video-size">${fmtSize(v.size)}</div>`:''}
         </div>
         <div class="video-play">▶</div>
-      </div>`).join('')}
+        ${isOwn?`<button onclick="event.stopPropagation();deleteVideo('${v.id}')" style="position:absolute;top:6px;right:6px;background:rgba(0,0,0,.55);border:none;color:#ff6b6b;border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer;">削除</button>`:''}
+      </div>`
+    }).join('')}
     </div>`
   wrap.appendChild(section)
   addGuideLink(wrap)
+}
+
+async function deleteVideo(videoId){
+  if(!confirm('この動画を削除しますか？'))return
+  const res=await fetch(`${W}/api/album/${token}/files/${videoId}`,{method:'DELETE'})
+  if(res.ok){
+    document.getElementById(`vi_${videoId}`)?.remove()
+    const s=JSON.parse(sessionStorage.getItem(`uploads_${token}`)||'[]')
+    sessionStorage.setItem(`uploads_${token}`,JSON.stringify(s.filter(id=>id!==videoId)))
+    showToast('削除しました')
+  }else{showToast('削除に失敗しました')}
 }
 
 function openVideoPlayer(viewLink) {

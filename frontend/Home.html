@@ -150,6 +150,7 @@ body{font-family:-apple-system,'Hiragino Sans',sans-serif;background:var(--bg);c
       <div class="fd"><div class="sw-w"><span style="font-size:14px;">パスワードを設定する</span><button class="sw" id="nPwSw" onclick="toggleNPw()"></button></div></div>
       <div id="nPwFd" class="fd" style="display:none;"><label>パスワード</label><input type="text" id="nPw" placeholder="例：yamada2026"></div>
       <div class="fd"><div class="sw-w"><span style="font-size:14px;">お客様によるアップロードを許可</span><button class="sw" id="nUploadSw" onclick="toggleNUpload()"></button></div></div>
+      <div class="fd"><div class="sw-w"><span style="font-size:14px;">動画のアップロードを許可</span><button class="sw" id="nVideoUploadSw" onclick="toggleNVideoUpload()"></button></div></div>
       <div style="border-top:1px solid var(--bd);padding-top:14px;">
         <div style="font-size:13px;font-weight:600;color:var(--mt);margin-bottom:10px;">カバーテキスト</div>
         <div class="fd">
@@ -188,6 +189,7 @@ body{font-family:-apple-system,'Hiragino Sans',sans-serif;background:var(--bg);c
       <div class="fd"><label>アルバム名</label><input type="text" id="eName"></div>
       <div class="fd"><div class="sw-w"><span style="font-size:14px;">公開する</span><button class="sw" id="ePubSw" onclick="toggleEPub()"></button></div></div>
       <div class="fd"><div class="sw-w"><span style="font-size:14px;">お客さんによる写真追加を許可する</span><button class="sw" id="eUploadSw" onclick="toggleEUpload()"></button></div></div>
+      <div class="fd"><div class="sw-w"><span style="font-size:14px;">動画のアップロードを許可する</span><button class="sw" id="eVideoUploadSw" onclick="toggleEVideoUpload()"></button></div></div>
       <div class="fd"><div class="sw-w"><span style="font-size:14px;">有効期限を設定する</span><button class="sw" id="eExpSw" onclick="toggleEExp()"></button></div></div>
       <div id="eExpFd" class="fd" style="display:none;"><label>有効期限</label><input type="date" id="eExp"></div>
       <div style="border-top:1px solid var(--bd);padding-top:14px;">
@@ -398,7 +400,7 @@ const W = 'https://ac-photoshare.nikkomaedori.workers.dev'
 let tok = sessionStorage.getItem('adminToken') || localStorage.getItem('adminToken') || ''
 let albums=[], filtered=[]
 let filter='all', bulk=false, selToks=new Set(), lastBulkSel=-1
-let editTok='', nExpOn=true, nPwOn=false, ePubOn=true, eExpOn=false, ePwOn=false, eUploadOn=false
+let editTok='', nExpOn=true, nPwOn=false, ePubOn=true, eExpOn=false, ePwOn=false, eUploadOn=false, eVideoUploadOn=false
 let deleteTarget=null
 
 if (tok) initMain()
@@ -562,7 +564,7 @@ function openCreate(){
   const d=new Date();d.setMonth(d.getMonth()+1)
   document.getElementById('nExp').value=d.toISOString().split('T')[0]
   document.getElementById('nName').value='';document.getElementById('nPw').value=''
-  nExpOn=true;nPwOn=false;nUploadOn=false
+  nExpOn=true;nPwOn=false;nUploadOn=false;nVideoUploadOn=false
   document.getElementById('nExpSw').className='sw on';document.getElementById('nPwSw').className='sw';document.getElementById('nUploadSw').className='sw'
   document.getElementById('nExpFd').style.display='flex';document.getElementById('nPwFd').style.display='none'
   document.getElementById('moCreate').classList.add('on')
@@ -571,8 +573,9 @@ function closeCreate(){document.getElementById('moCreate').classList.remove('on'
 function toggleNExp(){nExpOn=!nExpOn;document.getElementById('nExpSw').className=`sw${nExpOn?' on':''}`;document.getElementById('nExpFd').style.display=nExpOn?'flex':'none'}
 function toggleNPw(){nPwOn=!nPwOn;document.getElementById('nPwSw').className=`sw${nPwOn?' on':''}`;document.getElementById('nPwFd').style.display=nPwOn?'flex':'none'}
 
-let nUploadOn=false
+let nUploadOn=false, nVideoUploadOn=false
 function toggleNUpload(){nUploadOn=!nUploadOn;document.getElementById('nUploadSw').className=`sw${nUploadOn?' on':''}`}
+function toggleNVideoUpload(){nVideoUploadOn=!nVideoUploadOn;document.getElementById('nVideoUploadSw').className=`sw${nVideoUploadOn?' on':''}`}
 
 let creating=false
 async function createAlbum(){
@@ -583,7 +586,7 @@ async function createAlbum(){
   creating=true
   const btn=document.getElementById('createBtn');btn.innerHTML='<div class="sp"></div> 作成中...';btn.disabled=true
   try{
-    const r=await fetch(`${W}/api/admin/albums`,{method:'POST',headers:{Authorization:`Bearer ${tok}`,'Content-Type':'application/json'},body:JSON.stringify({name,expiresAt,password,heroText:getHeroText('nHeroTextSel','nHeroCustom'),heroFont:document.getElementById('nHeroFont').value,allowCustomerUpload:nUploadOn})})
+    const r=await fetch(`${W}/api/admin/albums`,{method:'POST',headers:{Authorization:`Bearer ${tok}`,'Content-Type':'application/json'},body:JSON.stringify({name,expiresAt,password,heroText:getHeroText('nHeroTextSel','nHeroCustom'),heroFont:document.getElementById('nHeroFont').value,allowCustomerUpload:nUploadOn,allowVideoUpload:nVideoUploadOn})})
     const d=await r.json()
     if(!r.ok)throw new Error(d.error||'Error')
     // 即時表示してからバックグラウンドで再読み込み
@@ -600,9 +603,10 @@ function openEdit(token){
   const a=albums.find(x=>x.token===token);if(!a)return
   editTok=token
   document.getElementById('eName').value=a.name
-  ePubOn=a.published!==false;eExpOn=!!a.expiresAt;ePwOn=false;eUploadOn=!!a.allowCustomerUpload
+  ePubOn=a.published!==false;eExpOn=!!a.expiresAt;ePwOn=false;eUploadOn=!!a.allowCustomerUpload;eVideoUploadOn=!!a.allowVideoUpload
   document.getElementById('ePubSw').className=`sw${ePubOn?' on':''}`
   document.getElementById('eUploadSw').className=`sw${eUploadOn?' on':''}`
+  document.getElementById('eVideoUploadSw').className=`sw${eVideoUploadOn?' on':''}`
   document.getElementById('eExpSw').className=`sw${eExpOn?' on':''}`
   document.getElementById('ePwSw').className='sw'
   document.getElementById('eExpFd').style.display=eExpOn?'flex':'none'
@@ -625,6 +629,7 @@ function openEdit(token){
 function closeEdit(){document.getElementById('moEdit').classList.remove('on')}
 function toggleEPub(){ePubOn=!ePubOn;document.getElementById('ePubSw').className=`sw${ePubOn?' on':''}`}
 function toggleEUpload(){eUploadOn=!eUploadOn;document.getElementById('eUploadSw').className=`sw${eUploadOn?' on':''}`}
+function toggleEVideoUpload(){eVideoUploadOn=!eVideoUploadOn;document.getElementById('eVideoUploadSw').className=`sw${eVideoUploadOn?' on':''}`}
 function toggleEExp(){eExpOn=!eExpOn;document.getElementById('eExpSw').className=`sw${eExpOn?' on':''}`;document.getElementById('eExpFd').style.display=eExpOn?'flex':'none'}
 function toggleEPw(){ePwOn=!ePwOn;document.getElementById('ePwSw').className=`sw${ePwOn?' on':''}`;document.getElementById('ePwFd').style.display=ePwOn?'flex':'none'}
 function clearPassword(){
@@ -636,7 +641,7 @@ function clearPassword(){
 async function saveEdit(){
   const btn=document.getElementById('editBtn');btn.innerHTML='<div class="sp"></div>';btn.disabled=true
   try{
-    const body={name:document.getElementById('eName').value.trim(),published:ePubOn,allowCustomerUpload:eUploadOn,expiresAt:eExpOn?document.getElementById('eExp').value||null:null,heroText:getHeroText('eHeroTextSel','eHeroCustom'),heroFont:document.getElementById('eHeroFont').value,flagDefs:albumFlagOn?albumFlagDefs:null}
+    const body={name:document.getElementById('eName').value.trim(),published:ePubOn,allowCustomerUpload:eUploadOn,allowVideoUpload:eVideoUploadOn,expiresAt:eExpOn?document.getElementById('eExp').value||null:null,heroText:getHeroText('eHeroTextSel','eHeroCustom'),heroFont:document.getElementById('eHeroFont').value,flagDefs:albumFlagOn?albumFlagDefs:null}
     const pwInput=document.getElementById('ePw')
     if(ePwOn){
       if(pwInput.dataset.clear==='true'){body.password=null;delete pwInput.dataset.clear}
