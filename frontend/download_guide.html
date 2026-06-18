@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>写真のダウンロードガイド | Alcyone PhotoShare</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#FDFCF9;
+  --bg2:#F4F1EB;
+  --text:#1E1E1C;
+  --muted:#888880;
+  --accent:#C47A4A;
+  --accent-light:#FBF0E8;
+  --border:#E8E5DF;
+  --green:#4A9B6F;
+  --green-light:#EBF5F0;
+  --red:#C44A4A;
+  --red-light:#FBE8E8;
+  --blue:#4A7AC4;
+  --blue-light:#E8EEF5;
+  --sans:'Noto Sans JP',sans-serif;
+}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:300;line-height:1.8;-webkit-font-smoothing:antialiased}
+.wrap{max-width:720px;margin:0 auto;padding:0 20px}
+
+/* header */
+header{background:var(--text);color:var(--bg);padding:32px 0 28px}
+header .wrap{display:flex;flex-direction:column;gap:6px}
+.header-logo{font-size:13px;font-weight:500;opacity:.5;letter-spacing:.1em}
+.header-title{font-size:clamp(18px,3vw,24px);font-weight:500;line-height:1.4}
+.header-sub{font-size:13px;opacity:.6;margin-top:4px}
+
+/* tabs */
+.tab-nav{background:#fff;border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100}
+.tab-nav .wrap{display:flex;gap:0}
+.tab-btn{flex:1;padding:14px 8px;font-size:13px;font-weight:400;font-family:var(--sans);border:none;background:transparent;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;transition:all .2s;display:flex;flex-direction:column;align-items:center;gap:4px}
+.tab-btn .tab-icon{font-size:18px}
+.tab-btn.active{color:var(--accent);border-bottom-color:var(--accent);font-weight:500}
+
+/* tab content */
+.tab-content{display:none;padding:32px 0 64px}
+.tab-content.active{display:block}
+
+/* section */
+.section{margin-bottom:40px}
+.section-title{font-size:16px;font-weight:500;margin-bottom:20px;padding-bottom:10px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px}
+.section-title .icon{font-size:18px}
+
+/* steps */
+.steps{display:grid;gap:12px}
+.step{display:flex;gap:14px;align-items:flex-start}
+.step-num{width:26px;height:26px;border-radius:50%;background:var(--accent);color:#fff;font-size:12px;font-weight:500;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px}
+.step-body{flex:1}
+.step-title{font-size:14px;font-weight:500;margin-bottom:3px;line-height:1.5}
+.step-desc{font-size:13px;color:var(--muted);line-height:1.75}
+.step-desc code{background:var(--bg2);padding:1px 6px;border-radius:3px;font-size:12px;color:var(--text)}
+
+/* method cards */
+.method-grid{display:grid;gap:14px;margin-bottom:32px}
+.method-card{border:1px solid var(--border);border-radius:6px;overflow:hidden}
+.method-head{background:var(--bg2);padding:12px 16px;display:flex;align-items:center;gap:10px}
+.method-head-icon{font-size:16px}
+.method-head-title{font-size:14px;font-weight:500}
+.method-head-badge{margin-left:auto;font-size:11px;color:var(--muted);background:#fff;border:1px solid var(--border);padding:2px 8px;border-radius:10px}
+.method-body{padding:16px}
+
+/* tip / note / warn */
+.tip,.note,.warn{border-radius:6px;padding:12px 14px;font-size:13px;line-height:1.75;margin:12px 0;display:flex;gap:10px;align-items:flex-start}
+.tip{background:var(--accent-light);color:var(--accent)}
+.note{background:var(--blue-light);color:var(--blue)}
+.warn{background:var(--red-light);color:var(--red)}
+.tip-icon,.note-icon,.warn-icon{flex-shrink:0;margin-top:1px}
+.tip-text,.note-text,.warn-text{color:var(--text)}
+
+/* file app guide */
+.file-app{background:var(--bg2);border-radius:6px;padding:20px;margin-top:8px}
+.file-app-title{font-size:13px;font-weight:500;margin-bottom:14px;color:var(--muted)}
+
+/* size table */
+.size-table{width:100%;border-collapse:collapse;font-size:13px;margin-top:8px}
+.size-table th{background:var(--bg2);padding:10px 12px;text-align:left;font-weight:500;border-bottom:1px solid var(--border)}
+.size-table td{padding:10px 12px;border-bottom:1px solid var(--border);color:var(--text)}
+.size-table tr:last-child td{border-bottom:none}
+.size-table .ok{color:var(--green);font-weight:500}
+.size-table .ng{color:var(--red)}
+.size-badge{display:inline-block;background:var(--green-light);color:var(--green);font-size:11px;padding:1px 7px;border-radius:10px;font-weight:500}
+.size-badge.ng{background:var(--red-light);color:var(--red)}
+
+/* goods */
+.goods-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.goods-card{border:1px solid var(--border);border-radius:6px;padding:16px}
+.goods-icon{font-size:24px;margin-bottom:8px}
+.goods-name{font-size:14px;font-weight:500;margin-bottom:4px}
+.goods-desc{font-size:12px;color:var(--muted);line-height:1.7}
+
+.cta-banner{background:var(--text);color:#fff;border-radius:8px;padding:24px;text-align:center;margin-top:24px}
+.cta-banner p{font-size:13px;opacity:.7;margin-bottom:14px;line-height:1.7}
+.cta-banner a{display:inline-block;background:var(--accent);color:#fff;font-size:13px;padding:10px 28px;border-radius:3px;font-family:var(--sans)}
+
+/* notice section */
+.notice-list{display:grid;gap:10px}
+.notice-item{display:flex;gap:12px;padding:14px 16px;border-radius:6px;font-size:13px;line-height:1.75}
+.notice-item.warn{background:var(--red-light)}
+.notice-item.ok{background:var(--green-light)}
+
+footer{padding:28px 0;border-top:1px solid var(--border);text-align:center;margin-top:40px}
+footer p{font-size:12px;color:var(--muted)}
+
+@media(max-width:560px){
+  .goods-grid{grid-template-columns:1fr}
+  .size-table{font-size:11px}
+  .size-table th,.size-table td{padding:6px 6px}
+  .size-table th:nth-child(3),.size-table td:nth-child(3){display:none} /* ピクセル数列をスマホで非表示 */
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <div class="header-logo">Alcyone PhotoShare</div>
+    <div class="header-title">📥 写真のダウンロードガイド</div>
+    <div class="header-sub">お使いのデバイスに合わせた方法でダウンロードしてください</div>
+  </div>
+</header>
+
+<nav class="tab-nav">
+  <div class="wrap">
+    <button class="tab-btn active" onclick="switchTab('iphone',this)">
+      <span class="tab-icon">📱</span>iPhone
+    </button>
+    <button class="tab-btn" onclick="switchTab('android',this)">
+      <span class="tab-icon">🤖</span>Android
+    </button>
+    <button class="tab-btn" onclick="switchTab('pc',this)">
+      <span class="tab-icon">💻</span>PC / Mac
+    </button>
+  </div>
+</nav>
+
+<!-- 注意事項（タブの下・スクロールする） -->
+<div style="background:var(--bg2);border-bottom:1px solid var(--border);padding:20px 0">
+  <div class="wrap">
+    <div style="font-size:12px;font-weight:500;color:var(--muted);margin-bottom:10px;letter-spacing:.04em">📋 ダウンロード前にご確認ください</div>
+    <div class="notice-list">
+      <div class="notice-item warn"><span>⏰</span><span><strong>有効期限があります。</strong>期限内にダウンロードしてください。期限が切れるとアクセスできなくなります。</span></div>
+      <div class="notice-item warn"><span>📶</span><span><strong>Wi-Fi環境でのダウンロードをおすすめします。</strong>写真データは大容量のため、モバイル通信だと通信量が多くかかります。</span></div>
+      <div class="notice-item warn"><span>💾</span><span><strong>ストレージの空き容量を確認してください。</strong>フルサイズは1枚あたり5〜15MB程度あります。</span></div>
+      <div class="notice-item ok"><span>🖨️</span><span><strong>印刷サイズに合わせてダウンロードサイズを選んでください。</strong>大きく印刷したい場合は「フルサイズ」、L判〜A4なら「A4用」がおすすめです。ページ下部の印刷サイズ表も参考にしてください。</span></div>
+      <div class="notice-item ok"><span>✅</span><span><strong>有効期限内であれば何度でもダウンロードできます。</strong></span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== iPhone ==================== -->
+<div id="tab-iphone" class="tab-content active">
+  <div class="wrap">
+
+    <div class="tip" style="margin-top:24px">
+      <span class="tip-icon">💡</span>
+      <span class="tip-text">iPhoneでは <strong>Safari</strong> でページを開くのがおすすめです。Chromeだとダウンロード先が異なる場合があります。</span>
+    </div>
+
+    <div class="section" style="margin-top:24px">
+      <div class="section-title"><span class="icon">📲</span>ダウンロード方法</div>
+      <div class="method-grid">
+
+        <!-- 個別 -->
+        <div class="method-card">
+          <div class="method-head">
+            <span class="method-head-icon">🖼️</span>
+            <span class="method-head-title">個別ダウンロード（1枚ずつ写真アプリへ保存）</span>
+            <span class="method-head-badge">おすすめ</span>
+          </div>
+          <div class="method-body">
+            <div class="steps">
+              <div class="step"><div class="step-num">1</div><div class="step-body"><div class="step-title">保存したい写真をタップして開く</div></div></div>
+              <div class="step"><div class="step-num">2</div><div class="step-body"><div class="step-title">右上の「保存」ボタンをタップ</div><div class="step-desc">画面右上に表示されている保存アイコンです</div></div></div>
+              <div class="step"><div class="step-num">3</div><div class="step-body"><div class="step-title">サイズを選択する</div><div class="step-desc">フルサイズ・中サイズ・小サイズから選べます</div></div></div>
+              <div class="step"><div class="step-num">4</div><div class="step-body"><div class="step-title">ダイアログが表示されたら「表示」をタップ</div><div class="step-desc">Safariのダウンロード確認が出た場合にタップしてください</div></div></div>
+              <div class="step"><div class="step-num">5</div><div class="step-body"><div class="step-title">画像を長押し→「"写真"に保存」をタップ</div><div class="step-desc">これで写真アプリに直接保存されます</div></div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 選択 -->
+        <div class="method-card">
+          <div class="method-head">
+            <span class="method-head-icon">☑️</span>
+            <span class="method-head-title">選択ダウンロード（選んでまとめて保存）</span>
+          </div>
+          <div class="method-body">
+            <div class="steps">
+              <div class="step"><div class="step-num">1</div><div class="step-body"><div class="step-title">「選択」ボタンをタップ</div><div class="step-desc">保存したい写真を選ぶモードになります</div></div></div>
+              <div class="step"><div class="step-num">2</div><div class="step-body"><div class="step-title">保存したい写真をタップして選ぶ</div><div class="step-desc">チェックが入った写真が選択された状態です</div></div></div>
+              <div class="step"><div class="step-num">3</div><div class="step-body"><div class="step-title">「ダウンロード」をタップ</div><div class="step-desc">選択した写真がZIPでまとめてダウンロードされます</div></div></div>
+              <div class="step"><div class="step-num">4</div><div class="step-body"><div class="step-title">ファイルアプリで確認する</div><div class="step-desc">↓の「ファイルアプリの開き方」をご確認ください</div></div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 全体 -->
+        <div class="method-card">
+          <div class="method-head">
+            <span class="method-head-icon">📦</span>
+            <span class="method-head-title">全体ダウンロード（まとめて全部保存）</span>
+          </div>
+          <div class="method-body">
+            <div class="steps">
+              <div class="step"><div class="step-num">1</div><div class="step-body"><div class="step-title">「全部ダウンロード」ボタンをタップ</div><div class="step-desc">アルバムページ上部のボタンです</div></div></div>
+              <div class="step"><div class="step-num">2</div><div class="step-body"><div class="step-title">「ダウンロード」をタップ</div><div class="step-desc">Safariの確認ダイアログが出ます</div></div></div>
+              <div class="step"><div class="step-num">3</div><div class="step-body"><div class="step-title">ダウンロードが完了するまで待つ</div><div class="step-desc">画面右上の↓マークが進行中を表しています。写真の枚数によっては少し時間がかかります</div></div></div>
+              <div class="step"><div class="step-num">4</div><div class="step-body"><div class="step-title">ファイルアプリで確認する</div><div class="step-desc">↓の「ファイルアプリの開き方」をご確認ください</div></div></div>
+            </div>
+            <div class="tip" style="margin-top:12px">
+              <span class="tip-icon">💡</span>
+              <span class="tip-text">ZIPファイルでまとめてダウンロードされます。ファイルアプリで開くと自動で解凍されます。</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ファイルアプリ -->
+    <div class="section">
+      <div class="section-title"><span class="icon">📁</span>ファイルアプリの開き方・使い方</div>
+      <div class="file-app">
+        <div class="file-app-title">📂 ファイルアプリでダウンロードした写真を確認する</div>
+        <div class="steps">
+          <div class="step"><div class="step-num">1</div><div class="step-body"><div class="step-title">ホーム画面で「ファイル」アプリを開く</div><div class="step-desc">見つからない場合は画面を下にスワイプして「ファイル」と検索してください</div></div></div>
+          <div class="step"><div class="step-num">2</div><div class="step-body"><div class="step-title">「このiPhone内」をタップ</div></div></div>
+          <div class="step"><div class="step-num">3</div><div class="step-body"><div class="step-title">「ダウンロード」フォルダを開く</div><div class="step-desc">ダウンロードした写真やZIPファイルがここに入っています</div></div></div>
+          <div class="step"><div class="step-num">4</div><div class="step-body"><div class="step-title">ZIPファイルをタップすると自動で解凍される</div><div class="step-desc">解凍後にフォルダが作られ、中に写真が入っています</div></div></div>
+        </div>
+      </div>
+      <div class="file-app" style="margin-top:12px">
+        <div class="file-app-title">📷 写真アプリに移動する方法</div>
+        <div class="steps">
+          <div class="step"><div class="step-num">1</div><div class="step-body"><div class="step-title">ファイルアプリで写真を開く</div></div></div>
+          <div class="step"><div class="step-num">2</div><div class="step-body"><div class="step-title">左下の「共有」ボタン（□↑）をタップ</div></div></div>
+          <div class="step"><div class="step-num">3</div><div class="step-body"><div class="step-title">「写真に保存」をタップ</div><div class="step-desc">これで写真アプリに移動します。複数枚ある場合は1枚ずつ行うか、まとめて選択してから共有してください。</div></div></div>
+        </div>
+        <div class="note" style="margin-top:12px">
+          <span class="note-icon">ℹ️</span>
+          <span class="note-text">複数枚まとめて移動する場合：ファイルアプリでフォルダを開き、右上の「...」→「選択」→すべて選択→共有→「写真に保存」の順でできます。</span>
+        </div>
+        <div class="warn" style="margin-top:10px">
+          <span class="warn-icon">🗑️</span>
+          <span class="warn-text"><strong>写真アプリに保存できたら、ファイルアプリのデータは削除してください。</strong>そのままにしておくと同じデータが2か所に残り、ストレージを無駄に消費してしまいます。ファイルアプリの「ダウンロード」フォルダからZIPファイルと解凍後のフォルダを長押し→「削除」で消せます。</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- サイズ確認 iPhone -->
+    <div class="section">
+      <div class="section-title"><span class="icon">📐</span>画像サイズの確認方法（iPhone）</div>
+      <div class="steps">
+        <div class="step"><div class="step-num">1</div><div class="step-body"><div class="step-title">写真アプリで確認したい写真を開く</div></div></div>
+        <div class="step"><div class="step-num">2</div><div class="step-body"><div class="step-title">画面を上にスワイプ、または「ⓘ」ボタンをタップ</div><div class="step-desc">写真の情報が表示されます</div></div></div>
+        <div class="step"><div class="step-num">3</div><div class="step-body"><div class="step-title">「〇〇 × 〇〇」という数字が画像サイズ（ピクセル）です</div><div class="step-desc">例：6000 × 4000 → フルサイズで大判印刷OK</div></div></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ==================== Android ==================== -->
+<div id="tab-android" class="tab-content">
+  <div class="wrap">
+
+    <div class="tip" style="margin-top:24px">
+      <span class="tip-icon">💡</span>
+      <span class="tip-text">Androidは機種によって操作が少し異なる場合があります。基本的な流れは同じです。</span>
+    </div>
+
+    <div class="section" style="margin-top:24px">
+      <div class="section-title"><span class="icon">📲</span>ダウンロード方法</div>
+      <div class="method-grid">
+
+        <div class="method-card">
+          <div class="method-head">
+            <span class="method-head-icon">🖼️</span>
+            <span class="method-head-title">個別ダウンロード（1枚ずつ保存）</span>
+            <span class="method-head-badge">おすすめ</span>
+          </div>
+          <div class="method-body">
+            <div class="steps">
+              <div class="step"><div class="step-num">1</div><div class="step-body"><div class="step-title">写真をタップして開く</div></div></div>
+              <div class="step"><div class="step-num">2</div><div class="step-body"><div class="step-title">右上の「保存」ボタンをタップ</div></div></div>
+              <div class="step"><div class="step-num">3</div><div class="step-body"><div class="step-title">サイズを選択してダウンロード</div></div></div>
+            </div>
+            <div class="tip" style="margin-top:12px">
+              <span class="tip-icon">💡</span>
+              <span class="tip-text">写真をギャラリーに保存したい場合は、画像を長押し→「画像を保存」を選んでください。</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="method-card">
+          <div class="method-head">
+            <span class="method-head-icon">☑️</span>
+            <span class="method-head-title">選択ダウンロード（選んで保存）</span>
+          </div>
+          <div class="method-body">
+            <div class="steps">
+              <div class="step"><div class="step-num">1</div><div class="step-body"><div class="step-title">「選択」ボタンをタップ</div></div></div>
+              <div class="step"><div class="step-num">2</div><div class="step-body"><div class="step-title">保存したい写真をタップして選ぶ</div></div></div>
+              <div class="step"><div class="step-num">3</div><div class="step-body"><div class="step-title">「ダウンロード」をタップ</div><div class="step-desc">ダウンロードフォルダに保存されます</div></div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="method-card">
+          <div class="method-head">
+            <span class="method-head-icon">📦</span>
+            <span class="method-head-title">全体ダウンロード（まとめて全部保存）</span>
+          </div>
+          <div class="method-body">
+            <div class="steps">
+              <div class="step"><div class="step-num">1</div><div class="step-body"><div class="step-title">「全部ダウンロード」ボタンをタップ</div></div></div>
+              <div class="step"><div class="step-num">2</div><div class="step-body"><div class="step-title">ダウンロードが完了するまで待つ</div><div class="step-desc">画面上部の通知バーにダウンロードの進行状況が表示されます</div></div></div>
+              <div class="step"><div class="step-num">3</div><div class="step-body"><div class="step-title">通知をタップ、またはファイルマネージャーで確認</div><div class="step-desc">「ダウンロード」フォルダにZIPファイルが保存されています</div></div></div>
+              <div class="step"><div class="step-num">4</div><div class="step-body"><div class="step-title">ZIPファイルをタップして解凍</div><div class="step-desc">解凍アプリが起動して写真を取り出せます</div></div></div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title"><span class="icon">📁</span>ファイルマネージャーの開き方</div>
+      <div class="file-app">
+        <div class="file-app-title">📂 ダウンロードした写真を確認する</div>
+        <div class="steps">
+          <div class="step"><div class="step-num">1</div><div class="step-body"><div class="step-title">「ファイル」または「マイファイル」アプリを開く</div><div class="step-desc">見つからない場合はアプリ一覧で「ファイル」と検索してください</div></div></div>
+          <div class="step"><div class="step-num">2</div><div class="step-body"><div class="step-title">「ダウンロード」フォルダを開く</div><div class="step-desc">ダウンロードした写真・ZIPファイルがここにあります</div></div></div>
+          <div class="step"><div class="step-num">3</div><div class="step-body"><div class="step-title">ZIPファイルを長押し→「解凍」または「展開」</div><div class="step-desc">機種によって表示が異なります</div></div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title"><span class="icon">📐</span>画像サイズの確認方法（Android）</div>
+      <div class="steps">
+        <div class="step"><div class="step-num">1</div><div class="step-body"><div class="step-title">ギャラリーアプリで写真を開く</div></div></div>
+        <div class="step"><div class="step-num">2</div><div class="step-body"><div class="step-title">「詳細」または「ⓘ」ボタンをタップ</div><div class="step-desc">メニューや画面下部にあります</div></div></div>
+        <div class="step"><div class="step-num">3</div><div class="step-body"><div class="step-title">「解像度」または「サイズ」の欄を確認</div><div class="step-desc">例：6000 × 4000 と表示されます</div></div></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ==================== PC ==================== -->
+<div id="tab-pc" class="tab-content">
+  <div class="wrap">
+
+    <div class="tip" style="margin-top:24px">
+      <span class="tip-icon">💡</span>
+      <span class="tip-text">PCでのダウンロードが一番簡単です。大量の写真を保存する場合はPCをおすすめします。</span>
+    </div>
+
+    <div class="section" style="margin-top:24px">
+      <div class="section-title"><span class="icon">📲</span>ダウンロード方法</div>
+      <div class="method-grid">
+
+        <div class="method-card">
+          <div class="method-head">
+            <span class="method-head-icon">🖼️</span>
+            <span class="method-head-title">個別ダウンロード（1枚ずつ保存）</span>
+          </div>
+          <div class="method-body">
+            <div class="steps">
+              <div class="step"><div class="step-num">1</div><div class="step-body"><div class="step-title">写真をクリックして開く</div></div></div>
+              <div class="step"><div class="step-num">2</div><div class="step-body"><div class="step-title">右上の「保存」ボタンをクリック</div></div></div>
+              <div class="step"><div class="step-num">3</div><div class="step-body"><div class="step-title">サイズを選択するとダウンロードが始まる</div><div class="step-desc">保存先を変えたい場合はブラウザのダウンロード設定で変更できます</div></div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="method-card">
+          <div class="method-head">
+            <span class="method-head-icon">☑️</span>
+            <span class="method-head-title">選択ダウンロード（選んで保存）</span>
+          </div>
+          <div class="method-body">
+            <div class="steps">
+              <div class="step"><div class="step-num">1</div><div class="step-body"><div class="step-title">「選択」ボタンをクリック</div></div></div>
+              <div class="step"><div class="step-num">2</div><div class="step-body"><div class="step-title">保存したい写真をクリックして選ぶ</div><div class="step-desc">複数選択はクリックのたびに追加されます</div></div></div>
+              <div class="step"><div class="step-num">3</div><div class="step-body"><div class="step-title">「ダウンロード」をクリック</div></div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="method-card">
+          <div class="method-head">
+            <span class="method-head-icon">📦</span>
+            <span class="method-head-title">全体ダウンロード（まとめて全部保存）</span>
+          </div>
+          <div class="method-body">
+            <div class="steps">
+              <div class="step"><div class="step-num">1</div><div class="step-body"><div class="step-title">「全部ダウンロード」ボタンをクリック</div></div></div>
+              <div class="step"><div class="step-num">2</div><div class="step-body"><div class="step-title">ZIPファイルのダウンロードが始まる</div><div class="step-desc">ブラウザ下部またはダウンロードバーに進行状況が表示されます</div></div></div>
+              <div class="step"><div class="step-num">3</div><div class="step-body"><div class="step-title">ダウンロードフォルダを開いてZIPを解凍</div><div class="step-desc">Windowsは右クリック→「すべて展開」、Macはダブルクリックで解凍できます</div></div></div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title"><span class="icon">📁</span>保存先の確認方法</div>
+      <div class="file-app">
+        <div class="file-app-title">🪟 Windows の場合</div>
+        <div class="steps">
+          <div class="step"><div class="step-num">1</div><div class="step-body"><div class="step-title">エクスプローラーを開く</div><div class="step-desc">タスクバーのフォルダアイコンをクリック、またはWindowsキー+E</div></div></div>
+          <div class="step"><div class="step-num">2</div><div class="step-body"><div class="step-title">左サイドバーの「ダウンロード」をクリック</div></div></div>
+          <div class="step"><div class="step-num">3</div><div class="step-body"><div class="step-title">ZIPファイルを右クリック→「すべて展開」</div></div></div>
+        </div>
+      </div>
+      <div class="file-app" style="margin-top:12px">
+        <div class="file-app-title">🍎 Mac の場合</div>
+        <div class="steps">
+          <div class="step"><div class="step-num">1</div><div class="step-body"><div class="step-title">Finderを開く</div></div></div>
+          <div class="step"><div class="step-num">2</div><div class="step-body"><div class="step-title">左サイドバーの「ダウンロード」をクリック</div></div></div>
+          <div class="step"><div class="step-num">3</div><div class="step-body"><div class="step-title">ZIPファイルをダブルクリックで解凍</div><div class="step-desc">同じフォルダ内に解凍されたフォルダが作られます</div></div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title"><span class="icon">📐</span>画像サイズの確認方法（PC）</div>
+      <div class="file-app">
+        <div class="file-app-title">🪟 Windows</div>
+        <div class="steps">
+          <div class="step"><div class="step-num">1</div><div class="step-body"><div class="step-title">写真ファイルを右クリック→「プロパティ」</div></div></div>
+          <div class="step"><div class="step-num">2</div><div class="step-body"><div class="step-title">「詳細」タブをクリック</div></div></div>
+          <div class="step"><div class="step-num">3</div><div class="step-body"><div class="step-title">「幅」「高さ」の数値を確認</div></div></div>
+        </div>
+      </div>
+      <div class="file-app" style="margin-top:12px">
+        <div class="file-app-title">🍎 Mac</div>
+        <div class="steps">
+          <div class="step"><div class="step-num">1</div><div class="step-body"><div class="step-title">写真をプレビューで開く</div></div></div>
+          <div class="step"><div class="step-num">2</div><div class="step-body"><div class="step-title">メニューバー「ツール」→「インスペクタ」</div></div></div>
+          <div class="step"><div class="step-num">3</div><div class="step-body"><div class="step-title">「一般情報」タブで解像度・サイズを確認</div></div></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ==================== 共通セクション ==================== -->
+<div style="background:var(--bg2);padding:48px 0;margin-top:8px">
+  <div class="wrap">
+
+    <!-- 印刷サイズ（注意事項セクションは上部に移動済み） -->
+    <div class="section">
+      <div class="section-title"><span class="icon">🖨️</span>印刷サイズの目安</div>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:16px;line-height:1.75">納品写真はフルサイズ・A4印刷用・Lサイズ印刷用の3種類からダウンロードできます。印刷したいサイズに合わせてお選びください。</p>
+      <table class="size-table">
+        <thead>
+          <tr>
+            <th>サイズ名</th>
+            <th>寸法</th>
+            <th>300dpi推奨ピクセル数</th>
+            <th>用途</th>
+            <th>フル</th>
+            <th>A4用</th>
+            <th>L用</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>L判</strong></td>
+            <td>89×127mm</td>
+            <td style="color:var(--muted);font-size:12px">1051×1500px</td>
+            <td>一般的な写真プリント</td>
+            <td><span class="size-badge">◎</span></td>
+            <td><span class="size-badge">◎</span></td>
+            <td><span class="size-badge">◎</span></td>
+          </tr>
+          <tr>
+            <td><strong>KG判</strong></td>
+            <td>102×152mm</td>
+            <td style="color:var(--muted);font-size:12px">1205×1795px</td>
+            <td>キングサイズ・アルバム</td>
+            <td><span class="size-badge">◎</span></td>
+            <td><span class="size-badge">◎</span></td>
+            <td><span class="size-badge">◎</span></td>
+          </tr>
+          <tr>
+            <td><strong>2L判</strong></td>
+            <td>127×178mm</td>
+            <td style="color:var(--muted);font-size:12px">1500×2102px</td>
+            <td>飾り用・プレゼント</td>
+            <td><span class="size-badge">◎</span></td>
+            <td><span class="size-badge">◎</span></td>
+            <td><span class="size-badge">○</span></td>
+          </tr>
+          <tr>
+            <td><strong>六切り</strong></td>
+            <td>203×254mm</td>
+            <td style="color:var(--muted);font-size:12px">2398×3000px</td>
+            <td>額縁・飾り</td>
+            <td><span class="size-badge">◎</span></td>
+            <td><span class="size-badge">◎</span></td>
+            <td><span class="size-badge ng">△</span></td>
+          </tr>
+          <tr>
+            <td><strong>A4</strong></td>
+            <td>210×297mm</td>
+            <td style="color:var(--muted);font-size:12px">2480×3508px</td>
+            <td>フォトブック・インテリア</td>
+            <td><span class="size-badge">◎</span></td>
+            <td><span class="size-badge">◎</span></td>
+            <td><span class="size-badge ng">△</span></td>
+          </tr>
+          <tr>
+            <td><strong>四切り</strong></td>
+            <td>254×305mm</td>
+            <td style="color:var(--muted);font-size:12px">3000×3602px</td>
+            <td>大きな額縁</td>
+            <td><span class="size-badge">◎</span></td>
+            <td><span class="size-badge">○</span></td>
+            <td><span class="size-badge ng">✕</span></td>
+          </tr>
+          <tr>
+            <td><strong>A3</strong></td>
+            <td>297×420mm</td>
+            <td style="color:var(--muted);font-size:12px">3508×4961px</td>
+            <td>大判・キャンバス</td>
+            <td><span class="size-badge">◎</span></td>
+            <td><span class="size-badge ng">△</span></td>
+            <td><span class="size-badge ng">✕</span></td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="tip" style="margin-top:14px">
+        <span class="tip-icon">💡</span>
+        <span class="tip-text">迷ったら <strong>フルサイズ</strong> をダウンロードしておくのがおすすめです。あとからどのサイズでも印刷できます。</span>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<footer>
+  <p>© Alcyone PhotoShare　ご不明な点は<a href="https://lin.ee/Qy34W1s" target="_blank" style="color:var(--muted);">公式LINE</a>までお気軽にどうぞ</p>
+</footer>
+
+<script>
+function switchTab(id, btn) {
+  document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+  document.getElementById('tab-' + id).classList.add('active');
+  btn.classList.add('active');
+}
+</script>
+
+</body>
+</html>
