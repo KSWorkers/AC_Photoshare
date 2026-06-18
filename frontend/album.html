@@ -92,17 +92,17 @@ body{font-family:-apple-system,'Hiragino Sans',sans-serif;background:var(--bg);c
 .dl-item small{display:block;font-size:11px;color:var(--muted);margin-top:1px;}
 
 /* ── グリッド ── */
-.gallery{padding:3px 0 100px;}
+.gallery{padding:3px 0 100px;contain:layout;}
 .grow{display:flex;gap:3px;margin-bottom:3px;}
 .gi{flex-shrink:0;overflow:hidden;cursor:pointer;position:relative;background:#e8e6e2;}
-.gi img{width:100%;height:100%;object-fit:cover;display:block;will-change:transform;}
+.gi img{width:100%;height:100%;object-fit:cover;display:block;}
 .gi img{-webkit-touch-callout:default;}
-@media(hover:hover){.gi img{transition:transform .3s ease;}.gi:hover img{transform:scale(1.02);}}
+@media(hover:hover){.gi img{transition:transform .3s ease;will-change:transform;}.gi:hover img{transform:scale(1.02);}}
 .gi-ck{position:absolute;top:8px;left:8px;width:22px;height:22px;border-radius:50%;background:rgba(255,255,255,.88);border:1.5px solid #fff;display:none;align-items:center;justify-content:center;box-shadow:0 1px 4px rgba(0,0,0,.2);z-index:5;}
 .sel-mode .gi-ck{display:flex;}
 .gi.sel .gi-ck{background:var(--text);border-color:var(--text);}
 .gi.sel::before{content:'';position:absolute;inset:0;box-shadow:inset 0 0 0 3px var(--text);pointer-events:none;z-index:4;}
-.gi.sel img{opacity:.75;}
+.gi.sel img{filter:brightness(.7);}
 
 /* 選択バー */
 .sel-bar{position:fixed;bottom:0;left:0;right:0;background:var(--text);color:#fff;padding:14px 20px;display:none;align-items:center;justify-content:space-between;z-index:300;gap:12px;}
