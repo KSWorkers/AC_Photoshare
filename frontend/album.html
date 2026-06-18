@@ -492,7 +492,7 @@ async function downloadZip(list,size){
 }
 function downloadAll(size){closeAllMenus();downloadZip(photos,size)}
 function downloadSel(size){closeAllMenus();downloadZip([...selIds].map(i=>photos[i]),size);cancelSel()}
-function dlCurrent(size){closeAllMenus();const p=photos[cur];const a=document.createElement('a');a.href=photoUrl(p,size);a.download=(size==='full'?'':size+'_')+p.name;a.click();showToast('ダウンロードを開始します')}
+function dlCurrent(size){closeAllMenus();const p=photos[cur];window.open(photoUrl(p,size),'_blank');}
 
 function toggleDlMenu(e){e.stopPropagation();document.getElementById('allDlMenu').classList.toggle('on')}
 function toggleSelDl(e){e.stopPropagation();document.getElementById('selDlMenu').classList.toggle('on')}
@@ -522,7 +522,7 @@ function updLb(){
   document.getElementById('lbCnt').textContent=`${cur+1} / ${photos.length}`
   document.getElementById('lbPrev').disabled=cur===0
   document.getElementById('lbNext').disabled=cur===photos.length-1
-  document.getElementById('lbHint').innerHTML=isMobile?'長押し →「イメージを保存」でカメラロールに保存<br>（A4印刷サイズまで対応）':''
+  document.getElementById('lbHint').innerHTML=isMobile?'保存 ▾ からサイズを選択 → 画像が開いたら長押し →「イメージを保存」':''
 }
 function lbMv(dir){
   const n=cur+dir;if(n<0||n>=photos.length)return;cur=n
