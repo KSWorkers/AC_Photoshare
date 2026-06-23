@@ -522,7 +522,7 @@ function renderGrid(){
             ${heroOptHtml}
           </select>
         </div>
-        <div class="ub"><button class="btn btn-s btn-sm" onclick="copyUrl('${url}')">URLコピー</button><button class="btn btn-s btn-sm" onclick="showQr('${url}','${a.name.replace(/'/g,"\\'")}',event)">QR表示</button></div>
+        <div class="ub"><button class="btn btn-s btn-sm" onclick="copyAlbumInfo('${a.token}')">URLコピー</button><button class="btn btn-s btn-sm" onclick="showQr('${url}','${a.name.replace(/'/g,"\\'")}',event)">QR表示</button></div>
         <div class="ca">
           <a class="btn btn-s btn-sm" href="${url}" target="_blank" style="width:100%;justify-content:center;">アルバムを開く</a>
           <div style="display:flex;gap:5px;width:100%;">
@@ -770,6 +770,23 @@ async function executeDelete(){
 }
 
 function copyUrl(url,toast=true){navigator.clipboard?.writeText(url).catch(()=>{});if(toast)showToast('URLをコピーしました')}
+
+function copyAlbumInfo(token){
+  const a=albums.find(x=>x.token===token);if(!a)return
+  const url=`https://ac-photoshare.pages.dev/a/${token}`
+  const pwLine=a.password?`合い言葉: ${a._pwHint||'設定あり（カメラマンにご確認ください）'}`:'合い言葉: 合い言葉なしで閲覧できます'
+  let expLine='アルバムの公開終了日: 無期限'
+  if(a.expiresAt){
+    const exp=new Date(a.expiresAt)
+    const now=new Date()
+    const days=Math.ceil((exp-now)/(1000*60*60*24))
+    const y=exp.getFullYear(),m=String(exp.getMonth()+1).padStart(2,'0'),d=String(exp.getDate()).padStart(2,'0')
+    expLine=`アルバムの公開終了日: ${y} / ${m} / ${d}（あと ${days}日）`
+  }
+  const text=`アルバムのタイトル: ${a.name}\nアルバムのURL: ${url}\n${pwLine}\n${expLine}`
+  navigator.clipboard?.writeText(text).catch(()=>{})
+  showToast('アルバム情報をコピーしました')
+}
 
 function showToast(m){
   const t=document.getElementById('toast')
