@@ -85,10 +85,9 @@ body{font-family:-apple-system,'Hiragino Sans',sans-serif;background:var(--bg);c
 <header class="hd">
   <div class="logo">Alcyone PhotoShare <span>Photo<span class="logo-sub"> — 管理画面</span></span></div>
   <div style="display:flex;gap:8px;align-items:center;">
-    <button class="btn btn-s btn-sm" onclick="openSettings()" style="display:none;" id="settingsBtn">⚙️ <span data-t="settings">設定</span></button>
-    <button class="btn btn-s btn-sm" id="bulkBtn" onclick="toggleBulk()" style="display:none;" data-t="bulkSelect">まとめて選択</button>
-    <button class="btn btn-s btn-sm" id="langBtn" onclick="toggleLang()">EN</button>
-    <button class="btn btn-s btn-sm" onclick="logout()" data-t="logout">ログアウト</button>
+    <button class="btn btn-s btn-sm" onclick="openSettings()" style="display:none;" id="settingsBtn">⚙️ 設定</button>
+    <button class="btn btn-s btn-sm" id="bulkBtn" onclick="toggleBulk()" style="display:none;">まとめて選択</button>
+    <button class="btn btn-s btn-sm" onclick="logout()">ログアウト</button>
   </div>
 </header>
 
@@ -112,7 +111,7 @@ body{font-family:-apple-system,'Hiragino Sans',sans-serif;background:var(--bg);c
 <div id="main" class="main">
   <div class="ph">
     <div><div class="ph-t">アルバム一覧</div><div class="ph-s" id="phS"></div></div>
-    <button class="btn btn-p" onclick="openCreate()" id="newAlbumBtn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg><span data-t="newAlbum">新しいアルバム</span></button>
+    <button class="btn btn-p" onclick="openCreate()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>新しいアルバム</button>
   </div>
   <div class="fts">
     <button class="ft on" onclick="setFilter('all',this)">すべて</button>
@@ -400,117 +399,12 @@ body{font-family:-apple-system,'Hiragino Sans',sans-serif;background:var(--bg);c
 const W = 'https://ac-photoshare.nikkomaedori.workers.dev'
 let tok = sessionStorage.getItem('adminToken') || localStorage.getItem('adminToken') || ''
 
-// ── Language toggle ─────────────────────────────────────────────
-let lang = localStorage.getItem('adminLang') || 'ja'
-const T = {
-  ja: {
-    settings: '設定', bulkSelect: 'まとめて選択', logout: 'ログアウト',
-    albumList: 'アルバム一覧', newAlbum: '新しいアルバム',
-    filterAll: 'すべて', filterActive: '公開中', filterPrivate: '非公開', filterExpired: '期限切れ',
-    sortLabel: '並べ替え：',
-    sortCreatedDesc: '作成日（新しい順）', sortCreatedAsc: '作成日（古い順）',
-    sortNameAsc: 'アルバム名（A→Z）', sortUpdatedDesc: '更新日（新しい順）',
-    sortStatus: 'ステータス順（公開→期限切れ→非公開）',
-    bulkDelete: 'まとめて削除', bulkCancel: 'キャンセル',
-    stActive: '公開中', stPrivate: '非公開', stExpired: '期限切れ',
-    copyUrl: 'URLコピー', showQr: 'QR表示', openAlbum: 'アルバムを開く',
-    upload: 'アップロード', files: 'ファイル管理', editSettings: '設定',
-    loading: '読み込み中...',
-    toastCopied: 'アルバム情報をコピーしました', toastSaved: '設定を保存しました',
-    toastCreated: 'アルバムを作成しました！', toastSaveFail: '保存に失敗しました',
-    toastCreateFail: '作成に失敗しました',
-    loginTitle: '管理者ログイン', loginPw: 'パスワード', loginBtn: 'ログイン',
-    loginRemember: 'ログイン状態を保持する', loginErr: 'パスワードが正しくありません',
-    createTitle: '新しいアルバムを作成', createBtn: '作成してURLを発行',
-    editTitle: 'アルバム設定', saveBtn: '保存', cancelBtn: 'キャンセル',
-    unlimited: '無期限', noPassword: 'パスワード: なし',
-    expLabel: 'アルバムの公開終了日：', expDaysLeft: 'あと',
-    expDaysSuffix: '日）',
-  },
-  en: {
-    settings: 'Settings', bulkSelect: 'Select Multiple', logout: 'Logout',
-    albumList: 'Albums', newAlbum: 'New Album',
-    filterAll: 'All', filterActive: 'Active', filterPrivate: 'Private', filterExpired: 'Expired',
-    sortLabel: 'Sort:',
-    sortCreatedDesc: 'Created (Newest)', sortCreatedAsc: 'Created (Oldest)',
-    sortNameAsc: 'Name (A→Z)', sortUpdatedDesc: 'Updated (Newest)',
-    sortStatus: 'Status (Active → Expired → Private)',
-    bulkDelete: 'Delete Selected', bulkCancel: 'Cancel',
-    stActive: 'Active', stPrivate: 'Private', stExpired: 'Expired',
-    copyUrl: 'Copy Info', showQr: 'QR Code', openAlbum: 'Open Album',
-    upload: 'Upload', files: 'Files', editSettings: 'Settings',
-    loading: 'Loading...',
-    toastCopied: 'Album info copied', toastSaved: 'Settings saved',
-    toastCreated: 'Album created!', toastSaveFail: 'Failed to save',
-    toastCreateFail: 'Failed to create',
-    loginTitle: 'Admin Login', loginPw: 'Password', loginBtn: 'Login',
-    loginRemember: 'Stay logged in', loginErr: 'Incorrect password',
-    createTitle: 'Create New Album', createBtn: 'Create & Get URL',
-    editTitle: 'Album Settings', saveBtn: 'Save', cancelBtn: 'Cancel',
-    unlimited: 'No expiry', noPassword: 'Password: none',
-    expLabel: 'Album expires:', expDaysLeft: 'in',
-    expDaysSuffix: 'days)',
-  }
-}
-function t(key){ return (T[lang]||T.ja)[key] || (T.ja)[key] || key }
-function toggleLang(){
-  lang = lang==='ja'?'en':'ja'
-  localStorage.setItem('adminLang',lang)
-  document.getElementById('langBtn').textContent = lang==='ja'?'EN':'日本語'
-  applyLang()
-}
-function applyLang(){
-  // Static data-t elements
-  document.querySelectorAll('[data-t]').forEach(el=>{
-    const key=el.dataset.t
-    if(el.tagName==='OPTION')el.textContent=t(key)
-    else if(el.tagName==='INPUT'&&el.type==='submit')el.value=t(key)
-    else el.textContent=t(key)
-  })
-  // Login page
-  document.querySelector('.lt').textContent=t('loginTitle')
-  const pwLabel=document.querySelector('#loginWrap .fd label')
-  if(pwLabel)pwLabel.textContent=t('loginPw')
-  document.getElementById('loginBtn').textContent=t('loginBtn')
-  const remLabel=document.querySelector('label[for="rememberMe"]')
-  if(remLabel)remLabel.textContent=t('loginRemember')
-  document.getElementById('loginErr').textContent=t('loginErr')
-  // Page header
-  document.querySelector('.ph-t').textContent=t('albumList')
-  // Filter tabs
-  const fts=document.querySelectorAll('.ft')
-  const ftKeys=['filterAll','filterActive','filterPrivate','filterExpired']
-  fts.forEach((b,i)=>{if(ftKeys[i])b.textContent=t(ftKeys[i])})
-  // Sort label
-  const sortLabel=document.querySelector('label[style*="white-space:nowrap"]')
-  if(sortLabel)sortLabel.textContent=t('sortLabel')
-  // Sort options
-  const sortOptKeys=['sortCreatedDesc','sortCreatedAsc','sortNameAsc','sortUpdatedDesc','sortStatus']
-  document.querySelectorAll('#sortSel option').forEach((o,i)=>{if(sortOptKeys[i])o.textContent=t(sortOptKeys[i])})
-  // Bulk bar
-  document.querySelector('#bulkBar .btn-ds').textContent=t('bulkDelete')
-  // Modals
-  document.querySelector('#moCreate .mh').textContent=t('createTitle')
-  document.getElementById('createBtn').textContent=t('createBtn')
-  document.querySelector('#moEdit .mh').textContent=t('editTitle')
-  document.getElementById('editBtn').textContent=t('saveBtn')
-  // langBtn label
-  document.getElementById('langBtn').textContent=lang==='ja'?'EN':'日本語'
-  // Re-render grid to update card text
-  if(document.getElementById('main').classList.contains('on'))renderGrid()
-}
-// ── End language toggle ──────────────────────────────────────────
 let albums=[], filtered=[]
 let filter='all', bulk=false, selToks=new Set(), lastBulkSel=-1
 let editTok='', nExpOn=true, nPwOn=false, ePubOn=true, eExpOn=false, ePwOn=false, eUploadOn=false, eVideoUploadOn=false
 let deleteTarget=null
 
 if (tok) initMain()
-// Apply lang on page load
-;(function(){
-  document.getElementById('langBtn').textContent = lang==='ja'?'EN':'日本語'
-  applyLang()
-})()
 
 async function login() {
   const t = document.getElementById('tkIn').value.trim(); if (!t) return
@@ -538,7 +432,6 @@ function initMain(){
   document.getElementById('main').classList.add('on')
   document.getElementById('bulkBtn').style.display='inline-flex'
   document.getElementById('settingsBtn').style.display='inline-flex'
-  applyLang()
   loadAlbums()
 }
 
@@ -589,9 +482,9 @@ function renderGrid(){
     const soon=a.expiresAt&&!exp&&(new Date(a.expiresAt)-now)<7*864e5
     // ★ アルバム共有URL: Pages デプロイ後に実際のURLに変更してください
     const url=`https://ac-photoshare.pages.dev/a/${a.token}`
-    let sc='sb-on',sl=t('stActive')
-    if(prv){sc='sb-pv';sl=t('stPrivate')}
-    if(exp){sc='sb-ex';sl=t('stExpired')}
+    let sc='sb-on',sl='公開中'
+    if(prv){sc='sb-pv';sl='非公開'}
+    if(exp){sc='sb-ex';sl='期限切れ'}
     const isSel=selToks.has(a.token)
     const thumbHtml=a.coverId
       ?`<img src="${W}/api/admin/thumb/${a.coverId}?session=${tok}" loading="lazy" onerror="this.parentNode.innerHTML='<div class=th-ph>📸</div>'">`
@@ -615,7 +508,7 @@ function renderGrid(){
         </div>
         <div class="cm">
           <span>作成：${a.createdAt?a.createdAt.slice(0,10):'-'}</span>
-          ${a.expiresAt?`<span style="${exp?'color:#c0392b':''}">期限：${a.expiresAt.slice(0,10)}${soon?' ⚠️':''}</span>`:lang==='en'?'<span>Expiry: None</span>':'<span>期限：無期限</span>'}
+          ${a.expiresAt?`<span style="${exp?'color:#c0392b':''}">期限：${a.expiresAt.slice(0,10)}${soon?' ⚠️':''}</span>`:'<span>期限：無期限</span>'}
           ${a.password?'<span>🔒 パスワードあり</span>':''}
         </div>
         <div style="margin-bottom:8px;">
@@ -630,22 +523,22 @@ function renderGrid(){
             ${heroOptHtml}
           </select>
         </div>
-        <div class="ub"><button class="btn btn-s btn-sm" onclick="copyAlbumInfo('${a.token}')">${t('copyUrl')}</button><button class="btn btn-s btn-sm" onclick="showQr('${url}','${a.name.replace(/'/g,"\\'")}',event)">${t('showQr')}</button></div>
+        <div class="ub"><button class="btn btn-s btn-sm" onclick="copyAlbumInfo('${a.token}')">URLコピー</button><button class="btn btn-s btn-sm" onclick="showQr('${url}','${a.name.replace(/'/g,"\\'")}',event)">QR表示</button></div>
         <div class="ca">
-          <a class="btn btn-s btn-sm" href="${url}" target="_blank" style="width:100%;justify-content:center;">${t('openAlbum')}</a>
+          <a class="btn btn-s btn-sm" href="${url}" target="_blank" style="width:100%;justify-content:center;">アルバムを開く</a>
           <div style="display:flex;gap:5px;width:100%;">
-            <button class="btn btn-s btn-sm" onclick="openUpload('${a.token}')" style="flex:1;justify-content:center;">${t('upload')}</button>
-            <button class="btn btn-s btn-sm" onclick="openFiles('${a.token}')" style="flex:1;justify-content:center;">${t('files')}</button>
-            <button class="btn btn-s btn-sm" onclick="openSettingsPopup('${a.token}',event)" style="flex:1;justify-content:center;">${t('editSettings')}</button>
+            <button class="btn btn-s btn-sm" onclick="openUpload('${a.token}')" style="flex:1;justify-content:center;">アップロード</button>
+            <button class="btn btn-s btn-sm" onclick="openFiles('${a.token}')" style="flex:1;justify-content:center;">ファイル管理</button>
+            <button class="btn btn-s btn-sm" onclick="openSettingsPopup('${a.token}',event)" style="flex:1;justify-content:center;">設定</button>
           </div>
         </div>
       </div>
     </div>`
   }).join('')
-  g.innerHTML=cards+`<div class="cn-new" onclick="openCreate()"><div style="font-size:28px;margin-bottom:8px;">＋</div><div style="font-size:13px;font-weight:500;">${t('newAlbum')}</div></div>`
+  g.innerHTML=cards+`<div class="cn-new" onclick="openCreate()"><div style="font-size:28px;margin-bottom:8px;">＋</div><div style="font-size:13px;font-weight:500;">新しいアルバムを作成</div></div>`
 }
 
-function toggleBulk(){bulk=!bulk;document.getElementById('bulkBtn').textContent=bulk?(lang==='en'?'Cancel Selection':'選択解除'):t('bulkSelect');if(!bulk)cancelBulk();else renderGrid()}
+function toggleBulk(){bulk=!bulk;document.getElementById('bulkBtn').textContent=bulk?'選択解除':'まとめて選択';if(!bulk)cancelBulk();else renderGrid()}
 function toggleCardSel(token,fi,e){
   if(!bulk)return
   if(e.shiftKey&&lastBulkSel>=0){const mn=Math.min(fi,lastBulkSel),mx=Math.max(fi,lastBulkSel);filtered.slice(mn,mx+1).forEach(a=>selToks.add(a.token))}
@@ -655,7 +548,7 @@ function toggleCardSel(token,fi,e){
   document.getElementById('bulkBar').classList.toggle('on',selToks.size>0)
   renderGrid()
 }
-function cancelBulk(){bulk=false;selToks.clear();lastBulkSel=-1;document.getElementById('bulkBar').classList.remove('on');document.getElementById('bulkBtn').textContent=t('bulkSelect');renderGrid()}
+function cancelBulk(){bulk=false;selToks.clear();lastBulkSel=-1;document.getElementById('bulkBar').classList.remove('on');document.getElementById('bulkBtn').textContent='まとめて選択';renderGrid()}
 
 async function bulkDelete(){
   deleteTarget={tokens:[...selToks],name:`${selToks.size}件のアルバム`,bulk:true}
@@ -882,21 +775,18 @@ function copyUrl(url,toast=true){navigator.clipboard?.writeText(url).catch(()=>{
 function copyAlbumInfo(token){
   const a=albums.find(x=>x.token===token);if(!a)return
   const url=`https://ac-photoshare.pages.dev/a/${token}`
-  const isEn=lang==='en'
-  const pwLine=a.password?(isEn?'Password: ':'パスワード: '):(isEn?'Password: none':'パスワード: なし')
-  let expLine=isEn?'Album expires: No expiry':'アルバムの公開終了日: 無期限'
+  const pwLine=a.password?'パスワード: ':'パスワード: なし'
+  let expLine='アルバムの公開終了日: 無期限'
   if(a.expiresAt){
     const exp=new Date(a.expiresAt)
     const now=new Date()
     const days=Math.ceil((exp-now)/(1000*60*60*24))
     const y=exp.getFullYear(),m=String(exp.getMonth()+1).padStart(2,'0'),d=String(exp.getDate()).padStart(2,'0')
-    expLine=isEn?`Album expires: ${y}/${m}/${d} (in ${days} days)`:`アルバムの公開終了日: ${y} / ${m} / ${d}（あと ${days}日）`
+    expLine=`アルバムの公開終了日: ${y} / ${m} / ${d}（あと ${days}日）`
   }
-  const titleLabel=isEn?'Album title':'アルバムのタイトル'
-  const urlLabel=isEn?'Album URL':'アルバムのURL'
-  const text=`${titleLabel}: ${a.name}\n${urlLabel}: ${url}\n${pwLine}\n${expLine}`
+  const text=`アルバムのタイトル: ${a.name}\nアルバムのURL: ${url}\n${pwLine}\n${expLine}`
   navigator.clipboard?.writeText(text).catch(()=>{})
-  showToast(t('toastCopied'))
+  showToast('アルバム情報をコピーしました')
 }
 
 function showToast(m){

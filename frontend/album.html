@@ -170,9 +170,10 @@ body{font-family:-apple-system,'Hiragino Sans',sans-serif;background:var(--bg);c
 <header class="hd" id="header">
   <div class="logo">Alcyone PhotoShare <span>Photo</span></div>
   <div class="hd-right">
-    <button class="btn btn-gw btn-sm" onclick="shareAlbum()">
+    <button class="btn btn-gw btn-sm" id="langBtn" onclick="toggleLang()" style="min-width:36px;text-align:center;">EN</button>
+    <button class="btn btn-gw btn-sm" id="shareBtn" onclick="shareAlbum()">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.59 13.51l6.83 3.98M15.41 6.51l-6.82 3.98"/></svg>
-      共有
+      <span id="shareBtnTxt">共有</span>
     </button>
   </div>
 </header>
@@ -303,8 +304,8 @@ body{font-family:-apple-system,'Hiragino Sans',sans-serif;background:var(--bg);c
     <div id="custUploadBody">
       <label style="display:block;border:2px dashed rgba(0,0,0,.14);border-radius:10px;padding:24px;text-align:center;cursor:pointer;margin-bottom:12px;">
         <div style="font-size:24px;margin-bottom:4px;">📁</div>
-        <div style="font-size:14px;font-weight:500;margin-bottom:2px;">タップして写真・動画を選択</div>
-        <div style="font-size:12px;color:var(--muted);">JPG・PNG・HEIC・MP4・MOVなど</div>
+        <div style="font-size:14px;font-weight:500;margin-bottom:2px;" id="uploadLabelMain">タップして写真・動画を選択</div>
+        <div style="font-size:12px;color:var(--muted);" id="uploadLabelSub">JPG・PNG・HEIC・MP4・MOVなど</div>
         <input type="file" multiple accept="image/*,video/*" id="custFileInput" style="display:none;" onchange="onCustFiles()">
       </label>
       <div id="custUploadList" style="display:grid;gap:6px;max-height:180px;overflow-y:auto;margin-bottom:12px;"></div>
@@ -337,6 +338,161 @@ const W = 'https://ac-photoshare.nikkomaedori.workers.dev'
 const token = new URLSearchParams(location.search).get('token') || location.pathname.split('/').pop()
 const isMobile = /iPhone|iPad|Android/i.test(navigator.userAgent)
 
+// ── 言語設定 ────────────────────────────────────────────────────
+let lang = localStorage.getItem('albumLang') || 'ja'
+const T = {
+  ja: {
+    share: '共有', selBtn: '選択', selCancel: '選択解除',
+    dlAll: 'まとめてDL', dlSel: '選択DL ▾', cancelSel: 'キャンセル',
+    dlFull: 'フルサイズ', dlFullSub: '元データそのまま',
+    dlMed: '中サイズ（A4印刷対応）', dlMedSub: '約2400px',
+    dlSm: '小サイズ（L判印刷対応）', dlSmSub: '約1200px',
+    dlGuide: '📖 保存方法ガイド',
+    lbSave: '保存 ▾', lbDel: '削除',
+    lbHint: '保存 ▾ からサイズを選択 → 画像が開いたら長押し →「イメージを保存」',
+    selCount: n => `${n}枚選択中`,
+    lbCount: (c,t) => `${c} / ${t}`,
+    loading: '読み込み中...',
+    toastUrl: 'URLをコピーしました', toastDlDone: 'ダウンロード完了！', toastErr: 'エラーが発生しました',
+    toastDel: '削除しました', toastDelFail: '削除に失敗しました',
+    zipGen: 'ZIPを生成中...', zipComp: 'ZIPを圧縮中...',
+    progressCount: (d,t) => `${d} / ${t} 枚`,
+    pwProtected: 'パスワードで保護されています', pwPlaceholder: 'パスワード', pwOpen: '開く', pwErr: 'パスワードが違います',
+    videoSection: n => `動画（${n}件）`,
+    videoNotice: 'アップロードした動画はサムネイルが表示されるまで再生できない場合があります。しばらく経ってからページを再読み込みしてください。',
+    videoDl: '動画をダウンロード', videoDelBtn: '削除', videoDelConfirm: 'この動画を削除しますか？',
+    uploadTitle: '写真を追加', uploadLabel: 'タップして写真・動画を選択', uploadSub: 'JPG・PNG・HEIC・MP4・MOVなど',
+    uploadClose: '閉じる', uploadDone: f => `完了（${f}件成功・`, uploadFail: n => `${n}件失敗）`,
+    uploadedFile: 'アップロード済みファイル', uploadDupl: '⚠️ 送信済み',
+    uploadWait: '待機中', uploadUploading: 'アップロード中', uploadOk: '✓', uploadFailed: '✗',
+    custDelConfirm: 'このファイルを削除しますか？',
+    guideLink: '📖 写真・動画の保存方法ガイドを見る →',
+    photoCount: n => `${n}枚`,
+    expiry: d => `期限：${d}`,
+    errNotfound: 'アルバムが見つかりません', errNotfoundSub: 'URLをご確認ください。',
+    errExpired: 'このアルバムは期限切れです', errExpiredSub: 'ダウンロード期限が過ぎています。',
+    errPrivate: 'このアルバムは現在非公開です', errPrivateSub: '公開されるまでしばらくお待ちください。',
+    errLoad: '読み込みに失敗しました', errLoadSub: '時間をおいて再試行してください。',
+  },
+  en: {
+    share: 'Share', selBtn: 'Select', selCancel: 'Deselect',
+    dlAll: 'Download All', dlSel: 'Download ▾', cancelSel: 'Cancel',
+    dlFull: 'Full size', dlFullSub: 'Original quality',
+    dlMed: 'Medium (A4 print)', dlMedSub: 'approx. 2400px',
+    dlSm: 'Small (L-size print)', dlSmSub: 'approx. 1200px',
+    dlGuide: '📖 Download guide',
+    lbSave: 'Save ▾', lbDel: 'Delete',
+    lbHint: 'Tap Save ▾ → Choose size → Long-press the image → "Save Image"',
+    selCount: n => `${n} selected`,
+    lbCount: (c,t) => `${c} / ${t}`,
+    loading: 'Loading...',
+    toastUrl: 'URL copied', toastDlDone: 'Download complete!', toastErr: 'An error occurred',
+    toastDel: 'Deleted', toastDelFail: 'Failed to delete',
+    zipGen: 'Creating ZIP...', zipComp: 'Compressing ZIP...',
+    progressCount: (d,t) => `${d} / ${t} photos`,
+    pwProtected: 'This album is password protected', pwPlaceholder: 'Password', pwOpen: 'Open', pwErr: 'Incorrect password',
+    videoSection: n => `Videos (${n})`,
+    videoNotice: 'Uploaded videos may not be playable until a thumbnail appears. Please reload the page after a while.',
+    videoDl: 'Download video', videoDelBtn: 'Delete', videoDelConfirm: 'Delete this video?',
+    uploadTitle: 'Add photos', uploadLabel: 'Tap to select photos / videos', uploadSub: 'JPG, PNG, HEIC, MP4, MOV, etc.',
+    uploadClose: 'Close', uploadDone: f => `Done (${f} succeeded, `, uploadFail: n => `${n} failed)`,
+    uploadedFile: 'Uploaded file', uploadDupl: '⚠️ Already sent',
+    uploadWait: 'Waiting', uploadUploading: 'Uploading', uploadOk: '✓', uploadFailed: '✗',
+    custDelConfirm: 'Delete this file?',
+    guideLink: '📖 How to save photos & videos →',
+    photoCount: n => `${n} photos`,
+    expiry: d => `Expires: ${d}`,
+    errNotfound: 'Album not found', errNotfoundSub: 'Please check the URL.',
+    errExpired: 'This album has expired', errExpiredSub: 'The download period has ended.',
+    errPrivate: 'This album is currently private', errPrivateSub: 'Please wait until it is published.',
+    errLoad: 'Failed to load', errLoadSub: 'Please try again later.',
+  }
+}
+function t(key, ...args){
+  const dict = T[lang] || T.ja
+  const val = dict[key] ?? T.ja[key] ?? key
+  return typeof val === 'function' ? val(...args) : val
+}
+function toggleLang(){
+  lang = lang==='ja'?'en':'ja'
+  localStorage.setItem('albumLang', lang)
+  applyLang()
+}
+function applyLang(){
+  const btn = document.getElementById('langBtn')
+  btn.textContent = lang==='ja'?'EN':'日本語'
+  document.getElementById('shareBtnTxt').textContent = t('share')
+  // Toolbar
+  const selBtn = document.getElementById('selBtn')
+  if(selBtn) selBtn.textContent = selMode ? t('selCancel') : t('selBtn')
+  // DL menus (static HTML rebuild)
+  const allDlMenu = document.getElementById('allDlMenu')
+  if(allDlMenu) allDlMenu.innerHTML = dlMenuItems()
+  const selDlMenu = document.getElementById('selDlMenu')
+  if(selDlMenu) selDlMenu.innerHTML = dlMenuItems(true)
+  const lbDlMenu = document.getElementById('lbDlMenu')
+  if(lbDlMenu) lbDlMenu.innerHTML = lbDlMenuItems()
+  // Download All button
+  const dlAllBtn = document.querySelector('[onclick="toggleDlMenu(event)"]')
+  if(dlAllBtn) {
+    const svg = dlAllBtn.querySelector('svg')?.outerHTML || ''
+    dlAllBtn.innerHTML = svg + t('dlAll')
+  }
+  // Sel bar
+  const selDlBtn = document.querySelector('[onclick="toggleSelDl(event)"]')
+  if(selDlBtn) selDlBtn.textContent = t('dlSel')
+  const cancelBtn = document.querySelector('.sel-bar .btn-sm:last-child')
+  if(cancelBtn) cancelBtn.textContent = t('cancelSel')
+  const selCnt = document.getElementById('selCnt')
+  if(selCnt) selCnt.textContent = t('selCount', selIds?.size || 0)
+  // LB delete button text
+  const lbDelBtn = document.getElementById('lbDelBtn')
+  if(lbDelBtn) { const svg = lbDelBtn.querySelector('svg')?.outerHTML||''; lbDelBtn.innerHTML = svg + t('lbDel') }
+  // Password screen
+  document.querySelector('.pw-sub').textContent = t('pwProtected')
+  const pwIn = document.getElementById('pwIn')
+  if(pwIn) pwIn.placeholder = t('pwPlaceholder')
+  const pwOpenBtn = document.querySelector('[onclick="submitPw()"]')
+  if(pwOpenBtn) pwOpenBtn.textContent = t('pwOpen')
+  document.getElementById('pwErr').textContent = t('pwErr')
+  // Loading
+  const loadTxt = document.querySelector('.loading-wrap span')
+  if(loadTxt) loadTxt.textContent = t('loading')
+  // Upload modal
+  document.getElementById('custUploadTtl').textContent = t('uploadTitle')
+  const uploadLabelMain = document.getElementById('uploadLabelMain')
+  if(uploadLabelMain) uploadLabelMain.textContent = t('uploadLabel')
+  const uploadLabelSub = document.getElementById('uploadLabelSub')
+  if(uploadLabelSub) uploadLabelSub.textContent = t('uploadSub')
+  document.getElementById('custCloseBtn').textContent = t('uploadClose')
+  // Guide link
+  const guide = document.querySelector('.guide-link-big')
+  if(guide) guide.innerHTML = t('guideLink')
+  // LB save button text
+  const lbSaveBtn = document.querySelector('[onclick="toggleLbDl(event)"]')
+  if(lbSaveBtn) {
+    const svg = lbSaveBtn.querySelector('svg')?.outerHTML || ''
+    lbSaveBtn.innerHTML = svg + t('lbSave')
+  }
+  // LB hint
+  const lbHint = document.getElementById('lbHint')
+  if(lbHint && lbHint.textContent) lbHint.textContent = isMobile ? t('lbHint') : ''
+}
+function dlMenuItems(isSel=false){
+  const prefix = isSel ? 'downloadSel' : 'downloadAll'
+  return `<button class="dl-item" onclick="${prefix}('full')">${t('dlFull')}<small>${t('dlFullSub')}</small></button>
+    <button class="dl-item" onclick="${prefix}('medium')">${t('dlMed')}<small>${t('dlMedSub')}</small></button>
+    <button class="dl-item" onclick="${prefix}('small')">${t('dlSm')}<small>${t('dlSmSub')}</small></button>
+    <a class="dl-item" href="/download_guide.html" target="_blank" style="border-top:1px solid var(--border);color:var(--muted);">${t('dlGuide')}</a>`
+}
+function lbDlMenuItems(){
+  return `<button class="dl-item" onclick="dlCurrent('full')">${t('dlFull')}<small>${t('dlFullSub')}</small></button>
+    <button class="dl-item" onclick="dlCurrent('medium')">${t('dlMed')}<small>${t('dlMedSub')}</small></button>
+    <button class="dl-item" onclick="dlCurrent('small')">${t('dlSm')}<small>${t('dlSmSub')}</small></button>`
+}
+// 初期適用
+;(()=>{ document.getElementById('langBtn').textContent = lang==='ja'?'EN':'日本語' })()
+
 // フォント定義
 const FONTS = {
   josefin:   { url:'Josefin+Sans:wght@200;300',           css:"'Josefin Sans',sans-serif",         weight:200, spacing:'.28em', transform:'uppercase' },
@@ -367,11 +523,11 @@ function show(id) { document.querySelectorAll('.sc').forEach(s=>s.classList.remo
 
 function showErr(type) {
   const c = {
-    notfound:{ icon:'📭', title:'アルバムが見つかりません', sub:'URLをご確認ください。' },
-    expired: { icon:'⏰', title:'このアルバムは期限切れです', sub:'ダウンロード期限が過ぎています。' },
-    private: { icon:'🔒', title:'このアルバムは現在非公開です', sub:'公開されるまでしばらくお待ちください。' },
-    error:   { icon:'⚠️', title:'読み込みに失敗しました', sub:'時間をおいて再試行してください。' },
-  }[type] || {icon:'⚠️',title:'エラー',sub:''}
+    notfound:{ icon:'📭', title:t('errNotfound'), sub:t('errNotfoundSub') },
+    expired: { icon:'⏰', title:t('errExpired'), sub:t('errExpiredSub') },
+    private: { icon:'🔒', title:t('errPrivate'), sub:t('errPrivateSub') },
+    error:   { icon:'⚠️', title:t('errLoad'), sub:t('errLoadSub') },
+  }[type] || {icon:'⚠️',title:t('errLoad'),sub:''}
   document.getElementById('errIcon').textContent=c.icon
   document.getElementById('errTitle').textContent=c.title
   document.getElementById('errSub').textContent=c.sub
@@ -412,9 +568,9 @@ async function load(password='') {
     // アルバム情報
     document.getElementById('albumName').textContent = d.name
     const meta=[]
-    if (d.count) meta.push(`${d.count}枚`)
+    if (d.count) meta.push(t('photoCount', d.count))
     if (d.totalSizeLabel) meta.push(d.totalSizeLabel)
-    if (d.expiresAt) meta.push(`期限：${d.expiresAt.slice(0,10)}`)
+    if (d.expiresAt) meta.push(t('expiry', d.expiresAt.slice(0,10)))
     document.getElementById('albumMeta').innerHTML = meta.map((m,i)=>
       i<meta.length-1 ? `<span>${m}</span><span class="dot">·</span>` : `<span>${m}</span>`
     ).join('')
@@ -432,6 +588,7 @@ async function load(password='') {
       addGuideLink(document.getElementById('grid').parentNode)
     }
     show('scGal')
+    applyLang()
   } catch(e) { showErr('error') }
 }
 
@@ -480,28 +637,28 @@ function onClick(i,e){
   if(selMode){
     if(e.shiftKey&&lastSel>=0){const mn=Math.min(i,lastSel),mx=Math.max(i,lastSel);for(let j=mn;j<=mx;j++){selIds.add(j);document.getElementById(`gi${j}`)?.classList.add('sel')}}
     else{const el=document.getElementById(`gi${i}`);if(selIds.has(i)){selIds.delete(i);el.classList.remove('sel')}else{selIds.add(i);el.classList.add('sel')}}
-    lastSel=i;document.getElementById('selCnt').textContent=`${selIds.size}枚選択中`;document.getElementById('selBar').classList.toggle('on',selIds.size>0)
+    lastSel=i;document.getElementById('selCnt').textContent=t('selCount',selIds.size);document.getElementById('selBar').classList.toggle('on',selIds.size>0)
   }else openLb(i)
 }
-function toggleSel(){selMode=!selMode;document.getElementById('grid').classList.toggle('sel-mode',selMode);document.getElementById('selBtn').textContent=selMode?'選択解除':'選択';if(!selMode)cancelSel()}
-function cancelSel(){selMode=false;selIds.clear();lastSel=-1;document.querySelectorAll('.gi').forEach(el=>el.classList.remove('sel'));document.getElementById('grid').classList.remove('sel-mode');document.getElementById('selBar').classList.remove('on');document.getElementById('selBtn').textContent='選択'}
+function toggleSel(){selMode=!selMode;document.getElementById('grid').classList.toggle('sel-mode',selMode);document.getElementById('selBtn').textContent=selMode?t('selCancel'):t('selBtn');if(!selMode)cancelSel()}
+function cancelSel(){selMode=false;selIds.clear();lastSel=-1;document.querySelectorAll('.gi').forEach(el=>el.classList.remove('sel'));document.getElementById('grid').classList.remove('sel-mode');document.getElementById('selBar').classList.remove('on');document.getElementById('selBtn').textContent=t('selBtn')}
 
 function photoUrl(p,size){const params=new URLSearchParams({size,name:p.name,token});if(pw)params.set('pw',pw);return`${W}/api/photo/${p.id}?${params}`}
 
 function showProgress(title){document.getElementById('progressTtl').textContent=title;document.getElementById('progressModal').classList.add('on')}
 function hideProgress(){document.getElementById('progressModal').classList.remove('on')}
-function updateProgress(done,total){document.getElementById('progressBar').style.width=Math.round(done/total*100)+'%';document.getElementById('progressTxt').textContent=`${done} / ${total} 枚`}
+function updateProgress(done,total){document.getElementById('progressBar').style.width=Math.round(done/total*100)+'%';document.getElementById('progressTxt').textContent=t('progressCount',done,total)}
 
 async function downloadZip(list,size){
-  showProgress('ZIPを生成中...');updateProgress(0,list.length)
+  showProgress(t('zipGen'));updateProgress(0,list.length)
   try{
     const zip=new JSZip();let done=0
     await Promise.all(list.map(async p=>{const res=await fetch(photoUrl(p,size));zip.file(`${size==='full'?'':size+'_'}${p.name}`,await res.blob());done++;updateProgress(done,list.length)}))
-    document.getElementById('progressTtl').textContent='ZIPを圧縮中...'
+    document.getElementById('progressTtl').textContent=t('zipComp')
     const blob=await zip.generateAsync({type:'blob'})
     const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`photos_${size}.zip`;a.click()
-    showToast('ダウンロード完了！')
-  }catch{showToast('エラーが発生しました')}
+    showToast(t('toastDlDone'))
+  }catch{showToast(t('toastErr'))}
   finally{setTimeout(hideProgress,800)}
 }
 function downloadAll(size){closeAllMenus();downloadZip(photos,size)}
@@ -518,7 +675,7 @@ async function shareAlbum(){
   const url=location.href
   if(navigator.share){try{await navigator.share({title:document.getElementById('albumName').textContent,url});return}catch(e){}}
   navigator.clipboard?.writeText(url).catch(()=>{})
-  showToast('URLをコピーしました')
+  showToast(t('toastUrl'))
 }
 
 function openLb(i){cur=i;updLb();document.getElementById('lb').classList.add('on');document.body.style.overflow='hidden'}
@@ -536,7 +693,7 @@ function updLb(){
   document.getElementById('lbCnt').textContent=`${cur+1} / ${photos.length}`
   document.getElementById('lbPrev').disabled=cur===0
   document.getElementById('lbNext').disabled=cur===photos.length-1
-  document.getElementById('lbHint').innerHTML=isMobile?'保存 ▾ からサイズを選択 → 画像が開いたら長押し →「イメージを保存」':''
+  document.getElementById('lbHint').innerHTML=isMobile?t('lbHint'):''
   const uploaded=JSON.parse(sessionStorage.getItem(`uploads_${token}`)||'[]')
   const delBtn=document.getElementById('lbDelBtn')
   delBtn.style.display=uploaded.includes(p.id)?'':'none'
@@ -559,8 +716,8 @@ function renderVideos(videos) {
   section.className = 'video-section'
   const wrap = document.getElementById('grid').parentNode
   const uploaded=JSON.parse(sessionStorage.getItem(`uploads_${token}`)||'[]')
-  section.innerHTML = `<div class="video-hd"><span>🎬</span>動画（${videos.length}件）</div>
-    <div style="font-size:12px;color:var(--muted);background:#f8f6f2;border:1px solid var(--border);border-radius:8px;padding:9px 12px;margin-bottom:10px;line-height:1.7;">アップロードした動画はサムネイルが表示されるまで再生できない場合があります。しばらく経ってからページを再読み込みしてください。</div>
+  section.innerHTML = `<div class="video-hd"><span>🎬</span>${t('videoSection',videos.length)}</div>
+    <div style="font-size:12px;color:var(--muted);background:#f8f6f2;border:1px solid var(--border);border-radius:8px;padding:9px 12px;margin-bottom:10px;line-height:1.7;">${t('videoNotice')}</div>
     <div class="video-list" id="videoList">${videos.map(v=>{
       const isOwn=uploaded.includes(v.id)
       return`<div class="video-item" id="vi_${v.id}" style="position:relative;" onclick="openVideoPlayer('${v.viewLink}')">
@@ -570,7 +727,7 @@ function renderVideos(videos) {
           ${v.size?`<div class="video-size">${fmtSize(v.size)}</div>`:''}
         </div>
         <div class="video-play">▶</div>
-        ${isOwn?`<button onclick="event.stopPropagation();deleteVideo('${v.id}')" style="position:absolute;top:6px;right:6px;background:rgba(0,0,0,.55);border:none;color:#ff6b6b;border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer;">削除</button>`:''}
+        ${isOwn?`<button onclick="event.stopPropagation();deleteVideo('${v.id}')" style="position:absolute;top:6px;right:6px;background:rgba(0,0,0,.55);border:none;color:#ff6b6b;border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer;">${t('videoDelBtn')}</button>`:''}
       </div>`
     }).join('')}
     </div>`
@@ -579,14 +736,14 @@ function renderVideos(videos) {
 }
 
 async function deleteVideo(videoId){
-  if(!confirm('この動画を削除しますか？'))return
+  if(!confirm(t('videoDelConfirm')))return
   const res=await fetch(`${W}/api/album/${token}/files/${videoId}`,{method:'DELETE'})
   if(res.ok){
     document.getElementById(`vi_${videoId}`)?.remove()
     const s=JSON.parse(sessionStorage.getItem(`uploads_${token}`)||'[]')
     sessionStorage.setItem(`uploads_${token}`,JSON.stringify(s.filter(id=>id!==videoId)))
-    showToast('削除しました')
-  }else{showToast('削除に失敗しました')}
+    showToast(t('toastDel'))
+  }else{showToast(t('toastDelFail'))}
 }
 
 function openVideoPlayer(viewLink) {
@@ -609,7 +766,7 @@ function openVideoPlayer(viewLink) {
   dlBtn.href = downloadUrl
   dlBtn.target = '_blank'
   dlBtn.style.cssText = 'display:inline-flex;align-items:center;gap:6px;margin-top:14px;background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.3);border-radius:8px;padding:8px 18px;font-size:13px;text-decoration:none;backdrop-filter:blur(4px);'
-  dlBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> 動画をダウンロード'
+  dlBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> ' + t('videoDl')
   overlay.appendChild(closeBtn)
   overlay.appendChild(iframe)
   overlay.appendChild(dlBtn)
@@ -620,7 +777,7 @@ function addGuideLink(container) {
   const guide = document.createElement('a')
   guide.href = '/download_guide.html'
   guide.className = 'guide-link-big'
-  guide.innerHTML = '📖 写真・動画の保存方法ガイドを見る →'
+  guide.innerHTML = t('guideLink')
   container.appendChild(guide)
 }
 
@@ -638,11 +795,11 @@ function openCustUpload(){
       const row=document.createElement('div')
       row.id=`cuf_${id}`
       row.style.cssText='display:flex;align-items:center;gap:8px;padding:7px 10px;background:#f5f5f3;border-radius:8px;font-size:13px;'
-      row.innerHTML=`<span style="flex:1;color:var(--muted);font-size:12px;">アップロード済みファイル</span><button onclick="deleteCustFile('${id}',this)" style="font-size:11px;padding:2px 6px;border:1px solid rgba(192,57,43,.3);border-radius:4px;background:transparent;color:#c0392b;cursor:pointer;">削除</button>`
+      row.innerHTML=`<span style="flex:1;color:var(--muted);font-size:12px;">${t('uploadedFile')}</span><button onclick="deleteCustFile('${id}',this)" style="font-size:11px;padding:2px 6px;border:1px solid rgba(192,57,43,.3);border-radius:4px;background:transparent;color:#c0392b;cursor:pointer;">${t('videoDelBtn')}</button>`
       list.appendChild(row)
     })
   }
-  document.getElementById('custUploadTtl').textContent='写真を追加'
+  document.getElementById('custUploadTtl').textContent=t('uploadTitle')
   document.getElementById('custUploadModal').classList.add('on')
 }
 function closeCustUpload(){if(custUploading)return;document.getElementById('custUploadModal').classList.remove('on')}
@@ -661,7 +818,7 @@ async function uploadCustFiles(files){
     if(uploadedKeys.includes(fk)){
       const item=document.createElement('div')
       item.style.cssText='display:flex;align-items:center;gap:8px;padding:7px 10px;background:#f5f5f3;border-radius:8px;font-size:13px;'
-      item.innerHTML=`<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${f.name}</span><span style="color:#c0392b;font-size:12px;flex-shrink:0;">⚠️ 送信済み</span>`
+      item.innerHTML=`<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${f.name}</span><span style="color:#c0392b;font-size:12px;flex-shrink:0;">${t('uploadDupl')}</span>`
       list.appendChild(item)
       skipped++
       continue
@@ -670,7 +827,7 @@ async function uploadCustFiles(files){
     item.style.cssText='display:flex;flex-direction:column;gap:4px;padding:7px 10px;background:#f5f5f3;border-radius:8px;font-size:13px;'
     const isVideo=f.type.startsWith('video/')
     const sizeStr=f.size>1048576?`${(f.size/1048576).toFixed(1)}MB`:`${Math.round(f.size/1024)}KB`
-    item.innerHTML=`<div style="display:flex;align-items:center;gap:8px;"><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${f.name}</span><span style="color:var(--muted);font-size:11px;">${isVideo?'🎬':'🖼'} ${sizeStr}</span><span id="cst_${key}" style="color:var(--muted);font-size:12px;flex-shrink:0;">待機中</span></div><div id="cpb_${key}" style="display:none;height:3px;background:#e0ddd8;border-radius:2px;overflow:hidden;"><div id="cpbi_${key}" style="height:100%;background:#8b7a38;width:0%;transition:width .3s;"></div></div>`
+    item.innerHTML=`<div style="display:flex;align-items:center;gap:8px;"><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${f.name}</span><span style="color:var(--muted);font-size:11px;">${isVideo?'🎬':'🖼'} ${sizeStr}</span><span id="cst_${key}" style="color:var(--muted);font-size:12px;flex-shrink:0;">${t('uploadWait')}</span></div><div id="cpb_${key}" style="display:none;height:3px;background:#e0ddd8;border-radius:2px;overflow:hidden;"><div id="cpbi_${key}" style="height:100%;background:#8b7a38;width:0%;transition:width .3s;"></div></div>`
     list.appendChild(item)
     items[key]=f
   }
@@ -679,7 +836,7 @@ async function uploadCustFiles(files){
     const st=document.getElementById(`cst_${key}`)
     const pb=document.getElementById(`cpb_${key}`)
     const pbi=document.getElementById(`cpbi_${key}`)
-    if(st)st.textContent='送信中...'
+    if(st)st.textContent=t('uploadUploading')
     try{
       let uploadedId=null
       if(pb)pb.style.display='block'
@@ -726,16 +883,16 @@ async function uploadCustFiles(files){
         ks.push(fileKey(f));sessionStorage.setItem(`upload_keys_${token}`,JSON.stringify(ks))
         const km=JSON.parse(sessionStorage.getItem(`upload_keymap_${token}`)||'{}')
         km[uploadedId]=fileKey(f);sessionStorage.setItem(`upload_keymap_${token}`,JSON.stringify(km))
-        if(st)st.innerHTML=`<button onclick="deleteCustFile('${uploadedId}',this)" style="font-size:11px;padding:2px 6px;border:1px solid rgba(192,57,43,.3);border-radius:4px;background:transparent;color:#c0392b;cursor:pointer;">削除</button>`
+        if(st)st.innerHTML=`<button onclick="deleteCustFile('${uploadedId}',this)" style="font-size:11px;padding:2px 6px;border:1px solid rgba(192,57,43,.3);border-radius:4px;background:transparent;color:#c0392b;cursor:pointer;">${t('videoDelBtn')}</button>`
       }else{if(st)st.innerHTML='<span style="color:#1a7a3c;">✅</span>'}
       if(pbi)pbi.style.width='100%'
     }catch{errors++;if(st)st.innerHTML='<span style="color:#c0392b;">❌</span>'}
   }
-  const skipMsg=skipped?`・${skipped}件スキップ`:''
-  document.getElementById('custUploadTtl').textContent=errors?`完了（${done}件成功・${errors}件失敗${skipMsg}）`:skipped&&!done?`${skipped}件はすでに送信済みです`:`✅ ${done}件を追加しました${skipMsg}`
+  const skipMsg=skipped?(lang==='en'?` · ${skipped} skipped`:`・${skipped}件スキップ`):''
+  document.getElementById('custUploadTtl').textContent=errors?(lang==='en'?`Done (${done} succeeded, ${errors} failed${skipMsg})`:`完了（${done}件成功・${errors}件失敗${skipMsg}）`):skipped&&!done?(lang==='en'?`${skipped} file(s) already sent`:`${skipped}件はすでに送信済みです`):(lang==='en'?`✅ Added ${done} file(s)${skipMsg}`:`✅ ${done}件を追加しました${skipMsg}`)
   custUploading=false
   document.getElementById('custCloseBtn').disabled=false
-  if(done>0)showToast(`${done}件を追加しました`)
+  if(done>0)showToast(lang==='en'?`Added ${done} file(s)`:`${done}件を追加しました`)
 }
 
 async function deleteCurrent(){
@@ -754,16 +911,16 @@ async function deleteCurrent(){
     if(photos.length===0){closeLb();renderGrid();return}
     if(cur>=photos.length)cur=photos.length-1
     updLb();renderGrid()
-    showToast('削除しました')
+    showToast(t('toastDel'))
   }else{
-    btn.disabled=false;btn.innerHTML='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>削除'
-    showToast('削除に失敗しました')
+    btn.disabled=false;btn.innerHTML='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>'+t('lbDel')
+    showToast(t('toastDelFail'))
   }
 }
 
 async function deleteCustFile(fileId,btn){
-  if(!confirm('このファイルを削除しますか？'))return
-  btn.disabled=true;btn.textContent='削除中...'
+  if(!confirm(t('custDelConfirm')))return
+  btn.disabled=true;btn.textContent=lang==='en'?'Deleting...':'削除中...'
   const res=await fetch(`${W}/api/album/${token}/files/${fileId}`,{method:'DELETE'})
   if(res.ok){
     const row=document.getElementById(`cuf_${fileId}`)
