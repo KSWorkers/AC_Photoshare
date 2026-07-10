@@ -219,12 +219,12 @@ export default {
 
       if(path==='/api/admin/albums'&&req.method==='POST'){
         if(!await isAdmin(req,env))return errR('Unauthorized',401)
-        const{name,expiresAt,password,heroText,heroFont,allowCustomerUpload,allowVideoUpload}=await req.json()
+        const{name,expiresAt,password,heroText,heroFont,allowCustomerUpload,allowVideoUpload,lang}=await req.json()
         if(!name)return errR('name required')
         const token=genToken()
         const at=await getAccessToken(env,false)
         const folder=await createFolder(buildFolderName(name),env.DRIVE_ROOT_FOLDER_ID,at)
-        const album={name,folderId:folder.id,createdAt:new Date().toISOString(),expiresAt:normalizeExpiresAt(expiresAt),password:password?await hashPassword(password):null,published:true,heroText:heroText||'Photography',heroFont:heroFont||'josefin',allowCustomerUpload:!!allowCustomerUpload,allowVideoUpload:!!allowVideoUpload}
+        const album={name,folderId:folder.id,createdAt:new Date().toISOString(),expiresAt:normalizeExpiresAt(expiresAt),password:password?await hashPassword(password):null,published:true,heroText:heroText||'Photography',heroFont:heroFont||'josefin',allowCustomerUpload:!!allowCustomerUpload,allowVideoUpload:!!allowVideoUpload,lang:lang||'ja'}
         await saveAlbum(env,token,album)
         return jsonR({token,url:`${env.SITE_URL}/album.html?token=${token}`,folderId:folder.id,album})
       }
@@ -249,6 +249,7 @@ export default {
           flagDefs:'flagDefs'in body?body.flagDefs:album.flagDefs,
           allowCustomerUpload:'allowCustomerUpload'in body?body.allowCustomerUpload:album.allowCustomerUpload,
           allowVideoUpload:'allowVideoUpload'in body?body.allowVideoUpload:album.allowVideoUpload,
+          lang:'lang'in body?body.lang:(album.lang||'ja'),
           updatedAt:new Date().toISOString(),
         }
         // Driveフォルダ名をリネーム
@@ -421,7 +422,7 @@ export default {
         const videoFiles=await listVideos(album.folderId,at)
         if(videoFiles.length>0){ctx.waitUntil(getAccessToken(env,false).then(rwAt=>Promise.all(videoFiles.map(v=>grantAnyoneRead(v.id,rwAt)))).catch(()=>{}))}
         const videos=videoFiles.map(v=>({id:v.id,name:v.name,thumb:v.thumbnailLink?.replace('=s220','=s400')||null,viewLink:v.webViewLink,size:parseInt(v.size||0)}))
-        return jsonR({name:album.name,expiresAt:album.expiresAt,count:photos.length,totalSize,totalSizeLabel:fmtSize(totalSize),heroText:album.heroText||'Photography',heroFont:album.heroFont||'josefin',coverId:album.coverId||null,coverIdMobile:album.coverIdMobile||null,selectToken:album.selectToken||null,allowCustomerUpload:album.allowCustomerUpload||false,allowVideoUpload:album.allowVideoUpload||false,photos,videos})
+        return jsonR({name:album.name,expiresAt:album.expiresAt,count:photos.length,totalSize,totalSizeLabel:fmtSize(totalSize),heroText:album.heroText||'Photography',heroFont:album.heroFont||'josefin',coverId:album.coverId||null,coverIdMobile:album.coverIdMobile||null,selectToken:album.selectToken||null,allowCustomerUpload:album.allowCustomerUpload||false,allowVideoUpload:album.allowVideoUpload||false,lang:album.lang||'ja',photos,videos})
       }
 
       // 写真DL（認証付き）

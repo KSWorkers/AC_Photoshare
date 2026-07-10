@@ -340,6 +340,7 @@ const isMobile = /iPhone|iPad|Android/i.test(navigator.userAgent)
 
 // ── 言語設定 ────────────────────────────────────────────────────
 let lang = localStorage.getItem('albumLang') || 'ja'
+let _albumLangSet = false  // アルバム設定の言語を一度だけ適用するフラグ
 const T = {
   ja: {
     share: '共有', selBtn: '選択', selCancel: '選択解除',
@@ -546,6 +547,8 @@ async function load(password='') {
     if (d.requirePassword) { document.getElementById('pwName').textContent=d.name; return show('scPw') }
     if (!res.ok) return showErr('error')
     pw=password; photos=d.photos
+    // アルバム設定の言語を初回のみ適用（お客さまが手動で変更した場合は上書きしない）
+    if(!_albumLangSet&&d.lang){lang=d.lang;_albumLangSet=true}
     if(d.allowCustomerUpload){const b=document.getElementById('custUploadBtn');b.style.display='flex'}
     if(!d.allowVideoUpload){document.getElementById('custFileInput').accept='image/*'}
 
