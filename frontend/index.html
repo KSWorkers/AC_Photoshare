@@ -7,6 +7,9 @@ const p = location.pathname
 if (p.startsWith('/album/')) {
   const token = p.split('/')[2]
   if (token) location.replace('/album.html?token=' + token)
+} else if (p.startsWith('/a/')) {
+  const token = p.split('/')[2]
+  if (token) location.replace('/album.html?token=' + token)
 }
 </script>
 </head>

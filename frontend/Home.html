@@ -149,7 +149,6 @@ body{font-family:-apple-system,'Hiragino Sans',sans-serif;background:var(--bg);c
       <div id="nExpFd" class="fd"><label>有効期限</label><input type="date" id="nExp"></div>
       <div class="fd"><div class="sw-w"><span style="font-size:14px;">パスワードを設定する</span><button class="sw" id="nPwSw" onclick="toggleNPw()"></button></div></div>
       <div id="nPwFd" class="fd" style="display:none;"><label>パスワード</label><input type="text" id="nPw" placeholder="例：yamada2026"></div>
-      <div class="fd"><label>ヘッダータイトル<span style="font-size:11px;color:var(--mt);font-weight:400;margin-left:6px;">空欄の場合はデフォルト表示</span></label><input type="text" id="nSiteTitle" placeholder="例：山田様のアルバム"></div>
       <div class="fd"><div class="sw-w"><span style="font-size:14px;">お客さまによるアップロードを許可</span><button class="sw" id="nUploadSw" onclick="toggleNUpload()"></button></div></div>
       <div class="fd"><div class="sw-w"><span style="font-size:14px;">動画のアップロードを許可</span><button class="sw" id="nVideoUploadSw" onclick="toggleNVideoUpload()"></button></div></div>
       <div class="fd"><label style="font-size:13px;font-weight:500;color:var(--mt);">お客さまへの表示言語</label><select id="nAlbumLang" style="padding:9px 12px;border:1px solid var(--bdm);border-radius:8px;font-size:14px;color:var(--tx);background:var(--sur);outline:none;"><option value="ja">日本語（デフォルト）</option><option value="en">English</option></select></div>
@@ -189,7 +188,6 @@ body{font-family:-apple-system,'Hiragino Sans',sans-serif;background:var(--bg);c
     <div class="mh">アルバム設定</div>
     <div class="mb">
       <div class="fd"><label>アルバム名</label><input type="text" id="eName"></div>
-      <div class="fd"><label>ヘッダータイトル<span style="font-size:11px;color:var(--mt);font-weight:400;margin-left:6px;">空欄の場合はデフォルト表示</span></label><input type="text" id="eSiteTitle" placeholder="例：山田様のアルバム"></div>
       <div class="fd"><div class="sw-w"><span style="font-size:14px;">公開する</span><button class="sw" id="ePubSw" onclick="toggleEPub()"></button></div></div>
       <div class="fd"><div class="sw-w"><span style="font-size:14px;">お客さまによるアップロードを許可する</span><button class="sw" id="eUploadSw" onclick="toggleEUpload()"></button></div></div>
       <div class="fd"><div class="sw-w"><span style="font-size:14px;">動画のアップロードを許可する</span><button class="sw" id="eVideoUploadSw" onclick="toggleEVideoUpload()"></button></div></div>
@@ -367,7 +365,7 @@ body{font-family:-apple-system,'Hiragino Sans',sans-serif;background:var(--bg);c
         <button class="ft" id="ftab-photo" onclick="switchFtab('photo')" style="">写真</button>
         <button class="ft on" id="ftab-video" onclick="switchFtab('video')">動画</button>
       </div>
-      <div id="fileListWrap" style="max-height:55vh;overflow-y:auto;display:grid;gap:8px;"></div>
+      <div id="fileListWrap" style="max-height:55vh;overflow-y:auto;overflow-x:hidden;display:grid;gap:8px;min-width:0;"></div>
       <div id="fileListLoad" style="text-align:center;color:var(--mt);font-size:13px;">読み込み中...</div>
     </div>
     <div class="mf"><button class="btn btn-s" onclick="closeFiles()">閉じる</button></div>
@@ -402,9 +400,10 @@ body{font-family:-apple-system,'Hiragino Sans',sans-serif;background:var(--bg);c
 // ★ Worker URL: Workerデプロイ後に実際のURLを確認してください
 const W = 'https://ac-photoshare.nikkomaedori.workers.dev'
 let tok = sessionStorage.getItem('adminToken') || localStorage.getItem('adminToken') || ''
+
 let albums=[], filtered=[]
 let filter='all', bulk=false, selToks=new Set(), lastBulkSel=-1
-let editTok='', nExpOn=true, nPwOn=false, ePubOn=true, eExpOn=false, ePwOn=false, eUploadOn=false
+let editTok='', nExpOn=true, nPwOn=false, ePubOn=true, eExpOn=false, ePwOn=false, eUploadOn=false, eVideoUploadOn=false
 let deleteTarget=null
 
 if (tok) initMain()
@@ -501,11 +500,12 @@ function renderGrid(){
       <div class="ck" onclick="toggleCardSel('${a.token}',${fi},event)">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="${isSel?'#fff':'transparent'}" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>
       </div>
-      <div class="th">${thumbHtml}<span class="sb ${sc}">${sl}</span></div>
+      <div class="th" onclick="window.open('${url}','_blank')" style="cursor:pointer;">${thumbHtml}<span class="sb ${sc}">${sl}</span></div>
       <div class="ci">
         <div class="cn">${a.name}</div>
         <div class="cs">
           ${a.count!==undefined?`<span>📷 ${a.count}枚</span>`:''}
+          ${a.videoCount?`<span>🎬 ${a.videoCount}本</span>`:''}
           ${a.totalSizeLabel?`<span>💾 ${a.totalSizeLabel}</span>`:''}
         </div>
         <div class="cm">
@@ -525,7 +525,7 @@ function renderGrid(){
             ${heroOptHtml}
           </select>
         </div>
-        <div class="ub"><button class="btn btn-s btn-sm" onclick="copyUrl('${url}')">URLコピー</button><button class="btn btn-s btn-sm" onclick="showQr('${url}','${a.name.replace(/'/g,"\\'")}',event)">QR表示</button></div>
+        <div class="ub"><button class="btn btn-s btn-sm" onclick="copyAlbumInfo('${a.token}')">URLコピー</button><button class="btn btn-s btn-sm" onclick="showQr('${url}','${a.name.replace(/'/g,"\\'")}',event)">QR表示</button></div>
         <div class="ca">
           <a class="btn btn-s btn-sm" href="${url}" target="_blank" style="width:100%;justify-content:center;">アルバムを開く</a>
           <div style="display:flex;gap:5px;width:100%;">
@@ -570,9 +570,7 @@ function openCreate(){
   document.getElementById('nName').value='';document.getElementById('nPw').value=''
   nExpOn=true;nPwOn=false;nUploadOn=false;nVideoUploadOn=false
   document.getElementById('nExpSw').className='sw on';document.getElementById('nPwSw').className='sw';document.getElementById('nUploadSw').className='sw'
-  document.getElementById('nVideoUploadSw').className='sw'
   document.getElementById('nAlbumLang').value='ja'
-  document.getElementById('nSiteTitle').value=''
   document.getElementById('nExpFd').style.display='flex';document.getElementById('nPwFd').style.display='none'
   document.getElementById('moCreate').classList.add('on')
 }
@@ -580,8 +578,9 @@ function closeCreate(){document.getElementById('moCreate').classList.remove('on'
 function toggleNExp(){nExpOn=!nExpOn;document.getElementById('nExpSw').className=`sw${nExpOn?' on':''}`;document.getElementById('nExpFd').style.display=nExpOn?'flex':'none'}
 function toggleNPw(){nPwOn=!nPwOn;document.getElementById('nPwSw').className=`sw${nPwOn?' on':''}`;document.getElementById('nPwFd').style.display=nPwOn?'flex':'none'}
 
-let nUploadOn=false
+let nUploadOn=false, nVideoUploadOn=false
 function toggleNUpload(){nUploadOn=!nUploadOn;document.getElementById('nUploadSw').className=`sw${nUploadOn?' on':''}`}
+function toggleNVideoUpload(){nVideoUploadOn=!nVideoUploadOn;document.getElementById('nVideoUploadSw').className=`sw${nVideoUploadOn?' on':''}`}
 
 let creating=false
 async function createAlbum(){
@@ -592,7 +591,7 @@ async function createAlbum(){
   creating=true
   const btn=document.getElementById('createBtn');btn.innerHTML='<div class="sp"></div> 作成中...';btn.disabled=true
   try{
-    const r=await fetch(`${W}/api/admin/albums`,{method:'POST',headers:{Authorization:`Bearer ${tok}`,'Content-Type':'application/json'},body:JSON.stringify({name,expiresAt,password,heroText:getHeroText('nHeroTextSel','nHeroCustom'),heroFont:document.getElementById('nHeroFont').value,allowCustomerUpload:nUploadOn,allowVideoUpload:nVideoUploadOn,lang:document.getElementById('nAlbumLang').value,siteTitle:document.getElementById('nSiteTitle').value.trim()||null})})
+    const r=await fetch(`${W}/api/admin/albums`,{method:'POST',headers:{Authorization:`Bearer ${tok}`,'Content-Type':'application/json'},body:JSON.stringify({name,expiresAt,password,heroText:getHeroText('nHeroTextSel','nHeroCustom'),heroFont:document.getElementById('nHeroFont').value,allowCustomerUpload:nUploadOn,allowVideoUpload:nVideoUploadOn,lang:document.getElementById('nAlbumLang').value})})
     const d=await r.json()
     if(!r.ok)throw new Error(d.error||'Error')
     // 即時表示してからバックグラウンドで再読み込み
@@ -601,7 +600,7 @@ async function createAlbum(){
     applyFilter()
     showToast('アルバムを作成しました！')
     if(d.url)copyUrl(d.url,false)
-  }catch{showToast('作成に失敗しました')}
+  }catch(e){showToast(`作成に失敗しました: ${e.message||e}`)}
   finally{creating=false;btn.innerHTML='作成してURLを発行';btn.disabled=false}
 }
 
@@ -610,11 +609,10 @@ function openEdit(token){
   editTok=token
   document.getElementById('eName').value=a.name
   ePubOn=a.published!==false;eExpOn=!!a.expiresAt;ePwOn=false;eUploadOn=!!a.allowCustomerUpload;eVideoUploadOn=!!a.allowVideoUpload
-  document.getElementById('eSiteTitle').value=a.siteTitle||''
+  document.getElementById('eAlbumLang').value=a.lang||'ja'
   document.getElementById('ePubSw').className=`sw${ePubOn?' on':''}`
   document.getElementById('eUploadSw').className=`sw${eUploadOn?' on':''}`
   document.getElementById('eVideoUploadSw').className=`sw${eVideoUploadOn?' on':''}`
-  document.getElementById('eAlbumLang').value=a.lang||'ja'
   document.getElementById('eExpSw').className=`sw${eExpOn?' on':''}`
   document.getElementById('ePwSw').className='sw'
   document.getElementById('eExpFd').style.display=eExpOn?'flex':'none'
@@ -637,6 +635,7 @@ function openEdit(token){
 function closeEdit(){document.getElementById('moEdit').classList.remove('on')}
 function toggleEPub(){ePubOn=!ePubOn;document.getElementById('ePubSw').className=`sw${ePubOn?' on':''}`}
 function toggleEUpload(){eUploadOn=!eUploadOn;document.getElementById('eUploadSw').className=`sw${eUploadOn?' on':''}`}
+function toggleEVideoUpload(){eVideoUploadOn=!eVideoUploadOn;document.getElementById('eVideoUploadSw').className=`sw${eVideoUploadOn?' on':''}`}
 function toggleEExp(){eExpOn=!eExpOn;document.getElementById('eExpSw').className=`sw${eExpOn?' on':''}`;document.getElementById('eExpFd').style.display=eExpOn?'flex':'none'}
 function toggleEPw(){ePwOn=!ePwOn;document.getElementById('ePwSw').className=`sw${ePwOn?' on':''}`;document.getElementById('ePwFd').style.display=ePwOn?'flex':'none'}
 function clearPassword(){
@@ -648,7 +647,7 @@ function clearPassword(){
 async function saveEdit(){
   const btn=document.getElementById('editBtn');btn.innerHTML='<div class="sp"></div>';btn.disabled=true
   try{
-    const body={name:document.getElementById('eName').value.trim(),published:ePubOn,allowCustomerUpload:eUploadOn,allowVideoUpload:eVideoUploadOn,expiresAt:eExpOn?document.getElementById('eExp').value||null:null,heroText:getHeroText('eHeroTextSel','eHeroCustom'),heroFont:document.getElementById('eHeroFont').value,flagDefs:albumFlagOn?albumFlagDefs:null,lang:document.getElementById('eAlbumLang').value,siteTitle:document.getElementById('eSiteTitle').value.trim()||null}
+    const body={name:document.getElementById('eName').value.trim(),published:ePubOn,allowCustomerUpload:eUploadOn,allowVideoUpload:eVideoUploadOn,expiresAt:eExpOn?document.getElementById('eExp').value||null:null,heroText:getHeroText('eHeroTextSel','eHeroCustom'),heroFont:document.getElementById('eHeroFont').value,flagDefs:albumFlagOn?albumFlagDefs:null,lang:document.getElementById('eAlbumLang').value}
     const pwInput=document.getElementById('ePw')
     if(ePwOn){
       if(pwInput.dataset.clear==='true'){body.password=null;delete pwInput.dataset.clear}
@@ -656,7 +655,9 @@ async function saveEdit(){
     }
     const r=await fetch(`${W}/api/admin/albums/${editTok}`,{method:'PATCH',headers:{Authorization:`Bearer ${tok}`,'Content-Type':'application/json'},body:JSON.stringify(body)})
     if(!r.ok){const d=await r.json();throw new Error(d.error||'Error')}
-    closeEdit();await loadAlbums();showToast('設定を保存しました')
+    const a=albums.find(x=>x.token===editTok)
+    if(a){Object.assign(a,body);if(!('updatedAt'in body))a.updatedAt=new Date().toISOString()}
+    closeEdit();applyFilter();showToast('設定を保存しました')
   }catch(e){showToast(`保存に失敗しました: ${e.message}`)}
   finally{btn.innerHTML='保存';btn.disabled=false}
 }
@@ -731,8 +732,11 @@ async function saveThumb(){
   const btn=document.getElementById('thumbSaveBtn');btn.innerHTML='<div class="sp"></div>';btn.disabled=true
   const body=thumbTab==='pc'?{coverId:selectedCoverId}:{coverIdMobile:selectedCoverId}
   try{
-    await fetch(`${W}/api/admin/albums/${thumbToken}`,{method:'PATCH',headers:{Authorization:`Bearer ${tok}`,'Content-Type':'application/json'},body:JSON.stringify(body)})
-    closeThumb();await loadAlbums();showToast(thumbTab==='pc'?'PC用サムネイルを変更しました':'スマホ用サムネイルを変更しました')
+    const res=await fetch(`${W}/api/admin/albums/${thumbToken}`,{method:'PATCH',headers:{Authorization:`Bearer ${tok}`,'Content-Type':'application/json'},body:JSON.stringify(body)})
+    if(!res.ok)throw new Error()
+    const a=albums.find(x=>x.token===thumbToken)
+    if(a){if(thumbTab==='pc')a.coverId=selectedCoverId;else a.coverIdMobile=selectedCoverId}
+    closeThumb();renderGrid();showToast(thumbTab==='pc'?'PC用サムネイルを変更しました':'スマホ用サムネイルを変更しました')
   }catch{showToast('保存に失敗しました')}
   finally{btn.innerHTML='選択して保存';btn.disabled=false}
 }
@@ -771,6 +775,23 @@ async function executeDelete(){
 }
 
 function copyUrl(url,toast=true){navigator.clipboard?.writeText(url).catch(()=>{});if(toast)showToast('URLをコピーしました')}
+
+function copyAlbumInfo(token){
+  const a=albums.find(x=>x.token===token);if(!a)return
+  const url=`https://ac-photoshare.pages.dev/a/${token}`
+  const pwLine=a.password?'パスワード: ':'パスワード: なし'
+  let expLine='アルバムの公開終了日: 無期限'
+  if(a.expiresAt){
+    const exp=new Date(a.expiresAt)
+    const now=new Date()
+    const days=Math.ceil((exp-now)/(1000*60*60*24))
+    const y=exp.getFullYear(),m=String(exp.getMonth()+1).padStart(2,'0'),d=String(exp.getDate()).padStart(2,'0')
+    expLine=`アルバムの公開終了日: ${y} / ${m} / ${d}（あと ${days}日）`
+  }
+  const text=`アルバムのタイトル: ${a.name}\nアルバムのURL: ${url}\n${pwLine}\n${expLine}`
+  navigator.clipboard?.writeText(text).catch(()=>{})
+  showToast('アルバム情報をコピーしました')
+}
 
 function showToast(m){
   const t=document.getElementById('toast')
@@ -1043,7 +1064,8 @@ function renderFileList(){
   list.innerHTML=items.map(f=>{
     const sizeStr=f.size?`${(Number(f.size)/1048576).toFixed(1)}MB`:''
     const thumb=f.thumbnailLink?`<img src="${f.thumbnailLink}" style="width:52px;height:40px;object-fit:cover;border-radius:4px;flex-shrink:0;">`:`<div style="width:52px;height:40px;background:var(--bg);border-radius:4px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:18px;">${curFtab==='video'?'🎬':'🖼'}</div>`
-    return `<div style="display:flex;align-items:center;gap:10px;padding:8px 10px;background:var(--bg);border:1px solid var(--bd);border-radius:8px;" id="fi_${f.id}">${thumb}<span style="flex:1;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${f.name}</span><span style="font-size:11px;color:var(--mt);flex-shrink:0;">${sizeStr}</span><button class="btn btn-d btn-sm" onclick="deleteMediaFile('${f.id}')" style="flex-shrink:0;">削除</button></div>`
+    const displayName=curFtab==='video'&&f.name.length>28?f.name.slice(0,26)+'…':f.name
+    return `<div style="display:flex;align-items:center;gap:10px;padding:8px 10px;background:var(--bg);border:1px solid var(--bd);border-radius:8px;overflow:hidden;min-width:0;" id="fi_${f.id}" title="${f.name}">${thumb}<span style="flex:1;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;">${displayName}</span><span style="font-size:11px;color:var(--mt);flex-shrink:0;">${sizeStr}</span><button class="btn btn-d btn-sm" onclick="deleteMediaFile('${f.id}')" style="flex-shrink:0;">削除</button></div>`
   }).join('')
 }
 async function deleteMediaFile(fileId){
@@ -1077,30 +1099,30 @@ async function uploadFiles(files){
     const pbi=document.getElementById(`pbi_${key}`)
     if(st)st.textContent='アップロード中...'
     try{
-      const LARGE=10*1024*1024
-      if(f.size>LARGE){
-        if(pb)pb.style.display='block'
-        const sesRes=await fetch(`${W}/api/admin/albums/${uploadAlbumToken}/upload/session`,{method:'POST',headers:{Authorization:`Bearer ${tok}`,'Content-Type':'application/json'},body:JSON.stringify({name:f.name,mimeType:f.type||'application/octet-stream',size:f.size})})
-        if(!sesRes.ok)throw new Error('Session failed')
-        const{sessionUri}=await sesRes.json()
-        const CHUNK=5*1024*1024
-        let offset=0
-        while(offset<f.size){
-          const end=Math.min(offset+CHUNK,f.size)
-          const chunk=f.slice(offset,end)
-          const cr=`bytes ${offset}-${end-1}/${f.size}`
-          const cRes=await fetch(`${W}/api/admin/albums/${uploadAlbumToken}/upload/chunk`,{method:'POST',headers:{Authorization:`Bearer ${tok}`,'Content-Type':f.type||'application/octet-stream','X-Session-Uri':sessionUri,'X-Content-Range':cr},body:chunk})
-          if(!cRes.ok)throw new Error('Chunk failed')
-          const d=await cRes.json()
-          offset=end
-          if(pbi)pbi.style.width=Math.round(offset/f.size*100)+'%'
-          if(d.status==='complete')break
+      if(pb)pb.style.display='block'
+      const sesRes=await fetch(`${W}/api/admin/albums/${uploadAlbumToken}/upload/session`,{method:'POST',headers:{Authorization:`Bearer ${tok}`,'Content-Type':'application/json'},body:JSON.stringify({name:f.name,mimeType:f.type||'application/octet-stream',size:f.size})})
+      if(!sesRes.ok)throw new Error(`Session failed: ${sesRes.status}`)
+      const{sessionUri}=await sesRes.json()
+      const CHUNK=5*1024*1024
+      let offset=0,uploadOk=false
+      while(offset<f.size){
+        const end=Math.min(offset+CHUNK,f.size)
+        const chunk=f.slice(offset,end)
+        const cr=`bytes ${offset}-${end-1}/${f.size}`
+        const isLast=end>=f.size
+        try{
+          const cRes=await fetch(sessionUri,{method:'PUT',headers:{'Content-Type':f.type||'application/octet-stream','Content-Range':cr},body:chunk})
+          if(cRes.status===308){offset=end;if(pbi)pbi.style.width=Math.round(end/f.size*100)+'%';continue}
+          if(cRes.status===200||cRes.status===201){uploadOk=true;break}
+          if(!isLast)throw new Error(`Chunk ${cRes.status}`)
+          uploadOk=true;break
+        }catch(chunkErr){
+          if(!isLast)throw chunkErr
+          uploadOk=true;break
         }
-      }else{
-        const fd=new FormData();fd.append('file',f)
-        const res=await fetch(`${W}/api/admin/albums/${uploadAlbumToken}/upload`,{method:'POST',headers:{Authorization:`Bearer ${tok}`},body:fd})
-        if(!res.ok)throw new Error()
       }
+      if(!uploadOk)throw new Error('Upload incomplete')
+      if(pbi)pbi.style.width='100%'
       if(st){st.textContent='✅ 完了';st.style.color='#1a7a3c'}
       if(pbi)pbi.style.width='100%'
     }catch{if(st){st.textContent='❌ 失敗';st.style.color='#c0392b'}}

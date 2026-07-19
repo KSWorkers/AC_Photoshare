@@ -92,17 +92,17 @@ body{font-family:-apple-system,'Hiragino Sans',sans-serif;background:var(--bg);c
 .dl-item small{display:block;font-size:11px;color:var(--muted);margin-top:1px;}
 
 /* ── グリッド ── */
-.gallery{padding:3px 0 100px;}
+.gallery{padding:3px 0 100px;contain:layout;}
 .grow{display:flex;gap:3px;margin-bottom:3px;}
 .gi{flex-shrink:0;overflow:hidden;cursor:pointer;position:relative;background:#e8e6e2;}
-.gi img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .3s ease,-webkit-touch-callout:default;}
+.gi img{width:100%;height:100%;object-fit:cover;display:block;}
 .gi img{-webkit-touch-callout:default;}
-.gi:hover img{transform:scale(1.02);}
+@media(hover:hover){.gi img{transition:transform .3s ease;will-change:transform;}.gi:hover img{transform:scale(1.02);}}
 .gi-ck{position:absolute;top:8px;left:8px;width:22px;height:22px;border-radius:50%;background:rgba(255,255,255,.88);border:1.5px solid #fff;display:none;align-items:center;justify-content:center;box-shadow:0 1px 4px rgba(0,0,0,.2);z-index:5;}
 .sel-mode .gi-ck{display:flex;}
 .gi.sel .gi-ck{background:var(--text);border-color:var(--text);}
 .gi.sel::before{content:'';position:absolute;inset:0;box-shadow:inset 0 0 0 3px var(--text);pointer-events:none;z-index:4;}
-.gi.sel img{opacity:.75;}
+.gi.sel img{filter:brightness(.7);}
 
 /* 選択バー */
 .sel-bar{position:fixed;bottom:0;left:0;right:0;background:var(--text);color:#fff;padding:14px 20px;display:none;align-items:center;justify-content:space-between;z-index:300;gap:12px;}
@@ -117,14 +117,14 @@ body{font-family:-apple-system,'Hiragino Sans',sans-serif;background:var(--bg);c
 .lb-btn{background:rgba(0,0,0,.4);border:none;color:#fff;border-radius:8px;padding:8px 14px;cursor:pointer;font-size:13px;display:flex;align-items:center;gap:6px;}
 .lb-btn:hover{background:rgba(0,0,0,.6);}
 .lb-main{flex:1;display:flex;align-items:center;position:relative;}
-.lb-wrap{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:52px 52px 16px;transition:opacity .15s;}
+.lb-wrap{position:relative;display:flex;align-items:center;justify-content:center;width:100%;flex:1;transition:opacity .15s;}
 .lb-wrap img{max-width:100%;max-height:100%;object-fit:contain;display:block;}
 .lb-nav{position:absolute;top:50%;transform:translateY(-50%);background:rgba(255,255,255,.12);border:none;color:#fff;width:44px;height:44px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;}
 .lb-nav:hover{background:rgba(255,255,255,.22);}
 .lb-nav:disabled{opacity:.15;cursor:default;}
 .lb-prev{left:8px;}.lb-next{right:8px;}
 .lb-hint{position:absolute;bottom:0;left:0;right:0;padding:8px;text-align:center;font-size:12px;color:rgba(255,255,255,.5);background:linear-gradient(to top,rgba(0,0,0,.4),transparent);}
-@media(max-width:600px){.lb-wrap{padding:52px 44px 12px;}.lb-prev{left:4px;}.lb-next{right:4px;}}
+@media(max-width:600px){.lb-prev{left:4px;}.lb-next{right:4px;}}
 
 /* ローディング */
 .loading-wrap{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;}
@@ -168,9 +168,9 @@ body{font-family:-apple-system,'Hiragino Sans',sans-serif;background:var(--bg);c
 <body>
 
 <header class="hd" id="header">
-  <div class="logo" id="siteLogo">Alcyone PhotoShare <span>Photo</span></div>
+  <div class="logo">Alcyone PhotoShare <span>Photo</span></div>
   <div class="hd-right">
-    <button class="btn btn-gw btn-sm" id="langBtn" onclick="toggleLang()" style="min-width:40px;">EN</button>
+    <button class="btn btn-gw btn-sm" id="langBtn" onclick="toggleLang()" style="min-width:36px;text-align:center;">EN</button>
     <button class="btn btn-gw btn-sm" id="shareBtn" onclick="shareAlbum()">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.59 13.51l6.83 3.98M15.41 6.51l-6.82 3.98"/></svg>
       <span id="shareBtnTxt">共有</span>
@@ -281,15 +281,20 @@ body{font-family:-apple-system,'Hiragino Sans',sans-serif;background:var(--bg);c
           <a class="dl-item" href="/download_guide.html" target="_blank" style="border-top:1px solid var(--border);color:var(--muted);">📖 保存方法ガイド</a>
         </div>
       </div>
+      <button class="lb-btn" id="lbDelBtn" onclick="deleteCurrent()" style="color:#ff6b6b;display:none;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>削除
+      </button>
       <button class="lb-btn" onclick="closeLb()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
     </div>
   </div>
   <div class="lb-main">
     <button class="lb-nav lb-prev" id="lbPrev" onclick="lbMv(-1)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg></button>
-    <div class="lb-wrap" id="lbWrap"><img id="lbImg" src="" alt=""></div>
+    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;gap:10px;padding:52px 44px 16px;">
+      <div class="lb-wrap" id="lbWrap"><img id="lbImg" src="" alt=""></div>
+      <div id="lbHint" style="font-size:12px;color:rgba(255,255,255,.5);text-align:center;line-height:1.6;"></div>
+    </div>
     <button class="lb-nav lb-next" id="lbNext" onclick="lbMv(1)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg></button>
   </div>
-  <div class="lb-hint" id="lbHint"></div>
 </div>
 
 <!-- お客さんアップロードモーダル -->
@@ -299,8 +304,8 @@ body{font-family:-apple-system,'Hiragino Sans',sans-serif;background:var(--bg);c
     <div id="custUploadBody">
       <label style="display:block;border:2px dashed rgba(0,0,0,.14);border-radius:10px;padding:24px;text-align:center;cursor:pointer;margin-bottom:12px;">
         <div style="font-size:24px;margin-bottom:4px;">📁</div>
-        <div style="font-size:14px;font-weight:500;margin-bottom:2px;">タップして写真・動画を選択</div>
-        <div style="font-size:12px;color:var(--muted);">JPG・PNG・HEIC・MP4・MOVなど</div>
+        <div style="font-size:14px;font-weight:500;margin-bottom:2px;" id="uploadLabelMain">タップして写真・動画を選択</div>
+        <div style="font-size:12px;color:var(--muted);" id="uploadLabelSub">JPG・PNG・HEIC・MP4・MOVなど</div>
         <input type="file" multiple accept="image/*,video/*" id="custFileInput" style="display:none;" onchange="onCustFiles()">
       </label>
       <div id="custUploadList" style="display:grid;gap:6px;max-height:180px;overflow-y:auto;margin-bottom:12px;"></div>
@@ -333,92 +338,161 @@ const W = 'https://ac-photoshare.nikkomaedori.workers.dev'
 const token = new URLSearchParams(location.search).get('token') || location.pathname.split('/').pop()
 const isMobile = /iPhone|iPad|Android/i.test(navigator.userAgent)
 
-// ── 言語設定 ──────────────────────────────────────────────────
+// ── 言語設定 ────────────────────────────────────────────────────
 let lang = localStorage.getItem('albumLang') || 'ja'
+let _albumLangSet = false  // アルバム設定の言語を一度だけ適用するフラグ
 const T = {
   ja: {
-    share:'共有', selBtn:'選択', selCancel:'選択解除',
-    dlAll:'まとめてDL', dlSel:'選択DL ▾', cancelSel:'キャンセル',
-    dlFull:'フルサイズ', dlFullSub:'元データそのまま',
-    dlMed:'中サイズ（A4印刷対応）', dlMedSub:'約2400px',
-    dlSm:'小サイズ（L判印刷対応）', dlSmSub:'約1200px',
-    dlGuide:'📖 保存方法ガイド', lbSave:'保存 ▾',
-    lbHintMobile:'保存 ▾ からサイズを選択 → 画像が開いたら長押し →「イメージを保存」',
-    selCount: n=>`${n}枚選択中`,
-    photoCount: n=>`${n}枚`, expiry: d=>`期限：${d}`,
-    toastUrl:'URLをコピーしました', toastDlDone:'ダウンロード完了！', toastErr:'エラーが発生しました',
-    zipGen:'ZIPを生成中...', zipComp:'ZIPを圧縮中...',
-    progressCount:(d,t)=>`${d} / ${t} 枚`,
-    videoSection: n=>`動画（${n}件）`,
-    videoNotice:'アップロードした動画はサムネイルが表示されるまで再生できない場合があります。しばらく経ってからページを再読み込みしてください。',
-    videoDl:'動画をダウンロード', videoDelBtn:'削除', videoDelConfirm:'この動画を削除しますか？',
-    guideLink:'📖 写真・動画の保存方法ガイドを見る →',
+    share: '共有', selBtn: '選択', selCancel: '選択解除',
+    dlAll: 'まとめてDL', dlSel: '選択DL ▾', cancelSel: 'キャンセル',
+    dlFull: 'フルサイズ', dlFullSub: '元データそのまま',
+    dlMed: '中サイズ（A4印刷対応）', dlMedSub: '約2400px',
+    dlSm: '小サイズ（L判印刷対応）', dlSmSub: '約1200px',
+    dlGuide: '📖 保存方法ガイド',
+    lbSave: '保存 ▾', lbDel: '削除',
+    lbHint: '保存 ▾ からサイズを選択 → 画像が開いたら長押し →「イメージを保存」',
+    selCount: n => `${n}枚選択中`,
+    lbCount: (c,t) => `${c} / ${t}`,
+    loading: '読み込み中...',
+    toastUrl: 'URLをコピーしました', toastDlDone: 'ダウンロード完了！', toastErr: 'エラーが発生しました',
+    toastDel: '削除しました', toastDelFail: '削除に失敗しました',
+    zipGen: 'ZIPを生成中...', zipComp: 'ZIPを圧縮中...',
+    progressCount: (d,t) => `${d} / ${t} 枚`,
+    pwProtected: 'パスワードで保護されています', pwPlaceholder: 'パスワード', pwOpen: '開く', pwErr: 'パスワードが違います',
+    videoSection: n => `動画（${n}件）`,
+    videoNotice: 'アップロードした動画はサムネイルが表示されるまで再生できない場合があります。しばらく経ってからページを再読み込みしてください。',
+    videoDl: '動画をダウンロード', videoDelBtn: '削除', videoDelConfirm: 'この動画を削除しますか？',
+    uploadTitle: '写真を追加', uploadLabel: 'タップして写真・動画を選択', uploadSub: 'JPG・PNG・HEIC・MP4・MOVなど',
+    uploadClose: '閉じる', uploadDone: f => `完了（${f}件成功・`, uploadFail: n => `${n}件失敗）`,
+    uploadedFile: 'アップロード済みファイル', uploadDupl: '⚠️ 送信済み',
+    uploadWait: '待機中', uploadUploading: 'アップロード中', uploadOk: '✓', uploadFailed: '✗',
+    custDelConfirm: 'このファイルを削除しますか？',
+    guideLink: '📖 写真・動画の保存方法ガイドを見る →',
+    photoCount: n => `${n}枚`,
+    expiry: d => `期限：${d}`,
+    errNotfound: 'アルバムが見つかりません', errNotfoundSub: 'URLをご確認ください。',
+    errExpired: 'このアルバムは期限切れです', errExpiredSub: 'ダウンロード期限が過ぎています。',
+    errPrivate: 'このアルバムは現在非公開です', errPrivateSub: '公開されるまでしばらくお待ちください。',
+    errLoad: '読み込みに失敗しました', errLoadSub: '時間をおいて再試行してください。',
   },
   en: {
-    share:'Share', selBtn:'Select', selCancel:'Deselect',
-    dlAll:'Download All', dlSel:'Download ▾', cancelSel:'Cancel',
-    dlFull:'Full size', dlFullSub:'Original quality',
-    dlMed:'Medium (A4 print)', dlMedSub:'approx. 2400px',
-    dlSm:'Small (L-size print)', dlSmSub:'approx. 1200px',
-    dlGuide:'📖 Download guide', lbSave:'Save ▾',
-    lbHintMobile:'Tap Save ▾ → Choose size → Long-press the image → "Save Image"',
-    selCount: n=>`${n} selected`,
-    photoCount: n=>`${n} photos`, expiry: d=>`Expires: ${d}`,
-    toastUrl:'URL copied', toastDlDone:'Download complete!', toastErr:'An error occurred',
-    zipGen:'Creating ZIP...', zipComp:'Compressing ZIP...',
-    progressCount:(d,t)=>`${d} / ${t} photos`,
-    videoSection: n=>`Videos (${n})`,
-    videoNotice:'Uploaded videos may not be playable until a thumbnail appears. Please reload the page after a while.',
-    videoDl:'Download video', videoDelBtn:'Delete', videoDelConfirm:'Delete this video?',
-    guideLink:'📖 How to save photos & videos →',
+    share: 'Share', selBtn: 'Select', selCancel: 'Deselect',
+    dlAll: 'Download All', dlSel: 'Download ▾', cancelSel: 'Cancel',
+    dlFull: 'Full size', dlFullSub: 'Original quality',
+    dlMed: 'Medium (A4 print)', dlMedSub: 'approx. 2400px',
+    dlSm: 'Small (L-size print)', dlSmSub: 'approx. 1200px',
+    dlGuide: '📖 Download guide',
+    lbSave: 'Save ▾', lbDel: 'Delete',
+    lbHint: 'Tap Save ▾ → Choose size → Long-press the image → "Save Image"',
+    selCount: n => `${n} selected`,
+    lbCount: (c,t) => `${c} / ${t}`,
+    loading: 'Loading...',
+    toastUrl: 'URL copied', toastDlDone: 'Download complete!', toastErr: 'An error occurred',
+    toastDel: 'Deleted', toastDelFail: 'Failed to delete',
+    zipGen: 'Creating ZIP...', zipComp: 'Compressing ZIP...',
+    progressCount: (d,t) => `${d} / ${t} photos`,
+    pwProtected: 'This album is password protected', pwPlaceholder: 'Password', pwOpen: 'Open', pwErr: 'Incorrect password',
+    videoSection: n => `Videos (${n})`,
+    videoNotice: 'Uploaded videos may not be playable until a thumbnail appears. Please reload the page after a while.',
+    videoDl: 'Download video', videoDelBtn: 'Delete', videoDelConfirm: 'Delete this video?',
+    uploadTitle: 'Add photos', uploadLabel: 'Tap to select photos / videos', uploadSub: 'JPG, PNG, HEIC, MP4, MOV, etc.',
+    uploadClose: 'Close', uploadDone: f => `Done (${f} succeeded, `, uploadFail: n => `${n} failed)`,
+    uploadedFile: 'Uploaded file', uploadDupl: '⚠️ Already sent',
+    uploadWait: 'Waiting', uploadUploading: 'Uploading', uploadOk: '✓', uploadFailed: '✗',
+    custDelConfirm: 'Delete this file?',
+    guideLink: '📖 How to save photos & videos →',
+    photoCount: n => `${n} photos`,
+    expiry: d => `Expires: ${d}`,
+    errNotfound: 'Album not found', errNotfoundSub: 'Please check the URL.',
+    errExpired: 'This album has expired', errExpiredSub: 'The download period has ended.',
+    errPrivate: 'This album is currently private', errPrivateSub: 'Please wait until it is published.',
+    errLoad: 'Failed to load', errLoadSub: 'Please try again later.',
   }
 }
-function t(key,...args){const v=(T[lang]||T.ja)[key]??(T.ja)[key]??key;return typeof v==='function'?v(...args):v}
+function t(key, ...args){
+  const dict = T[lang] || T.ja
+  const val = dict[key] ?? T.ja[key] ?? key
+  return typeof val === 'function' ? val(...args) : val
+}
 function toggleLang(){
-  lang=lang==='ja'?'en':'ja'
-  localStorage.setItem('albumLang',lang)
+  lang = lang==='ja'?'en':'ja'
+  localStorage.setItem('albumLang', lang)
   applyLang()
 }
 function applyLang(){
-  const btn=document.getElementById('langBtn')
-  if(btn)btn.textContent=lang==='ja'?'EN':'日本語'
-  document.getElementById('shareBtnTxt').textContent=t('share')
-  const selBtn=document.getElementById('selBtn')
-  if(selBtn)selBtn.textContent=selMode?t('selCancel'):t('selBtn')
-  const selCnt=document.getElementById('selCnt')
-  if(selCnt&&selIds)selCnt.textContent=t('selCount',selIds.size)
-  // DLメニュー再描画
-  const dlInner=`<button class="dl-item" onclick="downloadAll('full')">${t('dlFull')}<small>${t('dlFullSub')}</small></button><button class="dl-item" onclick="downloadAll('medium')">${t('dlMed')}<small>${t('dlMedSub')}</small></button><button class="dl-item" onclick="downloadAll('small')">${t('dlSm')}<small>${t('dlSmSub')}</small></button><a class="dl-item" href="/download_guide.html" target="_blank" style="border-top:1px solid var(--border);color:var(--muted);">${t('dlGuide')}</a>`
-  const allDl=document.getElementById('allDlMenu');if(allDl)allDl.innerHTML=dlInner.replace(/downloadAll/g,'downloadAll')
-  const selDlInner=`<button class="dl-item" onclick="downloadSel('full')">${t('dlFull')}<small>${t('dlFullSub')}</small></button><button class="dl-item" onclick="downloadSel('medium')">${t('dlMed')}<small>${t('dlMedSub')}</small></button><button class="dl-item" onclick="downloadSel('small')">${t('dlSm')}<small>${t('dlSmSub')}</small></button><a class="dl-item" href="/download_guide.html" target="_blank" style="border-top:1px solid var(--border);color:var(--muted);">${t('dlGuide')}</a>`
-  const selDl=document.getElementById('selDlMenu');if(selDl)selDl.innerHTML=selDlInner
-  const lbDlInner=`<button class="dl-item" onclick="dlCurrent('full')">${t('dlFull')}<small>${t('dlFullSub')}</small></button><button class="dl-item" onclick="dlCurrent('medium')">${t('dlMed')}<small>${t('dlMedSub')}</small></button><button class="dl-item" onclick="dlCurrent('small')">${t('dlSm')}<small>${t('dlSmSub')}</small></button>`
-  const lbDl=document.getElementById('lbDlMenu');if(lbDl)lbDl.innerHTML=lbDlInner
-  // LB保存ボタン
-  const lbSaveBtn=document.querySelector('[onclick="toggleLbDl(event)"]')
-  if(lbSaveBtn){const svg=lbSaveBtn.querySelector('svg')?.outerHTML||'';lbSaveBtn.innerHTML=svg+t('lbSave')}
-  // まとめてDLボタン
-  const dlAllBtn=document.querySelector('[onclick="toggleDlMenu(event)"]')
-  if(dlAllBtn){const svg=dlAllBtn.querySelector('svg')?.outerHTML||'';dlAllBtn.innerHTML=svg+'\n        '+t('dlAll')+'\n      '}
-  // 選択DLボタン
-  const selDlBtn=document.querySelector('[onclick="toggleSelDl(event)"]')
-  if(selDlBtn)selDlBtn.textContent=t('dlSel')
-  // キャンセルボタン
-  const cancelBtn=document.querySelector('.sel-bar [onclick="cancelSel()"]')
-  if(cancelBtn)cancelBtn.textContent=t('cancelSel')
-  // ガイドリンク
-  const guide=document.querySelector('.guide-link-big')
-  if(guide)guide.textContent=t('guideLink')
-  // アルバムメタ再描画（loadedData が必要）
-  if(typeof _albumData!=='undefined'&&_albumData){
-    const meta=[]
-    if(_albumData.count)meta.push(t('photoCount',_albumData.count))
-    if(_albumData.totalSizeLabel)meta.push(_albumData.totalSizeLabel)
-    if(_albumData.expiresAt)meta.push(t('expiry',_albumData.expiresAt.slice(0,10)))
-    document.getElementById('albumMeta').innerHTML=meta.map((m,i)=>i<meta.length-1?`<span>${m}</span><span class="dot">·</span>`:`<span>${m}</span>`).join('')
+  const btn = document.getElementById('langBtn')
+  btn.textContent = lang==='ja'?'EN':'日本語'
+  document.getElementById('shareBtnTxt').textContent = t('share')
+  // Toolbar
+  const selBtn = document.getElementById('selBtn')
+  if(selBtn) selBtn.textContent = selMode ? t('selCancel') : t('selBtn')
+  // DL menus (static HTML rebuild)
+  const allDlMenu = document.getElementById('allDlMenu')
+  if(allDlMenu) allDlMenu.innerHTML = dlMenuItems()
+  const selDlMenu = document.getElementById('selDlMenu')
+  if(selDlMenu) selDlMenu.innerHTML = dlMenuItems(true)
+  const lbDlMenu = document.getElementById('lbDlMenu')
+  if(lbDlMenu) lbDlMenu.innerHTML = lbDlMenuItems()
+  // Download All button
+  const dlAllBtn = document.querySelector('[onclick="toggleDlMenu(event)"]')
+  if(dlAllBtn) {
+    const svg = dlAllBtn.querySelector('svg')?.outerHTML || ''
+    dlAllBtn.innerHTML = svg + t('dlAll')
   }
+  // Sel bar
+  const selDlBtn = document.querySelector('[onclick="toggleSelDl(event)"]')
+  if(selDlBtn) selDlBtn.textContent = t('dlSel')
+  const cancelBtn = document.querySelector('.sel-bar .btn-sm:last-child')
+  if(cancelBtn) cancelBtn.textContent = t('cancelSel')
+  const selCnt = document.getElementById('selCnt')
+  if(selCnt) selCnt.textContent = t('selCount', selIds?.size || 0)
+  // LB delete button text
+  const lbDelBtn = document.getElementById('lbDelBtn')
+  if(lbDelBtn) { const svg = lbDelBtn.querySelector('svg')?.outerHTML||''; lbDelBtn.innerHTML = svg + t('lbDel') }
+  // Password screen
+  document.querySelector('.pw-sub').textContent = t('pwProtected')
+  const pwIn = document.getElementById('pwIn')
+  if(pwIn) pwIn.placeholder = t('pwPlaceholder')
+  const pwOpenBtn = document.querySelector('[onclick="submitPw()"]')
+  if(pwOpenBtn) pwOpenBtn.textContent = t('pwOpen')
+  document.getElementById('pwErr').textContent = t('pwErr')
+  // Loading
+  const loadTxt = document.querySelector('.loading-wrap span')
+  if(loadTxt) loadTxt.textContent = t('loading')
+  // Upload modal
+  document.getElementById('custUploadTtl').textContent = t('uploadTitle')
+  const uploadLabelMain = document.getElementById('uploadLabelMain')
+  if(uploadLabelMain) uploadLabelMain.textContent = t('uploadLabel')
+  const uploadLabelSub = document.getElementById('uploadLabelSub')
+  if(uploadLabelSub) uploadLabelSub.textContent = t('uploadSub')
+  document.getElementById('custCloseBtn').textContent = t('uploadClose')
+  // Guide link
+  const guide = document.querySelector('.guide-link-big')
+  if(guide) guide.innerHTML = t('guideLink')
+  // LB save button text
+  const lbSaveBtn = document.querySelector('[onclick="toggleLbDl(event)"]')
+  if(lbSaveBtn) {
+    const svg = lbSaveBtn.querySelector('svg')?.outerHTML || ''
+    lbSaveBtn.innerHTML = svg + t('lbSave')
+  }
+  // LB hint
+  const lbHint = document.getElementById('lbHint')
+  if(lbHint && lbHint.textContent) lbHint.textContent = isMobile ? t('lbHint') : ''
 }
-;(()=>{const b=document.getElementById('langBtn');if(b)b.textContent=lang==='ja'?'EN':'日本語'})()
+function dlMenuItems(isSel=false){
+  const prefix = isSel ? 'downloadSel' : 'downloadAll'
+  return `<button class="dl-item" onclick="${prefix}('full')">${t('dlFull')}<small>${t('dlFullSub')}</small></button>
+    <button class="dl-item" onclick="${prefix}('medium')">${t('dlMed')}<small>${t('dlMedSub')}</small></button>
+    <button class="dl-item" onclick="${prefix}('small')">${t('dlSm')}<small>${t('dlSmSub')}</small></button>
+    <a class="dl-item" href="/download_guide.html" target="_blank" style="border-top:1px solid var(--border);color:var(--muted);">${t('dlGuide')}</a>`
+}
+function lbDlMenuItems(){
+  return `<button class="dl-item" onclick="dlCurrent('full')">${t('dlFull')}<small>${t('dlFullSub')}</small></button>
+    <button class="dl-item" onclick="dlCurrent('medium')">${t('dlMed')}<small>${t('dlMedSub')}</small></button>
+    <button class="dl-item" onclick="dlCurrent('small')">${t('dlSm')}<small>${t('dlSmSub')}</small></button>`
+}
+// 初期適用
+;(()=>{ document.getElementById('langBtn').textContent = lang==='ja'?'EN':'日本語' })()
 
 // フォント定義
 const FONTS = {
@@ -444,17 +518,17 @@ function applyFont(fontKey) {
   el.style.textTransform = f.transform
 }
 
-let photos=[], pw='', selMode=false, selIds=new Set(), cur=0, lastSel=-1, _albumData=null
+let photos=[], pw='', selMode=false, selIds=new Set(), cur=0, lastSel=-1
 
 function show(id) { document.querySelectorAll('.sc').forEach(s=>s.classList.remove('on')); document.getElementById(id).classList.add('on') }
 
 function showErr(type) {
   const c = {
-    notfound:{ icon:'📭', title:'アルバムが見つかりません', sub:'URLをご確認ください。' },
-    expired: { icon:'⏰', title:'このアルバムは期限切れです', sub:'ダウンロード期限が過ぎています。' },
-    private: { icon:'🔒', title:'このアルバムは現在非公開です', sub:'公開されるまでしばらくお待ちください。' },
-    error:   { icon:'⚠️', title:'読み込みに失敗しました', sub:'時間をおいて再試行してください。' },
-  }[type] || {icon:'⚠️',title:'エラー',sub:''}
+    notfound:{ icon:'📭', title:t('errNotfound'), sub:t('errNotfoundSub') },
+    expired: { icon:'⏰', title:t('errExpired'), sub:t('errExpiredSub') },
+    private: { icon:'🔒', title:t('errPrivate'), sub:t('errPrivateSub') },
+    error:   { icon:'⚠️', title:t('errLoad'), sub:t('errLoadSub') },
+  }[type] || {icon:'⚠️',title:t('errLoad'),sub:''}
   document.getElementById('errIcon').textContent=c.icon
   document.getElementById('errTitle').textContent=c.title
   document.getElementById('errSub').textContent=c.sub
@@ -464,20 +538,19 @@ function showErr(type) {
 async function load(password='') {
   try {
     const qs = password ? `?pw=${encodeURIComponent(password)}` : ''
-    const res = await fetch(`${W}/api/album/${token}${qs}`)
+    const ctrl = new AbortController(); setTimeout(() => ctrl.abort(), 15000)
+    const res = await fetch(`${W}/api/album/${token}${qs}`, { signal: ctrl.signal })
     const d = await res.json()
     if (res.status===404) return showErr('notfound')
     if (res.status===410) return showErr('expired')
     if (res.status===403) return showErr('private')
     if (d.requirePassword) { document.getElementById('pwName').textContent=d.name; return show('scPw') }
     if (!res.ok) return showErr('error')
-    pw=password; photos=d.photos; _albumData=d
-    // アルバム設定の言語（お客さまが手動変更していなければ適用）
-    if(d.lang&&!localStorage.getItem('albumLang')){lang=d.lang}
-    // ヘッダータイトル
-    if(d.siteTitle){document.getElementById('siteLogo').textContent=d.siteTitle}
+    pw=password; photos=d.photos
+    // アルバム設定の言語を初回のみ適用（お客さまが手動で変更した場合は上書きしない）
+    if(!_albumLangSet&&d.lang){lang=d.lang;_albumLangSet=true}
     if(d.allowCustomerUpload){const b=document.getElementById('custUploadBtn');b.style.display='flex'}
-    if(!d.allowVideoUpload){document.getElementById('custFileInput')?.setAttribute('accept','image/*')}
+    if(!d.allowVideoUpload){document.getElementById('custFileInput').accept='image/*'}
 
     // ヒーロー設定
     applyFont(d.heroFont||'josefin')
@@ -498,9 +571,9 @@ async function load(password='') {
     // アルバム情報
     document.getElementById('albumName').textContent = d.name
     const meta=[]
-    if (d.count) meta.push(t('photoCount',d.count))
+    if (d.count) meta.push(t('photoCount', d.count))
     if (d.totalSizeLabel) meta.push(d.totalSizeLabel)
-    if (d.expiresAt) meta.push(t('expiry',d.expiresAt.slice(0,10)))
+    if (d.expiresAt) meta.push(t('expiry', d.expiresAt.slice(0,10)))
     document.getElementById('albumMeta').innerHTML = meta.map((m,i)=>
       i<meta.length-1 ? `<span>${m}</span><span class="dot">·</span>` : `<span>${m}</span>`
     ).join('')
@@ -552,10 +625,18 @@ function renderGrid() {
     if(row.length)rows.push([...row])
     grid.innerHTML=rows.map(r=>{const tg=(r.length-1)*gap,tw=r.reduce((s,p)=>s+p._w,0),sc=(cw-tg)/tw,rh=Math.round(th*sc);return`<div class="grow">${r.map(p=>`<div class="gi" id="gi${p._i}" style="width:${Math.round(p._w*sc)}px;height:${rh}px;" onclick="onClick(${p._i},event)"><img src="${p.thumb}" loading="lazy"><div class="gi-ck"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></div></div>`).join('')}</div>`}).join('')
   }
+  if(selMode){grid.classList.add('sel-mode');selIds.forEach(i=>document.getElementById(`gi${i}`)?.classList.add('sel'))}
 }
-window.addEventListener('resize',()=>{if(photos.length)renderGrid()})
+let _lastRenderW=0
+window.addEventListener('resize',()=>{const w=window.innerWidth;if(photos.length&&w!==_lastRenderW){_lastRenderW=w;if(!selMode)renderGrid()}})
+
+// スクロール中のクリック誤検知を防ぐタッチ追跡
+let _touchStartY=0, _touchStartX=0, _touchScrolled=false
+document.addEventListener('touchstart',e=>{_touchStartX=e.touches[0].clientX;_touchStartY=e.touches[0].clientY;_touchScrolled=false},{passive:true})
+document.addEventListener('touchmove',e=>{const dy=Math.abs(e.touches[0].clientY-_touchStartY),dx=Math.abs(e.touches[0].clientX-_touchStartX);if(dy>8||dx>8)_touchScrolled=true},{passive:true})
 
 function onClick(i,e){
+  if(_touchScrolled)return
   if(selMode){
     if(e.shiftKey&&lastSel>=0){const mn=Math.min(i,lastSel),mx=Math.max(i,lastSel);for(let j=mn;j<=mx;j++){selIds.add(j);document.getElementById(`gi${j}`)?.classList.add('sel')}}
     else{const el=document.getElementById(`gi${i}`);if(selIds.has(i)){selIds.delete(i);el.classList.remove('sel')}else{selIds.add(i);el.classList.add('sel')}}
@@ -585,7 +666,7 @@ async function downloadZip(list,size){
 }
 function downloadAll(size){closeAllMenus();downloadZip(photos,size)}
 function downloadSel(size){closeAllMenus();downloadZip([...selIds].map(i=>photos[i]),size);cancelSel()}
-function dlCurrent(size){closeAllMenus();const p=photos[cur];const a=document.createElement('a');a.href=photoUrl(p,size);a.download=(size==='full'?'':size+'_')+p.name;a.click();showToast('ダウンロードを開始します')}
+function dlCurrent(size){closeAllMenus();const p=photos[cur];window.open(photoUrl(p,size),'_blank');}
 
 function toggleDlMenu(e){e.stopPropagation();document.getElementById('allDlMenu').classList.toggle('on')}
 function toggleSelDl(e){e.stopPropagation();document.getElementById('selDlMenu').classList.toggle('on')}
@@ -615,7 +696,10 @@ function updLb(){
   document.getElementById('lbCnt').textContent=`${cur+1} / ${photos.length}`
   document.getElementById('lbPrev').disabled=cur===0
   document.getElementById('lbNext').disabled=cur===photos.length-1
-  document.getElementById('lbHint').innerHTML=isMobile?t('lbHintMobile'):''
+  document.getElementById('lbHint').innerHTML=isMobile?t('lbHint'):''
+  const uploaded=JSON.parse(sessionStorage.getItem(`uploads_${token}`)||'[]')
+  const delBtn=document.getElementById('lbDelBtn')
+  delBtn.style.display=uploaded.includes(p.id)?'':'none'
 }
 function lbMv(dir){
   const n=cur+dir;if(n<0||n>=photos.length)return;cur=n
@@ -634,19 +718,35 @@ function renderVideos(videos) {
   const section = document.createElement('div')
   section.className = 'video-section'
   const wrap = document.getElementById('grid').parentNode
+  const uploaded=JSON.parse(sessionStorage.getItem(`uploads_${token}`)||'[]')
   section.innerHTML = `<div class="video-hd"><span>🎬</span>${t('videoSection',videos.length)}</div>
-    <div class="video-list">${videos.map(v=>`
-      <div class="video-item" onclick="openVideoPlayer('${v.viewLink}')">
+    <div style="font-size:12px;color:var(--muted);background:#f8f6f2;border:1px solid var(--border);border-radius:8px;padding:9px 12px;margin-bottom:10px;line-height:1.7;">${t('videoNotice')}</div>
+    <div class="video-list" id="videoList">${videos.map(v=>{
+      const isOwn=uploaded.includes(v.id)
+      return`<div class="video-item" id="vi_${v.id}" style="position:relative;" onclick="openVideoPlayer('${v.viewLink}')">
         ${v.thumb?`<img class="video-thumb" src="${v.thumb}" alt="">`:'<div class="video-thumb-ph">🎬</div>'}
         <div class="video-info">
           <div class="video-name">${v.name}</div>
           ${v.size?`<div class="video-size">${fmtSize(v.size)}</div>`:''}
         </div>
         <div class="video-play">▶</div>
-      </div>`).join('')}
+        ${isOwn?`<button onclick="event.stopPropagation();deleteVideo('${v.id}')" style="position:absolute;top:6px;right:6px;background:rgba(0,0,0,.55);border:none;color:#ff6b6b;border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer;">${t('videoDelBtn')}</button>`:''}
+      </div>`
+    }).join('')}
     </div>`
   wrap.appendChild(section)
   addGuideLink(wrap)
+}
+
+async function deleteVideo(videoId){
+  if(!confirm(t('videoDelConfirm')))return
+  const res=await fetch(`${W}/api/album/${token}/files/${videoId}`,{method:'DELETE'})
+  if(res.ok){
+    document.getElementById(`vi_${videoId}`)?.remove()
+    const s=JSON.parse(sessionStorage.getItem(`uploads_${token}`)||'[]')
+    sessionStorage.setItem(`uploads_${token}`,JSON.stringify(s.filter(id=>id!==videoId)))
+    showToast(t('toastDel'))
+  }else{showToast(t('toastDelFail'))}
 }
 
 function openVideoPlayer(viewLink) {
@@ -669,7 +769,7 @@ function openVideoPlayer(viewLink) {
   dlBtn.href = downloadUrl
   dlBtn.target = '_blank'
   dlBtn.style.cssText = 'display:inline-flex;align-items:center;gap:6px;margin-top:14px;background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.3);border-radius:8px;padding:8px 18px;font-size:13px;text-decoration:none;backdrop-filter:blur(4px);'
-  dlBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> ${t('videoDl')}`
+  dlBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> ' + t('videoDl')
   overlay.appendChild(closeBtn)
   overlay.appendChild(iframe)
   overlay.appendChild(dlBtn)
@@ -688,21 +788,49 @@ function showToast(m){const t=document.getElementById('toast');t.textContent=m;t
 
 // ─── お客さんアップロード ─────────────────────────
 let custUploading=false
-function openCustUpload(){document.getElementById('custFileInput').value='';document.getElementById('custUploadList').innerHTML='';document.getElementById('custUploadTtl').textContent='写真を追加';document.getElementById('custUploadModal').classList.add('on')}
+function openCustUpload(){
+  document.getElementById('custFileInput').value=''
+  const list=document.getElementById('custUploadList')
+  list.innerHTML=''
+  const saved=JSON.parse(sessionStorage.getItem(`uploads_${token}`)||'[]')
+  if(saved.length){
+    saved.forEach(id=>{
+      const row=document.createElement('div')
+      row.id=`cuf_${id}`
+      row.style.cssText='display:flex;align-items:center;gap:8px;padding:7px 10px;background:#f5f5f3;border-radius:8px;font-size:13px;'
+      row.innerHTML=`<span style="flex:1;color:var(--muted);font-size:12px;">${t('uploadedFile')}</span><button onclick="deleteCustFile('${id}',this)" style="font-size:11px;padding:2px 6px;border:1px solid rgba(192,57,43,.3);border-radius:4px;background:transparent;color:#c0392b;cursor:pointer;">${t('videoDelBtn')}</button>`
+      list.appendChild(row)
+    })
+  }
+  document.getElementById('custUploadTtl').textContent=t('uploadTitle')
+  document.getElementById('custUploadModal').classList.add('on')
+}
 function closeCustUpload(){if(custUploading)return;document.getElementById('custUploadModal').classList.remove('on')}
 function onCustFiles(){const files=Array.from(document.getElementById('custFileInput').files);if(!files.length)return;uploadCustFiles(files)}
+function fileKey(f){return`${f.name}|${f.size}|${f.lastModified}`}
 async function uploadCustFiles(files){
   custUploading=true
   document.getElementById('custCloseBtn').disabled=true
   const list=document.getElementById('custUploadList')
+  const uploadedKeys=JSON.parse(sessionStorage.getItem(`upload_keys_${token}`)||'[]')
   const items={}
+  let skipped=0
   for(const f of files){
+    const fk=fileKey(f)
     const key=f.name+f.size
+    if(uploadedKeys.includes(fk)){
+      const item=document.createElement('div')
+      item.style.cssText='display:flex;align-items:center;gap:8px;padding:7px 10px;background:#f5f5f3;border-radius:8px;font-size:13px;'
+      item.innerHTML=`<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${f.name}</span><span style="color:#c0392b;font-size:12px;flex-shrink:0;">${t('uploadDupl')}</span>`
+      list.appendChild(item)
+      skipped++
+      continue
+    }
     const item=document.createElement('div')
     item.style.cssText='display:flex;flex-direction:column;gap:4px;padding:7px 10px;background:#f5f5f3;border-radius:8px;font-size:13px;'
     const isVideo=f.type.startsWith('video/')
     const sizeStr=f.size>1048576?`${(f.size/1048576).toFixed(1)}MB`:`${Math.round(f.size/1024)}KB`
-    item.innerHTML=`<div style="display:flex;align-items:center;gap:8px;"><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${f.name}</span><span style="color:var(--muted);font-size:11px;">${isVideo?'🎬':'🖼'} ${sizeStr}</span><span id="cst_${key}" style="color:var(--muted);font-size:12px;flex-shrink:0;">待機中</span></div><div id="cpb_${key}" style="display:none;height:3px;background:#e0ddd8;border-radius:2px;overflow:hidden;"><div id="cpbi_${key}" style="height:100%;background:#8b7a38;width:0%;transition:width .3s;"></div></div>`
+    item.innerHTML=`<div style="display:flex;align-items:center;gap:8px;"><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${f.name}</span><span style="color:var(--muted);font-size:11px;">${isVideo?'🎬':'🖼'} ${sizeStr}</span><span id="cst_${key}" style="color:var(--muted);font-size:12px;flex-shrink:0;">${t('uploadWait')}</span></div><div id="cpb_${key}" style="display:none;height:3px;background:#e0ddd8;border-radius:2px;overflow:hidden;"><div id="cpbi_${key}" style="height:100%;background:#8b7a38;width:0%;transition:width .3s;"></div></div>`
     list.appendChild(item)
     items[key]=f
   }
@@ -711,52 +839,91 @@ async function uploadCustFiles(files){
     const st=document.getElementById(`cst_${key}`)
     const pb=document.getElementById(`cpb_${key}`)
     const pbi=document.getElementById(`cpbi_${key}`)
-    if(st)st.textContent='送信中...'
+    if(st)st.textContent=t('uploadUploading')
     try{
       let uploadedId=null
-      const LARGE=10*1024*1024
-      if(f.size>LARGE){
-        if(pb)pb.style.display='block'
-        const sesRes=await fetch(`${W}/api/album/${token}/upload/session`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:f.name,mimeType:f.type||'application/octet-stream',size:f.size})})
-        if(!sesRes.ok)throw new Error('Session failed')
-        const{sessionUri}=await sesRes.json()
-        const CHUNK=5*1024*1024
-        let offset=0
-        while(offset<f.size){
-          const end=Math.min(offset+CHUNK,f.size)
-          const chunk=f.slice(offset,end)
-          const cr=`bytes ${offset}-${end-1}/${f.size}`
-          const cRes=await fetch(`${W}/api/album/${token}/upload/chunk`,{method:'POST',headers:{'Content-Type':f.type||'application/octet-stream','X-Session-Uri':sessionUri,'X-Content-Range':cr},body:chunk})
-          if(!cRes.ok)throw new Error('Chunk failed')
-          const d=await cRes.json()
-          offset=end
-          if(pbi)pbi.style.width=Math.round(offset/f.size*100)+'%'
-          if(d.status==='complete'){uploadedId=d.id;break}
+      if(pb)pb.style.display='block'
+      const sesRes=await fetch(`${W}/api/album/${token}/upload/session`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:f.name,mimeType:f.type||'application/octet-stream',size:f.size})})
+      if(!sesRes.ok)throw new Error(`Session failed: ${sesRes.status}`)
+      const{sessionUri}=await sesRes.json()
+      const CHUNK=5*1024*1024
+      let offset=0,uploadOk=false
+      while(offset<f.size){
+        const end=Math.min(offset+CHUNK,f.size)
+        const chunk=f.slice(offset,end)
+        const cr=`bytes ${offset}-${end-1}/${f.size}`
+        const isLast=end>=f.size
+        try{
+          const cRes=await fetch(sessionUri,{method:'PUT',headers:{'Content-Type':f.type||'application/octet-stream','Content-Range':cr},body:chunk})
+          if(cRes.status===308){offset=end;if(pbi)pbi.style.width=Math.round(end/f.size*100)+'%';continue}
+          if(cRes.status===200||cRes.status===201){
+            try{const r=await cRes.json();uploadedId=r.id}catch{}
+            uploadOk=true;break
+          }
+          if(!isLast)throw new Error(`Chunk ${cRes.status}`)
+          // 最終チャンクで予期外ステータスでもデータは届いている可能性
+          uploadOk=true;break
+        }catch(chunkErr){
+          if(!isLast)throw chunkErr
+          // 最終チャンクでfetch自体が例外（CORSでレスポンス読めない等）→データは届いている
+          uploadOk=true;break
         }
-      }else{
-        const fd=new FormData();fd.append('file',f)
-        const res=await fetch(`${W}/api/album/${token}/upload`,{method:'POST',body:fd})
-        if(!res.ok)throw new Error()
-        const d=await res.json();uploadedId=d.id
+      }
+      if(!uploadOk)throw new Error('Upload incomplete')
+      if(pbi)pbi.style.width='100%'
+      // ファイルIDが取れなかった場合はWorkerに問い合わせ
+      if(!uploadedId){
+        try{
+          const idRes=await fetch(`${W}/api/album/${token}/upload/lookup`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:f.name})})
+          if(idRes.ok){const d=await idRes.json();uploadedId=d.id}
+        }catch{}
       }
       done++
       if(uploadedId){
         const s=JSON.parse(sessionStorage.getItem(`uploads_${token}`)||'[]')
         s.push(uploadedId);sessionStorage.setItem(`uploads_${token}`,JSON.stringify(s))
-        if(st)st.innerHTML=`<button onclick="deleteCustFile('${uploadedId}',this)" style="font-size:11px;padding:2px 6px;border:1px solid rgba(192,57,43,.3);border-radius:4px;background:transparent;color:#c0392b;cursor:pointer;">削除</button>`
+        const ks=JSON.parse(sessionStorage.getItem(`upload_keys_${token}`)||'[]')
+        ks.push(fileKey(f));sessionStorage.setItem(`upload_keys_${token}`,JSON.stringify(ks))
+        const km=JSON.parse(sessionStorage.getItem(`upload_keymap_${token}`)||'{}')
+        km[uploadedId]=fileKey(f);sessionStorage.setItem(`upload_keymap_${token}`,JSON.stringify(km))
+        if(st)st.innerHTML=`<button onclick="deleteCustFile('${uploadedId}',this)" style="font-size:11px;padding:2px 6px;border:1px solid rgba(192,57,43,.3);border-radius:4px;background:transparent;color:#c0392b;cursor:pointer;">${t('videoDelBtn')}</button>`
       }else{if(st)st.innerHTML='<span style="color:#1a7a3c;">✅</span>'}
       if(pbi)pbi.style.width='100%'
     }catch{errors++;if(st)st.innerHTML='<span style="color:#c0392b;">❌</span>'}
   }
-  document.getElementById('custUploadTtl').textContent=errors?`完了（${done}件成功・${errors}件失敗）`:`✅ ${done}件を追加しました`
+  const skipMsg=skipped?(lang==='en'?` · ${skipped} skipped`:`・${skipped}件スキップ`):''
+  document.getElementById('custUploadTtl').textContent=errors?(lang==='en'?`Done (${done} succeeded, ${errors} failed${skipMsg})`:`完了（${done}件成功・${errors}件失敗${skipMsg}）`):skipped&&!done?(lang==='en'?`${skipped} file(s) already sent`:`${skipped}件はすでに送信済みです`):(lang==='en'?`✅ Added ${done} file(s)${skipMsg}`:`✅ ${done}件を追加しました${skipMsg}`)
   custUploading=false
   document.getElementById('custCloseBtn').disabled=false
-  if(done>0)showToast(`${done}件を追加しました`)
+  if(done>0)showToast(lang==='en'?`Added ${done} file(s)`:`${done}件を追加しました`)
+}
+
+async function deleteCurrent(){
+  const p=photos[cur]
+  if(!confirm(`「${p.name}」を削除しますか？`))return
+  const btn=document.getElementById('lbDelBtn')
+  btn.disabled=true;btn.textContent='削除中...'
+  const res=await fetch(`${W}/api/album/${token}/files/${p.id}`,{method:'DELETE'})
+  if(res.ok){
+    photos.splice(cur,1)
+    const s=JSON.parse(sessionStorage.getItem(`uploads_${token}`)||'[]')
+    sessionStorage.setItem(`uploads_${token}`,JSON.stringify(s.filter(id=>id!==p.id)))
+    const km=JSON.parse(sessionStorage.getItem(`upload_keymap_${token}`)||'{}')
+    const ks=JSON.parse(sessionStorage.getItem(`upload_keys_${token}`)||'[]')
+    if(km[p.id]){sessionStorage.setItem(`upload_keys_${token}`,JSON.stringify(ks.filter(k=>k!==km[p.id])));delete km[p.id];sessionStorage.setItem(`upload_keymap_${token}`,JSON.stringify(km))}
+    if(photos.length===0){closeLb();renderGrid();return}
+    if(cur>=photos.length)cur=photos.length-1
+    updLb();renderGrid()
+    showToast(t('toastDel'))
+  }else{
+    btn.disabled=false;btn.innerHTML='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>'+t('lbDel')
+    showToast(t('toastDelFail'))
+  }
 }
 
 async function deleteCustFile(fileId,btn){
-  if(!confirm('このファイルを削除しますか？'))return
-  btn.disabled=true;btn.textContent='削除中...'
+  if(!confirm(t('custDelConfirm')))return
+  btn.disabled=true;btn.textContent=lang==='en'?'Deleting...':'削除中...'
   const res=await fetch(`${W}/api/album/${token}/files/${fileId}`,{method:'DELETE'})
   if(res.ok){
     const row=document.getElementById(`cuf_${fileId}`)
@@ -764,6 +931,9 @@ async function deleteCustFile(fileId,btn){
     showToast('削除しました')
     const s=sessionStorage.getItem(`uploads_${token}`)
     if(s){const arr=JSON.parse(s).filter(id=>id!==fileId);sessionStorage.setItem(`uploads_${token}`,JSON.stringify(arr))}
+    const km=JSON.parse(sessionStorage.getItem(`upload_keymap_${token}`)||'{}')
+    const ks=JSON.parse(sessionStorage.getItem(`upload_keys_${token}`)||'[]')
+    if(km[fileId]){sessionStorage.setItem(`upload_keys_${token}`,JSON.stringify(ks.filter(k=>k!==km[fileId])));delete km[fileId];sessionStorage.setItem(`upload_keymap_${token}`,JSON.stringify(km))}
   }else{btn.disabled=false;btn.textContent='削除';showToast('削除に失敗しました')}
 }
 

@@ -219,12 +219,12 @@ export default {
 
       if(path==='/api/admin/albums'&&req.method==='POST'){
         if(!await isAdmin(req,env))return errR('Unauthorized',401)
-        const{name,expiresAt,password,heroText,heroFont,allowCustomerUpload,allowVideoUpload,lang,siteTitle}=await req.json()
+        const{name,expiresAt,password,heroText,heroFont,allowCustomerUpload,allowVideoUpload,lang}=await req.json()
         if(!name)return errR('name required')
         const token=genToken()
         const at=await getAccessToken(env,false)
         const folder=await createFolder(buildFolderName(name),env.DRIVE_ROOT_FOLDER_ID,at)
-        const album={name,folderId:folder.id,createdAt:new Date().toISOString(),expiresAt:normalizeExpiresAt(expiresAt),password:password?await hashPassword(password):null,published:true,heroText:heroText||'Photography',heroFont:heroFont||'josefin',allowCustomerUpload:!!allowCustomerUpload,allowVideoUpload:!!allowVideoUpload,lang:lang||'ja',siteTitle:siteTitle||null}
+        const album={name,folderId:folder.id,createdAt:new Date().toISOString(),expiresAt:normalizeExpiresAt(expiresAt),password:password?await hashPassword(password):null,published:true,heroText:heroText||'Photography',heroFont:heroFont||'josefin',allowCustomerUpload:!!allowCustomerUpload,allowVideoUpload:!!allowVideoUpload,lang:lang||'ja'}
         await saveAlbum(env,token,album)
         return jsonR({token,url:`${env.SITE_URL}/album.html?token=${token}`,folderId:folder.id,album})
       }
@@ -248,9 +248,8 @@ export default {
           heroFont:'heroFont'in body?body.heroFont:(album.heroFont??'josefin'),
           flagDefs:'flagDefs'in body?body.flagDefs:album.flagDefs,
           allowCustomerUpload:'allowCustomerUpload'in body?body.allowCustomerUpload:album.allowCustomerUpload,
-          allowVideoUpload:'allowVideoUpload'in body?body.allowVideoUpload:(album.allowVideoUpload||false),
+          allowVideoUpload:'allowVideoUpload'in body?body.allowVideoUpload:album.allowVideoUpload,
           lang:'lang'in body?body.lang:(album.lang||'ja'),
-          siteTitle:'siteTitle'in body?body.siteTitle:(album.siteTitle||null),
           updatedAt:new Date().toISOString(),
         }
         // Driveフォルダ名をリネーム
@@ -423,7 +422,7 @@ export default {
         const videoFiles=await listVideos(album.folderId,at)
         if(videoFiles.length>0){ctx.waitUntil(getAccessToken(env,false).then(rwAt=>Promise.all(videoFiles.map(v=>grantAnyoneRead(v.id,rwAt)))).catch(()=>{}))}
         const videos=videoFiles.map(v=>({id:v.id,name:v.name,thumb:v.thumbnailLink?.replace('=s220','=s400')||null,viewLink:v.webViewLink,size:parseInt(v.size||0)}))
-        return jsonR({name:album.name,expiresAt:album.expiresAt,count:photos.length,totalSize,totalSizeLabel:fmtSize(totalSize),heroText:album.heroText||'Photography',heroFont:album.heroFont||'josefin',coverId:album.coverId||null,coverIdMobile:album.coverIdMobile||null,selectToken:album.selectToken||null,allowCustomerUpload:album.allowCustomerUpload||false,allowVideoUpload:album.allowVideoUpload||false,lang:album.lang||'ja',siteTitle:album.siteTitle||null,photos,videos})
+        return jsonR({name:album.name,expiresAt:album.expiresAt,count:photos.length,totalSize,totalSizeLabel:fmtSize(totalSize),heroText:album.heroText||'Photography',heroFont:album.heroFont||'josefin',coverId:album.coverId||null,coverIdMobile:album.coverIdMobile||null,selectToken:album.selectToken||null,allowCustomerUpload:album.allowCustomerUpload||false,allowVideoUpload:album.allowVideoUpload||false,lang:album.lang||'ja',photos,videos})
       }
 
       // 写真DL（認証付き）
@@ -458,8 +457,8 @@ export default {
         const contentRange=req.headers.get('X-Content-Range')
         const mimeType=req.headers.get('Content-Type')||'application/octet-stream'
         if(!sessionUri||!contentRange)return errR('Missing headers',400)
-        const buf=await req.arrayBuffer()
-        const chunkRes=await fetch(sessionUri,{method:'PUT',headers:{'Content-Range':contentRange,'Content-Type':mimeType,'Content-Length':String(buf.byteLength)},body:buf})
+        const contentLength=req.headers.get('Content-Length')||'0'
+        const chunkRes=await fetch(sessionUri,{method:'PUT',headers:{'Content-Range':contentRange,'Content-Type':mimeType,'Content-Length':contentLength},body:req.body,duplex:'half'})
         if(chunkRes.status===308)return jsonR({status:'continue'})
         if(chunkRes.status===200||chunkRes.status===201){const r=await chunkRes.json();return jsonR({status:'complete',id:r.id,name:r.name})}
         throw new Error(`Chunk: ${chunkRes.status} ${await chunkRes.text()}`)
@@ -474,6 +473,7 @@ export default {
         if(album.expiresAt&&new Date(album.expiresAt)<new Date())return errR('Expired',410)
         if(!album.allowCustomerUpload)return errR('Upload not allowed',403)
         const{name,mimeType,size}=await req.json()
+        if(mimeType&&mimeType.startsWith('video/')&&!album.allowVideoUpload)return errR('Video upload not allowed',403)
         const at=await getAccessToken(env,false)
         const sesRes=await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&supportsAllDrives=true',{
           method:'POST',
@@ -485,6 +485,22 @@ export default {
       }
 
       // ══ お客さんファイル削除 ══
+      // ══ アップロード後ファイルID照合 ══
+      const pubLookupMatch=path.match(/^\/api\/album\/([a-z0-9]+)\/upload\/lookup$/)
+      if(pubLookupMatch&&req.method==='POST'){
+        const t=pubLookupMatch[1],album=await getAlbum(env,t)
+        if(!album)return errR('Not found',404)
+        if(!album.allowCustomerUpload)return errR('Upload not allowed',403)
+        const{name}=await req.json()
+        if(!name)return errR('name required',400)
+        const at=await getAccessToken(env,false)
+        const q=encodeURIComponent(`'${album.folderId}' in parents and name='${name.replace(/'/g,"\\'")}' and trashed=false`)
+        const r=await driveReq(`/files?q=${q}&fields=files(id,name)&supportsAllDrives=true&includeItemsFromAllDrives=true&orderBy=createdTime desc&pageSize=1`,at)
+        const file=r.files?.[0]
+        if(!file)return errR('Not found',404)
+        return jsonR({id:file.id,name:file.name})
+      }
+
       const pubDelFileMatch=path.match(/^\/api\/album\/([a-z0-9]+)\/files\/([^/]+)$/)
       if(pubDelFileMatch&&req.method==='DELETE'){
         const t=pubDelFileMatch[1],fileId=pubDelFileMatch[2]
@@ -506,8 +522,8 @@ export default {
         const contentRange=req.headers.get('X-Content-Range')
         const mimeType=req.headers.get('Content-Type')||'application/octet-stream'
         if(!sessionUri||!contentRange)return errR('Missing headers',400)
-        const buf=await req.arrayBuffer()
-        const chunkRes=await fetch(sessionUri,{method:'PUT',headers:{'Content-Range':contentRange,'Content-Type':mimeType,'Content-Length':String(buf.byteLength)},body:buf})
+        const contentLength=req.headers.get('Content-Length')||'0'
+        const chunkRes=await fetch(sessionUri,{method:'PUT',headers:{'Content-Range':contentRange,'Content-Type':mimeType,'Content-Length':contentLength},body:req.body,duplex:'half'})
         if(chunkRes.status===308)return jsonR({status:'continue'})
         if(chunkRes.status===200||chunkRes.status===201){const r=await chunkRes.json();return jsonR({status:'complete',id:r.id,name:r.name})}
         throw new Error(`Chunk: ${chunkRes.status} ${await chunkRes.text()}`)
@@ -562,6 +578,7 @@ export default {
         const fd=await req.formData()
         const file=fd.get('file')
         if(!file)return errR('No file',400)
+        if(file.type&&file.type.startsWith('video/')&&!album.allowVideoUpload)return errR('Video upload not allowed',403)
         const at=await getAccessToken(env,false)
         const boundary='-------314159265358979323846'
         const meta=JSON.stringify({name:file.name,parents:[album.folderId]})
@@ -586,6 +603,7 @@ export default {
         if(album.expiresAt&&new Date(album.expiresAt)<new Date())return errR('Expired',410)
         if(!album.allowCustomerUpload)return errR('Upload not allowed',403)
         const{name,mimeType,size}=await req.json()
+        if(mimeType&&mimeType.startsWith('video/')&&!album.allowVideoUpload)return errR('Video upload not allowed',403)
         const at=await getAccessToken(env,false)
         const res=await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&supportsAllDrives=true',{
           method:'POST',
