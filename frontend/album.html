@@ -168,7 +168,7 @@ body{font-family:-apple-system,'Hiragino Sans',sans-serif;background:var(--bg);c
 <body>
 
 <header class="hd" id="header">
-  <div class="logo">Alcyone PhotoShare <span>Photo</span></div>
+  <div class="logo" id="siteLogo">Alcyone PhotoShare <span>Photo</span></div>
   <div class="hd-right">
     <button class="btn btn-gw btn-sm" id="langBtn" onclick="toggleLang()" style="min-width:36px;text-align:center;">EN</button>
     <button class="btn btn-gw btn-sm" id="shareBtn" onclick="shareAlbum()">
@@ -549,6 +549,7 @@ async function load(password='') {
     pw=password; photos=d.photos
     // アルバム設定の言語を初回のみ適用（お客さまが手動で変更した場合は上書きしない）
     if(!_albumLangSet&&d.lang){lang=d.lang;_albumLangSet=true}
+    if(d.siteTitle){document.getElementById('siteLogo').textContent=d.siteTitle}
     if(d.allowCustomerUpload){const b=document.getElementById('custUploadBtn');b.style.display='flex'}
     if(!d.allowVideoUpload){document.getElementById('custFileInput').accept='image/*'}
 
