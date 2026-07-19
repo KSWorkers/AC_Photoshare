@@ -442,7 +442,7 @@ export default {
         if(size==='full'){imgRes=await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`,{headers:{Authorization:`Bearer ${at}`}})}
         else{const meta=await driveReq(`/files/${fileId}?fields=thumbnailLink`,at);const s=size==='medium'?'s2400':'s1200';const thumbUrl=meta.thumbnailLink?.replace('=s220',`=${s}`);if(!thumbUrl)return errR('No thumbnail',404);imgRes=await fetch(thumbUrl)}
         const blob=await imgRes.blob()
-        const disp=size==='full'?`attachment; filename="${fname}"`:`attachment; filename="${size}_${fname}"`
+        const disp=size==='full'?`inline; filename="${fname}"`:`inline; filename="${size}_${fname}"`
         return new Response(blob,{headers:{'Content-Type':imgRes.headers.get('Content-Type')||'image/jpeg','Content-Disposition':disp,'Cache-Control':'private, max-age=3600',...CORS}})
       }
 
