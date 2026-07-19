@@ -152,6 +152,7 @@ body{font-family:-apple-system,'Hiragino Sans',sans-serif;background:var(--bg);c
       <div class="fd"><div class="sw-w"><span style="font-size:14px;">お客さまによるアップロードを許可</span><button class="sw" id="nUploadSw" onclick="toggleNUpload()"></button></div></div>
       <div class="fd"><div class="sw-w"><span style="font-size:14px;">動画のアップロードを許可</span><button class="sw" id="nVideoUploadSw" onclick="toggleNVideoUpload()"></button></div></div>
       <div class="fd"><label style="font-size:13px;font-weight:500;color:var(--mt);">お客さまへの表示言語</label><select id="nAlbumLang" style="padding:9px 12px;border:1px solid var(--bdm);border-radius:8px;font-size:14px;color:var(--tx);background:var(--sur);outline:none;"><option value="ja">日本語（デフォルト）</option><option value="en">English</option></select></div>
+      <div class="fd"><label>ヘッダータイトル<span style="font-size:11px;color:var(--mt);font-weight:400;margin-left:6px;">空欄の場合はデフォルト表示</span></label><input type="text" id="nSiteTitle" placeholder="例：山田様のアルバム"></div>
       <div style="border-top:1px solid var(--bd);padding-top:14px;">
         <div style="font-size:13px;font-weight:600;color:var(--mt);margin-bottom:10px;">カバーテキスト</div>
         <div class="fd">
@@ -192,6 +193,7 @@ body{font-family:-apple-system,'Hiragino Sans',sans-serif;background:var(--bg);c
       <div class="fd"><div class="sw-w"><span style="font-size:14px;">お客さまによるアップロードを許可する</span><button class="sw" id="eUploadSw" onclick="toggleEUpload()"></button></div></div>
       <div class="fd"><div class="sw-w"><span style="font-size:14px;">動画のアップロードを許可する</span><button class="sw" id="eVideoUploadSw" onclick="toggleEVideoUpload()"></button></div></div>
       <div class="fd"><label style="font-size:13px;font-weight:500;color:var(--mt);">お客さまへの表示言語</label><select id="eAlbumLang" style="padding:9px 12px;border:1px solid var(--bdm);border-radius:8px;font-size:14px;color:var(--tx);background:var(--sur);outline:none;"><option value="ja">日本語（デフォルト）</option><option value="en">English</option></select></div>
+      <div class="fd"><label>ヘッダータイトル<span style="font-size:11px;color:var(--mt);font-weight:400;margin-left:6px;">空欄の場合はデフォルト表示</span></label><input type="text" id="eSiteTitle" placeholder="例：山田様のアルバム"></div>
       <div class="fd"><div class="sw-w"><span style="font-size:14px;">有効期限を設定する</span><button class="sw" id="eExpSw" onclick="toggleEExp()"></button></div></div>
       <div id="eExpFd" class="fd" style="display:none;"><label>有効期限</label><input type="date" id="eExp"></div>
       <div style="border-top:1px solid var(--bd);padding-top:14px;">
@@ -571,6 +573,7 @@ function openCreate(){
   nExpOn=true;nPwOn=false;nUploadOn=false;nVideoUploadOn=false
   document.getElementById('nExpSw').className='sw on';document.getElementById('nPwSw').className='sw';document.getElementById('nUploadSw').className='sw'
   document.getElementById('nAlbumLang').value='ja'
+  document.getElementById('nSiteTitle').value=''
   document.getElementById('nExpFd').style.display='flex';document.getElementById('nPwFd').style.display='none'
   document.getElementById('moCreate').classList.add('on')
 }
@@ -591,7 +594,7 @@ async function createAlbum(){
   creating=true
   const btn=document.getElementById('createBtn');btn.innerHTML='<div class="sp"></div> 作成中...';btn.disabled=true
   try{
-    const r=await fetch(`${W}/api/admin/albums`,{method:'POST',headers:{Authorization:`Bearer ${tok}`,'Content-Type':'application/json'},body:JSON.stringify({name,expiresAt,password,heroText:getHeroText('nHeroTextSel','nHeroCustom'),heroFont:document.getElementById('nHeroFont').value,allowCustomerUpload:nUploadOn,allowVideoUpload:nVideoUploadOn,lang:document.getElementById('nAlbumLang').value})})
+    const r=await fetch(`${W}/api/admin/albums`,{method:'POST',headers:{Authorization:`Bearer ${tok}`,'Content-Type':'application/json'},body:JSON.stringify({name,expiresAt,password,heroText:getHeroText('nHeroTextSel','nHeroCustom'),heroFont:document.getElementById('nHeroFont').value,allowCustomerUpload:nUploadOn,allowVideoUpload:nVideoUploadOn,lang:document.getElementById('nAlbumLang').value,siteTitle:document.getElementById('nSiteTitle').value.trim()||null})})
     const d=await r.json()
     if(!r.ok)throw new Error(d.error||'Error')
     // 即時表示してからバックグラウンドで再読み込み
@@ -610,6 +613,7 @@ function openEdit(token){
   document.getElementById('eName').value=a.name
   ePubOn=a.published!==false;eExpOn=!!a.expiresAt;ePwOn=false;eUploadOn=!!a.allowCustomerUpload;eVideoUploadOn=!!a.allowVideoUpload
   document.getElementById('eAlbumLang').value=a.lang||'ja'
+  document.getElementById('eSiteTitle').value=a.siteTitle||''
   document.getElementById('ePubSw').className=`sw${ePubOn?' on':''}`
   document.getElementById('eUploadSw').className=`sw${eUploadOn?' on':''}`
   document.getElementById('eVideoUploadSw').className=`sw${eVideoUploadOn?' on':''}`
@@ -647,7 +651,7 @@ function clearPassword(){
 async function saveEdit(){
   const btn=document.getElementById('editBtn');btn.innerHTML='<div class="sp"></div>';btn.disabled=true
   try{
-    const body={name:document.getElementById('eName').value.trim(),published:ePubOn,allowCustomerUpload:eUploadOn,allowVideoUpload:eVideoUploadOn,expiresAt:eExpOn?document.getElementById('eExp').value||null:null,heroText:getHeroText('eHeroTextSel','eHeroCustom'),heroFont:document.getElementById('eHeroFont').value,flagDefs:albumFlagOn?albumFlagDefs:null,lang:document.getElementById('eAlbumLang').value}
+    const body={name:document.getElementById('eName').value.trim(),published:ePubOn,allowCustomerUpload:eUploadOn,allowVideoUpload:eVideoUploadOn,expiresAt:eExpOn?document.getElementById('eExp').value||null:null,heroText:getHeroText('eHeroTextSel','eHeroCustom'),heroFont:document.getElementById('eHeroFont').value,flagDefs:albumFlagOn?albumFlagDefs:null,lang:document.getElementById('eAlbumLang').value,siteTitle:document.getElementById('eSiteTitle').value.trim()||null}
     const pwInput=document.getElementById('ePw')
     if(ePwOn){
       if(pwInput.dataset.clear==='true'){body.password=null;delete pwInput.dataset.clear}
