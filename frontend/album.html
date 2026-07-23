@@ -836,7 +836,7 @@ async function uploadCustFiles(files){
     items[key]=f
   }
   let done=0,errors=0
-  for(const[key,f]of Object.entries(items)){
+  async function uploadOne(key,f){
     const st=document.getElementById(`cst_${key}`)
     const pb=document.getElementById(`cpb_${key}`)
     const pbi=document.getElementById(`cpbi_${key}`)
@@ -847,7 +847,7 @@ async function uploadCustFiles(files){
       const sesRes=await fetch(`${W}/api/album/${token}/upload/session`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:f.name,mimeType:f.type||'application/octet-stream',size:f.size})})
       if(!sesRes.ok)throw new Error(`Session failed: ${sesRes.status}`)
       const{sessionUri}=await sesRes.json()
-      const CHUNK=5*1024*1024
+      const CHUNK=8*1024*1024
       let offset=0,uploadOk=false
       while(offset<f.size){
         const end=Math.min(offset+CHUNK,f.size)
@@ -892,6 +892,16 @@ async function uploadCustFiles(files){
       if(pbi)pbi.style.width='100%'
     }catch{errors++;if(st)st.innerHTML='<span style="color:#c0392b;">❌</span>'}
   }
+  // 同時4件までのプールで並列アップロード（1件ずつ逐次にすると通信待ちが直列化して遅い）
+  const CONCURRENCY=4
+  const queue=Object.entries(items)
+  async function worker(){
+    while(queue.length){
+      const[key,f]=queue.shift()
+      await uploadOne(key,f)
+    }
+  }
+  await Promise.all(Array.from({length:Math.min(CONCURRENCY,queue.length)},worker))
   const skipMsg=skipped?(lang==='en'?` · ${skipped} skipped`:`・${skipped}件スキップ`):''
   document.getElementById('custUploadTtl').textContent=errors?(lang==='en'?`Done (${done} succeeded, ${errors} failed${skipMsg})`:`完了（${done}件成功・${errors}件失敗${skipMsg}）`):skipped&&!done?(lang==='en'?`${skipped} file(s) already sent`:`${skipped}件はすでに送信済みです`):(lang==='en'?`✅ Added ${done} file(s)${skipMsg}`:`✅ ${done}件を追加しました${skipMsg}`)
   custUploading=false

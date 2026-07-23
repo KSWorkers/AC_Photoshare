@@ -1097,7 +1097,7 @@ async function uploadFiles(files){
     list.appendChild(item)
     items[key]={f,item}
   }
-  for(const[key,{f}]of Object.entries(items)){
+  async function uploadOne(key,f){
     const st=document.getElementById(`st_${key}`)
     const pb=document.getElementById(`pb_${key}`)
     const pbi=document.getElementById(`pbi_${key}`)
@@ -1107,7 +1107,7 @@ async function uploadFiles(files){
       const sesRes=await fetch(`${W}/api/admin/albums/${uploadAlbumToken}/upload/session`,{method:'POST',headers:{Authorization:`Bearer ${tok}`,'Content-Type':'application/json'},body:JSON.stringify({name:f.name,mimeType:f.type||'application/octet-stream',size:f.size})})
       if(!sesRes.ok)throw new Error(`Session failed: ${sesRes.status}`)
       const{sessionUri}=await sesRes.json()
-      const CHUNK=5*1024*1024
+      const CHUNK=8*1024*1024
       let offset=0,uploadOk=false
       while(offset<f.size){
         const end=Math.min(offset+CHUNK,f.size)
@@ -1131,6 +1131,16 @@ async function uploadFiles(files){
       if(pbi)pbi.style.width='100%'
     }catch{if(st){st.textContent='❌ 失敗';st.style.color='#c0392b'}}
   }
+  // 同時4件までのプールで並列アップロード（1件ずつ逐次にすると通信待ちが直列化して遅い）
+  const CONCURRENCY=4
+  const queue=Object.entries(items)
+  async function worker(){
+    while(queue.length){
+      const[key,{f}]=queue.shift()
+      await uploadOne(key,f)
+    }
+  }
+  await Promise.all(Array.from({length:Math.min(CONCURRENCY,queue.length)},worker))
   await loadAlbums()
 }
 
