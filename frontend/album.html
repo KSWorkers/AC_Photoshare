@@ -302,7 +302,7 @@ body{font-family:-apple-system,'Hiragino Sans',sans-serif;background:var(--bg);c
   <div class="progress-card" style="min-width:300px;max-width:360px;width:90%;">
     <div class="progress-ttl" id="custUploadTtl">写真を追加</div>
     <div id="custUploadBody">
-      <label style="display:block;border:2px dashed rgba(0,0,0,.14);border-radius:10px;padding:24px;text-align:center;cursor:pointer;margin-bottom:12px;">
+      <label id="custDropZone" style="display:block;border:2px dashed rgba(0,0,0,.14);border-radius:10px;padding:24px;text-align:center;cursor:pointer;margin-bottom:12px;transition:background .15s,border-color .15s;">
         <div style="font-size:24px;margin-bottom:4px;">📁</div>
         <div style="font-size:14px;font-weight:500;margin-bottom:2px;" id="uploadLabelMain">タップして写真・動画を選択</div>
         <div style="font-size:12px;color:var(--muted);" id="uploadLabelSub">JPG・PNG・HEIC・MP4・MOVなど</div>
@@ -808,6 +808,18 @@ function openCustUpload(){
 }
 function closeCustUpload(){if(custUploading)return;document.getElementById('custUploadModal').classList.remove('on')}
 function onCustFiles(){const files=Array.from(document.getElementById('custFileInput').files);if(!files.length)return;uploadCustFiles(files)}
+;(()=>{
+  const zone=document.getElementById('custDropZone')
+  if(!zone)return
+  const setActive=on=>{zone.style.background=on?'rgba(139,122,56,.08)':'';zone.style.borderColor=on?'#8b7a38':'rgba(0,0,0,.14)'}
+  ;['dragenter','dragover'].forEach(ev=>zone.addEventListener(ev,e=>{e.preventDefault();e.stopPropagation();if(!custUploading)setActive(true)}))
+  ;['dragleave','drop'].forEach(ev=>zone.addEventListener(ev,e=>{e.preventDefault();e.stopPropagation();setActive(false)}))
+  zone.addEventListener('drop',e=>{
+    if(custUploading)return
+    const files=Array.from(e.dataTransfer?.files||[]).filter(f=>f.type.startsWith('image/')||f.type.startsWith('video/'))
+    if(files.length)uploadCustFiles(files)
+  })
+})()
 function fileKey(f){return`${f.name}|${f.size}|${f.lastModified}`}
 async function uploadCustFiles(files){
   custUploading=true
