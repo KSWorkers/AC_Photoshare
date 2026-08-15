@@ -1040,6 +1040,17 @@ let uploadAlbumToken=''
 function openUpload(albumToken){uploadAlbumToken=albumToken;document.getElementById('uploadList').innerHTML='';document.getElementById('uploadFileInput').value='';document.getElementById('moUpload').classList.add('on')}
 function closeUpload(){document.getElementById('moUpload').classList.remove('on')}
 function onFilesSelected(){const files=Array.from(document.getElementById('uploadFileInput').files);if(!files.length)return;uploadFiles(files)}
+;(()=>{
+  const zone=document.getElementById('uploadDropZone')
+  if(!zone)return
+  const setActive=on=>{zone.style.background=on?'var(--sur)':'var(--bg)';zone.style.borderColor=on?'var(--tx)':'var(--bdm)'}
+  ;['dragenter','dragover'].forEach(ev=>zone.addEventListener(ev,e=>{e.preventDefault();e.stopPropagation();setActive(true)}))
+  ;['dragleave','drop'].forEach(ev=>zone.addEventListener(ev,e=>{e.preventDefault();e.stopPropagation();setActive(false)}))
+  zone.addEventListener('drop',e=>{
+    const files=Array.from(e.dataTransfer?.files||[]).filter(f=>f.type.startsWith('image/')||f.type.startsWith('video/'))
+    if(files.length)uploadFiles(files)
+  })
+})()
 
 // ─── ファイル管理 ─────────────────────────────────────
 let filesToken='',filesData={photos:[],videos:[]},curFtab='photo'
