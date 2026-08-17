@@ -544,7 +544,12 @@ async function load(password='') {
     if (res.status===404) return showErr('notfound')
     if (res.status===410) return showErr('expired')
     if (res.status===403) return showErr('private')
-    if (d.requirePassword) { document.getElementById('pwName').textContent=d.name; return show('scPw') }
+    if (d.requirePassword) {
+      document.getElementById('pwName').textContent=d.name
+      const err=document.getElementById('pwErr')
+      if(password){err.style.display='block'}else{err.style.display='none'}
+      return show('scPw')
+    }
     if (!res.ok) return showErr('error')
     pw=password; photos=d.photos
     // アルバム設定の言語を初回のみ適用（お客さまが手動で変更した場合は上書きしない）
