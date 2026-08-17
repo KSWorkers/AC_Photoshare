@@ -376,6 +376,7 @@ body{font-family:-apple-system,'Hiragino Sans',sans-serif;background:var(--bg);c
       <div class="bb" id="fileBulkBar">
         <div style="font-size:14px;font-weight:500;" id="fileBulkCnt">0件選択中</div>
         <div style="display:flex;gap:8px;">
+          <button class="btn btn-sm" style="background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.3);" onclick="toggleFileSelAll()" id="fileSelAllBtn">全て選択</button>
           <button class="btn btn-sm btn-ds" onclick="bulkDeleteFiles()">まとめて削除</button>
           <button class="btn btn-sm" style="background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.3);" onclick="cancelFileBulk()">キャンセル</button>
         </div>
@@ -1095,12 +1096,16 @@ function switchFtab(tab){
   curFtab=tab
   document.getElementById('ftab-photo').className='ft'+(tab==='photo'?' on':'')
   document.getElementById('ftab-video').className='ft'+(tab==='video'?' on':'')
+  if(fileBulk)updateFileBulkCnt()
   renderFileList()
 }
 function toggleFileBulk(){
   fileBulk=!fileBulk
   document.getElementById('fileBulkBtn').textContent=fileBulk?'選択解除':'まとめて選択'
-  if(!fileBulk)cancelFileBulk();else renderFileList()
+  if(!fileBulk){cancelFileBulk();return}
+  document.getElementById('fileBulkBar').classList.add('on')
+  updateFileBulkCnt()
+  renderFileList()
 }
 function cancelFileBulk(){
   fileBulk=false;fileSelIds.clear()
@@ -1108,10 +1113,23 @@ function cancelFileBulk(){
   document.getElementById('fileBulkBtn').textContent='まとめて選択'
   renderFileList()
 }
+function updateFileBulkCnt(){
+  const items=curFtab==='photo'?filesData.photos:filesData.videos
+  const allSel=items.length>0&&items.every(f=>fileSelIds.has(f.id))
+  document.getElementById('fileBulkCnt').textContent=`${fileSelIds.size}件選択中`
+  document.getElementById('fileSelAllBtn').textContent=allSel?'全て解除':'全て選択'
+}
 function toggleFileSel(fileId){
   if(fileSelIds.has(fileId))fileSelIds.delete(fileId);else fileSelIds.add(fileId)
-  document.getElementById('fileBulkCnt').textContent=`${fileSelIds.size}件選択中`
-  document.getElementById('fileBulkBar').classList.toggle('on',fileSelIds.size>0)
+  updateFileBulkCnt()
+  renderFileList()
+}
+function toggleFileSelAll(){
+  const items=curFtab==='photo'?filesData.photos:filesData.videos
+  const allSel=items.length>0&&items.every(f=>fileSelIds.has(f.id))
+  if(allSel)items.forEach(f=>fileSelIds.delete(f.id))
+  else items.forEach(f=>fileSelIds.add(f.id))
+  updateFileBulkCnt()
   renderFileList()
 }
 function renderFileList(){
