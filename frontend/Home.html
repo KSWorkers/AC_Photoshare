@@ -417,7 +417,7 @@ async function login() {
     const r = await fetch(`${W}/api/admin/login`, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({token:t})})
     const d = await r.json()
     if (r.status===429) { document.getElementById('loginErr').textContent='試行回数が多すぎます。15分後にお試しください。'; document.getElementById('loginErr').style.display='block'; return }
-    if (!d.ok) { document.getElementById('loginErr').style.display='block'; return }
+    if (!d.ok) { document.getElementById('loginErr').textContent='パスワードが正しくありません'; document.getElementById('loginErr').style.display='block'; return }
     tok=d.session; sessionStorage.setItem('adminToken',tok); if(document.getElementById('rememberMe').checked)localStorage.setItem('adminToken',tok); initMain()
   } catch { document.getElementById('loginErr').style.display='block' }
   finally { btn.innerHTML='ログイン'; btn.disabled=false }
