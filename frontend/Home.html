@@ -45,6 +45,9 @@ body{font-family:-apple-system,'Hiragino Sans',sans-serif;background:var(--bg);c
 .th img{width:100%;height:100%;object-fit:cover;display:block;}
 .th-ph{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:28px;}
 .sb{position:absolute;top:10px;right:10px;font-size:11px;font-weight:600;padding:3px 8px;border-radius:20px;background:rgba(255,255,255,.92);}
+.pin-btn{position:absolute;top:10px;left:10px;width:26px;height:26px;border-radius:50%;background:rgba(255,255,255,.92);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:13px;opacity:.55;transition:opacity .15s,background .15s;z-index:2;}
+.pin-btn:hover{opacity:1;}
+.pin-btn.on{opacity:1;background:#8b7a38;color:#fff;}
 .sb-on{color:#1a7a3c;}.sb-pv{color:#7a6b1a;}.sb-ex{color:var(--dg);}
 .ci{padding:14px 16px 16px;}
 .cn{font-size:14px;font-weight:600;margin-bottom:4px;}
@@ -363,9 +366,19 @@ body{font-family:-apple-system,'Hiragino Sans',sans-serif;background:var(--bg);c
   <div class="md" style="max-width:560px;">
     <div class="mh">ファイル管理</div>
     <div class="mb" style="gap:12px;">
-      <div style="display:flex;gap:8px;">
-        <button class="ft" id="ftab-photo" onclick="switchFtab('photo')" style="">写真</button>
-        <button class="ft on" id="ftab-video" onclick="switchFtab('video')">動画</button>
+      <div style="display:flex;gap:8px;justify-content:space-between;align-items:center;">
+        <div style="display:flex;gap:8px;">
+          <button class="ft" id="ftab-photo" onclick="switchFtab('photo')" style="">写真</button>
+          <button class="ft on" id="ftab-video" onclick="switchFtab('video')">動画</button>
+        </div>
+        <button class="btn btn-s btn-sm" id="fileBulkBtn" onclick="toggleFileBulk()">まとめて選択</button>
+      </div>
+      <div class="bb" id="fileBulkBar">
+        <div style="font-size:14px;font-weight:500;" id="fileBulkCnt">0件選択中</div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-sm btn-ds" onclick="bulkDeleteFiles()">まとめて削除</button>
+          <button class="btn btn-sm" style="background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.3);" onclick="cancelFileBulk()">キャンセル</button>
+        </div>
       </div>
       <div id="fileListWrap" style="max-height:55vh;overflow-y:auto;overflow-x:hidden;display:grid;gap:8px;min-width:0;"></div>
       <div id="fileListLoad" style="text-align:center;color:var(--mt);font-size:13px;">読み込み中...</div>
@@ -439,6 +452,13 @@ function initMain(){
   loadAlbums()
 }
 
+let pinnedTokens=new Set(JSON.parse(localStorage.getItem('pinnedAlbums')||'[]'))
+function togglePin(token,e){
+  e.stopPropagation()
+  if(pinnedTokens.has(token))pinnedTokens.delete(token);else pinnedTokens.add(token)
+  localStorage.setItem('pinnedAlbums',JSON.stringify([...pinnedTokens]))
+  applyFilter()
+}
 async function loadAlbums() {
   try {
     const r=await fetch(`${W}/api/admin/albums`,{headers:{Authorization:`Bearer ${tok}`}})
@@ -470,6 +490,8 @@ function applyFilter(){
       default: return 0
     }
   })
+  // ピン留めされたアルバムを先頭に（各項目内の相対順は上のソート結果を維持）
+  filtered.sort((a,b) => (pinnedTokens.has(b.token)?1:0) - (pinnedTokens.has(a.token)?1:0))
   const tot=albums.length
   const act=albums.filter(a=>!(a.expiresAt&&new Date(a.expiresAt)<new Date())).filter(a=>a.published!==false).length
   document.getElementById('phS').textContent=`全${tot}件 / 公開中${act}件`
@@ -498,11 +520,12 @@ function renderGrid(){
     const heroOptHtml=heroOpts.map(o=>`<option value="${o}"${o===heroVal?'selected':''}>${o}</option>`).join('')
       +`<option value="__custom"${!heroOpts.includes(heroVal)?'selected':''}>カスタム…</option>`
     const hasNew=a.selectToken&&a.selectSubmitted
+    const isPinned=pinnedTokens.has(a.token)
     return `<div class="card${isSel?' sel-c':''}" id="card-${a.token}">
       <div class="ck" onclick="toggleCardSel('${a.token}',${fi},event)">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="${isSel?'#fff':'transparent'}" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>
       </div>
-      <div class="th" onclick="window.open('${url}','_blank')" style="cursor:pointer;">${thumbHtml}<span class="sb ${sc}">${sl}</span></div>
+      <div class="th" onclick="window.open('${url}','_blank')" style="cursor:pointer;">${bulk?'':`<button class="pin-btn${isPinned?' on':''}" onclick="togglePin('${a.token}',event)" title="${isPinned?'ピン留めを解除':'ピン留め'}">📌</button>`}${thumbHtml}<span class="sb ${sc}">${sl}</span></div>
       <div class="ci">
         <div class="cn">${a.name}</div>
         <div class="cs">
@@ -1054,11 +1077,13 @@ function onFilesSelected(){const files=Array.from(document.getElementById('uploa
 
 // ─── ファイル管理 ─────────────────────────────────────
 let filesToken='',filesData={photos:[],videos:[]},curFtab='photo'
+let fileBulk=false, fileSelIds=new Set()
 async function openFiles(t){
   filesToken=t
   document.getElementById('moFiles').classList.add('on')
   document.getElementById('fileListLoad').style.display='block'
   document.getElementById('fileListWrap').innerHTML=''
+  fileBulk=false;fileSelIds.clear();document.getElementById('fileBulkBar').classList.remove('on');document.getElementById('fileBulkBtn').textContent='まとめて選択'
   const res=await fetch(`${W}/api/admin/albums/${t}/files`,{headers:{Authorization:`Bearer ${tok}`}})
   if(!res.ok){document.getElementById('fileListLoad').textContent='読み込み失敗';return}
   filesData=await res.json()
@@ -1072,6 +1097,23 @@ function switchFtab(tab){
   document.getElementById('ftab-video').className='ft'+(tab==='video'?' on':'')
   renderFileList()
 }
+function toggleFileBulk(){
+  fileBulk=!fileBulk
+  document.getElementById('fileBulkBtn').textContent=fileBulk?'選択解除':'まとめて選択'
+  if(!fileBulk)cancelFileBulk();else renderFileList()
+}
+function cancelFileBulk(){
+  fileBulk=false;fileSelIds.clear()
+  document.getElementById('fileBulkBar').classList.remove('on')
+  document.getElementById('fileBulkBtn').textContent='まとめて選択'
+  renderFileList()
+}
+function toggleFileSel(fileId){
+  if(fileSelIds.has(fileId))fileSelIds.delete(fileId);else fileSelIds.add(fileId)
+  document.getElementById('fileBulkCnt').textContent=`${fileSelIds.size}件選択中`
+  document.getElementById('fileBulkBar').classList.toggle('on',fileSelIds.size>0)
+  renderFileList()
+}
 function renderFileList(){
   const list=document.getElementById('fileListWrap')
   const items=curFtab==='photo'?filesData.photos:filesData.videos
@@ -1080,8 +1122,22 @@ function renderFileList(){
     const sizeStr=f.size?`${(Number(f.size)/1048576).toFixed(1)}MB`:''
     const thumb=f.thumbnailLink?`<img src="${f.thumbnailLink}" style="width:52px;height:40px;object-fit:cover;border-radius:4px;flex-shrink:0;">`:`<div style="width:52px;height:40px;background:var(--bg);border-radius:4px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:18px;">${curFtab==='video'?'🎬':'🖼'}</div>`
     const displayName=curFtab==='video'&&f.name.length>28?f.name.slice(0,26)+'…':f.name
-    return `<div style="display:flex;align-items:center;gap:10px;padding:8px 10px;background:var(--bg);border:1px solid var(--bd);border-radius:8px;overflow:hidden;min-width:0;" id="fi_${f.id}" title="${f.name}">${thumb}<span style="flex:1;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;">${displayName}</span><span style="font-size:11px;color:var(--mt);flex-shrink:0;">${sizeStr}</span><button class="btn btn-d btn-sm" onclick="deleteMediaFile('${f.id}')" style="flex-shrink:0;">削除</button></div>`
+    const checkbox=fileBulk?`<input type="checkbox" ${fileSelIds.has(f.id)?'checked':''} onclick="toggleFileSel('${f.id}')" style="flex-shrink:0;width:16px;height:16px;cursor:pointer;">`:''
+    const delBtn=fileBulk?'':`<button class="btn btn-d btn-sm" onclick="deleteMediaFile('${f.id}')" style="flex-shrink:0;">削除</button>`
+    return `<div style="display:flex;align-items:center;gap:10px;padding:8px 10px;background:var(--bg);border:1px solid var(--bd);border-radius:8px;overflow:hidden;min-width:0;" id="fi_${f.id}" title="${f.name}">${checkbox}${thumb}<span style="flex:1;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;">${displayName}</span><span style="font-size:11px;color:var(--mt);flex-shrink:0;">${sizeStr}</span>${delBtn}</div>`
   }).join('')
+}
+async function bulkDeleteFiles(){
+  if(!fileSelIds.size)return
+  if(!confirm(`${fileSelIds.size}件のファイルを削除しますか？`))return
+  const ids=[...fileSelIds]
+  const results=await Promise.all(ids.map(id=>fetch(`${W}/api/admin/albums/${filesToken}/files/${id}`,{method:'DELETE',headers:{Authorization:`Bearer ${tok}`}}).then(r=>({id,ok:r.ok})).catch(()=>({id,ok:false}))))
+  const okIds=new Set(results.filter(r=>r.ok).map(r=>r.id))
+  filesData.photos=filesData.photos.filter(f=>!okIds.has(f.id))
+  filesData.videos=filesData.videos.filter(f=>!okIds.has(f.id))
+  const failCount=ids.length-okIds.size
+  cancelFileBulk()
+  showToast(failCount?`${okIds.size}件削除・${failCount}件失敗`:`${okIds.size}件削除しました`)
 }
 async function deleteMediaFile(fileId){
   if(!confirm('このファイルを削除しますか？'))return
