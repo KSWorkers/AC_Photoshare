@@ -211,7 +211,16 @@ export default {
         const albums=await listAlbums(env)
         const at=await getAccessToken(env,true)
         const enriched=await Promise.all(albums.map(async a=>{
-          try{const photos=await listPhotos(a.folderId,at);const totalSize=photos.reduce((s,f)=>s+parseInt(f.size||0),0);return{...a,count:photos.length,totalSize,totalSizeLabel:fmtSize(totalSize),coverId:a.coverId||photos[0]?.id||null}}
+          try{
+            const photos=await listPhotos(a.folderId,at);const totalSize=photos.reduce((s,f)=>s+parseInt(f.size||0),0)
+            // カバー写真が削除済みなら参照が残らないよう検証してフォールバック
+            const coverValid=a.coverId&&photos.some(p=>p.id===a.coverId)
+            const coverMobileValid=a.coverIdMobile&&photos.some(p=>p.id===a.coverIdMobile)
+            if(a.coverId&&!coverValid||a.coverIdMobile&&!coverMobileValid){
+              ctx.waitUntil(saveAlbum(env,a.token,{...a,coverId:coverValid?a.coverId:null,coverIdMobile:coverMobileValid?a.coverIdMobile:null}))
+            }
+            return{...a,count:photos.length,totalSize,totalSizeLabel:fmtSize(totalSize),coverId:(coverValid?a.coverId:null)||photos[0]?.id||null}
+          }
           catch{return{...a,count:0,totalSize:0,totalSizeLabel:'0 B',coverId:null}}
         }))
         return jsonR({albums:enriched})
@@ -512,6 +521,9 @@ export default {
         const info=await driveReq(`/files/${fileId}?fields=parents&supportsAllDrives=true`,at)
         if(!info.parents?.includes(album.folderId))return errR('Forbidden',403)
         await deleteFile(fileId,at)
+        if(album.coverId===fileId||album.coverIdMobile===fileId){
+          await saveAlbum(env,t,{...album,coverId:album.coverId===fileId?null:album.coverId,coverIdMobile:album.coverIdMobile===fileId?null:album.coverIdMobile})
+        }
         return jsonR({ok:true})
       }
 
@@ -562,9 +574,13 @@ export default {
       const adminDelFileMatch=path.match(/^\/api\/admin\/albums\/([a-z0-9]+)\/files\/([^/]+)$/)
       if(adminDelFileMatch&&req.method==='DELETE'){
         if(!await isAdmin(req,env))return errR('Unauthorized',401)
-        const fileId=adminDelFileMatch[2]
+        const t=adminDelFileMatch[1],fileId=adminDelFileMatch[2]
         const at=await getAccessToken(env,false)
         await deleteFile(fileId,at)
+        const album=await getAlbum(env,t)
+        if(album&&(album.coverId===fileId||album.coverIdMobile===fileId)){
+          await saveAlbum(env,t,{...album,coverId:album.coverId===fileId?null:album.coverId,coverIdMobile:album.coverIdMobile===fileId?null:album.coverIdMobile})
+        }
         return jsonR({ok:true})
       }
 

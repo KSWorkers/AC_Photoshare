@@ -514,7 +514,7 @@ function renderGrid(){
     if(exp){sc='sb-ex';sl='期限切れ'}
     const isSel=selToks.has(a.token)
     const thumbHtml=a.coverId
-      ?`<img src="${W}/api/admin/thumb/${a.coverId}?session=${tok}" loading="lazy" onerror="this.parentNode.innerHTML='<div class=th-ph>📸</div>'">`
+      ?`<img src="${W}/api/admin/thumb/${a.coverId}?session=${tok}" loading="lazy" onerror="this.outerHTML='<div class=th-ph>📸</div>'">`
       :`<div class="th-ph">📸</div>`
     const heroVal=a.heroText||'Photography'
     const heroOpts=['Photography','Shichigosan','Omiyamairi','Wedding','Studio']
