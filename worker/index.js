@@ -209,7 +209,12 @@ export default {
       if(path==='/api/admin/albums'&&req.method==='GET'){
         if(!await isAdmin(req,env))return errR('Unauthorized',401)
         const albums=await listAlbums(env)
-        const at=await getAccessToken(env,true)
+        let at=null
+        try{at=await getAccessToken(env,true)}catch(e){console.error('getAccessToken failed',e)}
+        if(!at){
+          // Drive側のトークン取得に失敗しても、写真枚数などが空でも一覧自体は返す
+          return jsonR({albums:albums.map(a=>({...a,count:undefined,totalSize:0,totalSizeLabel:'',coverId:a.coverId||null}))})
+        }
         const enriched=await Promise.all(albums.map(async a=>{
           try{
             const photos=await listPhotos(a.folderId,at);const totalSize=photos.reduce((s,f)=>s+parseInt(f.size||0),0)
@@ -221,7 +226,7 @@ export default {
             }
             return{...a,count:photos.length,totalSize,totalSizeLabel:fmtSize(totalSize),coverId:(coverValid?a.coverId:null)||photos[0]?.id||null}
           }
-          catch{return{...a,count:0,totalSize:0,totalSizeLabel:'0 B',coverId:null}}
+          catch(e){console.error(`enrich album ${a.token} failed`,e);return{...a,count:0,totalSize:0,totalSizeLabel:'0 B',coverId:null}}
         }))
         return jsonR({albums:enriched})
       }
