@@ -533,6 +533,7 @@ function renderGrid(){
           ${a.count!==undefined?`<span>📷 ${a.count}枚</span>`:''}
           ${a.videoCount?`<span>🎬 ${a.videoCount}本</span>`:''}
           ${a.totalSizeLabel?`<span>💾 ${a.totalSizeLabel}</span>`:''}
+          ${a.viewCount?`<span>👁 ${a.viewCount}回</span>`:''}
         </div>
         <div class="cm">
           <span>作成：${a.createdAt?a.createdAt.slice(0,10):'-'}</span>

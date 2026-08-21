@@ -424,6 +424,7 @@ export default {
           return errR('Expired',410)
         }
         if(album.password){const pw=url.searchParams.get('pw');if(!pw||!await verifyPassword(pw,album.password))return jsonR({requirePassword:true,name:album.name})}
+        ctx.waitUntil(saveAlbum(env,t,{...album,viewCount:(album.viewCount||0)+1}).catch(()=>{}))
         const at=await getAccessToken(env,true)
         const files=await listPhotos(album.folderId,at)
         const totalSize=files.reduce((s,f)=>s+parseInt(f.size||0),0)
