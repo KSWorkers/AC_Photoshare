@@ -6,13 +6,13 @@
 <title>管理画面 | Alcyone PhotoShare</title>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
-:root{--bg:#fafaf9;--sur:#fff;--bd:rgba(0,0,0,.08);--bdm:rgba(0,0,0,.14);--tx:#1a1a18;--mt:#6b6b67;--dg:#c0392b;--r:10px;--rl:16px;}
+:root{--bg:#faf8f2;--sur:#fff;--bd:rgba(139,122,56,.14);--bdm:rgba(139,122,56,.28);--tx:#2c2418;--mt:#766b52;--ac:#8b7a38;--dg:#c0392b;--r:10px;--rl:16px;}
 body{font-family:-apple-system,'Hiragino Sans',sans-serif;background:var(--bg);color:var(--tx);min-height:100vh;}
 .hd{background:var(--sur);border-bottom:1px solid var(--bd);padding:0 20px;height:52px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;}
 .logo{font-size:14px;font-weight:600;letter-spacing:.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}.logo span{color:var(--mt);font-weight:400;}
 @media(max-width:600px){.hd{height:auto;flex-direction:column;align-items:stretch;padding:10px 16px;gap:8px;}.logo{font-size:13px;}.logo .logo-sub{display:none;}.btn-sm{padding:5px 8px;font-size:11px;}.hd>div:last-child{display:flex;justify-content:flex-end;}}
 .btn{text-decoration:none;font-weight:normal;display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;border:none;transition:background .15s;white-space:nowrap;}
-.btn-p{background:var(--tx);color:#fff;}.btn-p:hover{background:#333;}
+.btn-p{background:var(--tx);color:#fff;}.btn-p:hover{background:var(--ac);}
 .btn-s{background:transparent;color:var(--tx);border:1px solid var(--bdm);}.btn-s:hover{background:var(--bg);}
 .btn-d{background:transparent;color:var(--dg);border:1px solid rgba(192,57,43,.3);}.btn-d:hover{background:rgba(192,57,43,.06);}
 .btn-ds{background:var(--dg);color:#fff;}.btn-ds:hover{background:#a93226;}
@@ -36,18 +36,18 @@ body{font-family:-apple-system,'Hiragino Sans',sans-serif;background:var(--bg);c
 .bb.on{display:flex;}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:16px;}
 .card{background:var(--sur);border:1px solid var(--bd);border-radius:var(--rl);overflow:hidden;transition:box-shadow .2s;position:relative;}
-.card:hover{box-shadow:0 4px 16px rgba(0,0,0,.08);}
+.card:hover{box-shadow:0 4px 16px rgba(44,36,24,.12);}
 .card.sel-c{outline:2.5px solid var(--tx);}
-.ck{position:absolute;top:10px;left:10px;z-index:5;width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.9);border:2px solid #fff;display:none;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.2);transition:background .15s;}
+.ck{position:absolute;top:10px;left:10px;z-index:5;width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.9);border:2px solid #fff;display:none;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 1px 4px rgba(44,36,24,.25);transition:background .15s;}
 .bulk-mode .ck{display:flex;}
 .card.sel-c .ck{background:var(--tx);border-color:var(--tx);}
-.th{aspect-ratio:4/3;background:#eeecea;position:relative;overflow:hidden;}
+.th{aspect-ratio:4/3;background:#f0ebe0;position:relative;overflow:hidden;}
 .th img{width:100%;height:100%;object-fit:cover;display:block;}
 .th-ph{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:28px;}
 .sb{position:absolute;top:10px;right:10px;font-size:11px;font-weight:600;padding:3px 8px;border-radius:20px;background:rgba(255,255,255,.92);}
 .pin-btn{position:absolute;top:10px;left:10px;width:26px;height:26px;border-radius:50%;background:rgba(255,255,255,.92);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:13px;opacity:.55;transition:opacity .15s,background .15s;z-index:2;}
 .pin-btn:hover{opacity:1;}
-.pin-btn.on{opacity:1;background:#8b7a38;color:#fff;}
+.pin-btn.on{opacity:1;background:var(--ac);color:#fff;}
 .sb-on{color:#1a7a3c;}.sb-pv{color:#7a6b1a;}.sb-ex{color:var(--dg);}
 .ci{padding:14px 16px 16px;}
 .cn{font-size:14px;font-weight:600;margin-bottom:4px;}
@@ -57,9 +57,9 @@ body{font-family:-apple-system,'Hiragino Sans',sans-serif;background:var(--bg);c
 .ca{display:flex;gap:6px;flex-wrap:wrap;}
 .cn-new{background:var(--sur);border:1.5px dashed var(--bdm);border-radius:var(--rl);display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:240px;cursor:pointer;color:var(--mt);transition:border-color .15s,color .15s;}
 .cn-new:hover{border-color:var(--tx);color:var(--tx);}
-.mo{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:500;display:none;align-items:center;justify-content:center;padding:20px;}
+.mo{position:fixed;inset:0;background:rgba(44,36,24,.5);z-index:500;display:none;align-items:center;justify-content:center;padding:20px;}
 .mo.on{display:flex;}
-.md{background:var(--sur);border-radius:var(--rl);width:100%;max-width:480px;box-shadow:0 20px 60px rgba(0,0,0,.15);max-height:90vh;overflow-y:auto;}
+.md{background:var(--sur);border-radius:var(--rl);width:100%;max-width:480px;box-shadow:0 20px 60px rgba(44,36,24,.18);max-height:90vh;overflow-y:auto;}
 .mh{padding:20px 24px 0;font-size:17px;font-weight:600;}
 .mb{padding:20px 24px;display:flex;flex-direction:column;gap:16px;}
 .mf{padding:0 24px 20px;display:flex;gap:8px;justify-content:flex-end;}
@@ -74,9 +74,9 @@ body{font-family:-apple-system,'Hiragino Sans',sans-serif;background:var(--bg);c
 .sp{width:18px;height:18px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:s .7s linear infinite;display:inline-block;}
 .sp-sm{width:16px;height:16px;border:2px solid var(--bdm);border-top-color:var(--tx);border-radius:50%;animation:s .7s linear infinite;}
 @keyframes s{to{transform:rotate(360deg);}}
-#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:#1a1a18;color:#fff;padding:10px 18px;border-radius:100px;font-size:13px;font-weight:500;z-index:9999;transition:transform .3s,opacity .3s;opacity:0;pointer-events:none;white-space:nowrap;}
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--tx);color:#fff;padding:10px 18px;border-radius:100px;font-size:13px;font-weight:500;z-index:9999;transition:transform .3s,opacity .3s;opacity:0;pointer-events:none;white-space:nowrap;}
 .cl{display:flex;align-items:center;gap:10px;color:var(--mt);font-size:13px;padding:40px 0;}
-.cmenu{display:none;position:absolute;right:0;top:calc(100% + 4px);background:#fff;border:1px solid var(--bdm);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.12);min-width:170px;z-index:100;overflow:hidden;}
+.cmenu{display:none;position:absolute;right:0;top:calc(100% + 4px);background:#fff;border:1px solid var(--bdm);border-radius:10px;box-shadow:0 8px 24px rgba(44,36,24,.15);min-width:170px;z-index:100;overflow:hidden;}
 .cmenu.on{display:block;}
 .cmi{display:flex;align-items:center;gap:8px;width:100%;text-align:left;padding:9px 14px;font-size:13px;border:none;background:transparent;cursor:pointer;color:var(--tx);}
 .cmi:hover{background:var(--bg);}
@@ -533,7 +533,7 @@ function renderGrid(){
           ${a.count!==undefined?`<span>📷 ${a.count}枚</span>`:''}
           ${a.videoCount?`<span>🎬 ${a.videoCount}本</span>`:''}
           ${a.totalSizeLabel?`<span>💾 ${a.totalSizeLabel}</span>`:''}
-          ${a.viewCount?`<span>👁 ${a.viewCount}回</span>`:''}
+          ${a.viewCount?`<span>👁️ ${a.viewCount}</span>`:''}
         </div>
         <div class="cm">
           <span>作成：${a.createdAt?a.createdAt.slice(0,10):'-'}</span>
@@ -1021,7 +1021,7 @@ async function quickTogglePublish(token,publish){
 // ─── カード設定ポップアップ ───
 const settingsPopupHtml=`
 <div id="settingsPopupOverlay" onclick="closeSettingsPopup()" style="position:fixed;inset:0;z-index:500;"></div>
-<div id="settingsPopup" style="position:fixed;z-index:501;background:#fff;border:1px solid var(--bdm);border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,.15);min-width:190px;overflow:hidden;display:none;">
+<div id="settingsPopup" style="position:fixed;z-index:501;background:#fff;border:1px solid var(--bdm);border-radius:12px;box-shadow:0 8px 32px rgba(44,36,24,.18);min-width:190px;overflow:hidden;display:none;">
   <button class="cmi" id="spi-select">🔗 選定リンク発行</button>
   <button class="cmi" id="spi-results">📋 選定写真確認</button>
   <button class="cmi" id="spi-thumb">🖼 サムネイル設定</button>
