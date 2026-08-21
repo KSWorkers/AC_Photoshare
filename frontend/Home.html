@@ -463,9 +463,10 @@ function togglePin(token,e){
 async function loadAlbums() {
   try {
     const r=await fetch(`${W}/api/admin/albums`,{headers:{Authorization:`Bearer ${tok}`}})
+    if(!r.ok){document.getElementById('grid').innerHTML=`<div style="color:#c0392b;font-size:13px;">読み込みに失敗しました（HTTP ${r.status}）<br><button class="btn btn-s btn-sm" style="margin-top:8px;" onclick="loadAlbums()">再読み込み</button></div>`;return}
     const d=await r.json()
     albums=d.albums||[]; applyFilter(); checkNotifications()
-  } catch { document.getElementById('grid').innerHTML='<div style="color:#c0392b;font-size:13px;">読み込みに失敗しました</div>' }
+  } catch(e) { document.getElementById('grid').innerHTML=`<div style="color:#c0392b;font-size:13px;">読み込みに失敗しました：${e.message||e}<br><button class="btn btn-s btn-sm" style="margin-top:8px;" onclick="loadAlbums()">再読み込み</button></div>` }
 }
 
 function setFilter(f,btn){filter=f;document.querySelectorAll('.ft').forEach(t=>t.classList.remove('on'));btn.classList.add('on');applyFilter()}
