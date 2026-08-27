@@ -3,11 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<meta name="theme-color" content="#ffffff">
+<meta name="theme-color" content="#faf8f2">
 <title>フォトギャラリー | Alcyone PhotoShare</title>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
-:root{--border:rgba(0,0,0,0.08);--border-md:rgba(0,0,0,0.14);--text:#1a1a18;--muted:#6b6b67;--bg:#fafaf9;}
+:root{--border:rgba(139,122,56,.14);--border-md:rgba(139,122,56,.28);--text:#2c2418;--muted:#766b52;--bg:#faf8f2;--ac:#8b7a38;}
 body{font-family:-apple-system,'Hiragino Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
 
 /* ── ヘッダー ── */
@@ -25,8 +25,8 @@ body{font-family:-apple-system,'Hiragino Sans',sans-serif;background:var(--bg);c
 .btn-gw:hover{background:rgba(255,255,255,.28);}
 .hd.solid .btn-gw{background:transparent;color:var(--text);border-color:var(--border-md);}
 .hd.solid .btn-gw:hover{background:rgba(0,0,0,.04);}
-.btn-p{background:var(--text);color:#fff;}.btn-p:hover{background:#333;}
-.btn-s{background:transparent;color:var(--text);border:1px solid var(--border-md);}.btn-s:hover{background:#f5f5f3;}
+.btn-p{background:var(--text);color:#fff;}.btn-p:hover{background:var(--ac);}
+.btn-s{background:transparent;color:var(--text);border:1px solid var(--border-md);}.btn-s:hover{background:#f0ebe0;}
 .btn-w{background:rgba(255,255,255,.14);color:#fff;border:1px solid rgba(255,255,255,.28);}.btn-w:hover{background:rgba(255,255,255,.24);}
 .btn-sm{padding:5px 12px;font-size:12px;}
 
@@ -48,7 +48,7 @@ body{font-family:-apple-system,'Hiragino Sans',sans-serif;background:var(--bg);c
 .err-icon{font-size:40px;}
 .err-title{font-size:17px;font-weight:600;}
 .err-sub{font-size:14px;color:var(--muted);line-height:1.7;}
-.err-contact{margin-top:8px;font-size:13px;background:#f8f6f2;border:1px solid var(--border);border-radius:10px;padding:12px 16px;color:var(--muted);line-height:1.8;}
+.err-contact{margin-top:8px;font-size:13px;background:#f3ede0;border:1px solid var(--border);border-radius:10px;padding:12px 16px;color:var(--muted);line-height:1.8;}
 .err-contact strong{color:var(--text);}
 
 /* ── ヒーロー ── */
@@ -76,29 +76,29 @@ body{font-family:-apple-system,'Hiragino Sans',sans-serif;background:var(--bg);c
 .album-name{font-size:17px;font-weight:600;margin-bottom:4px;}
 .album-meta{display:flex;gap:10px;flex-wrap:wrap;}
 .album-meta span{font-size:12px;color:var(--muted);}
-.album-meta .dot{color:rgba(0,0,0,.15);}
+.album-meta .dot{color:rgba(44,36,24,.2);}
 
 /* ── ツールバー ── */
 .tb{position:sticky;top:52px;z-index:100;background:rgba(250,250,248,.94);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);padding:8px 12px;display:flex;align-items:center;justify-content:flex-end;gap:6px;flex-wrap:wrap;}
 @media(max-width:400px){.btn-sm{padding:5px 8px;font-size:11px;}}
 .dl-wrap{position:relative;}
-.dl-menu{position:absolute;top:calc(100%+6px);right:0;background:#fff;border-radius:10px;box-shadow:0 8px 32px rgba(0,0,0,.12);overflow:hidden;white-space:nowrap;z-index:20;display:none;min-width:200px;}
+.dl-menu{position:absolute;top:calc(100%+6px);right:0;background:#fff;border-radius:10px;box-shadow:0 8px 32px rgba(44,36,24,.15);overflow:hidden;white-space:nowrap;z-index:20;display:none;min-width:200px;}
 .dl-menu.on{display:block;}
 .dl-up .dl-menu{top:auto;bottom:calc(100%+6px);}
 /* sel-bar内のDLメニューはfixedで画面に直接固定 */
 .sel-bar .dl-up .dl-menu{position:fixed;bottom:72px;right:12px;top:auto;min-width:200px;}
 .dl-item{display:block;padding:10px 16px;font-size:13px;color:var(--text);cursor:pointer;border:none;background:transparent;width:100%;text-align:left;}
-.dl-item:hover{background:#f5f5f3;}
+.dl-item:hover{background:#f0ebe0;}
 .dl-item small{display:block;font-size:11px;color:var(--muted);margin-top:1px;}
 
 /* ── グリッド ── */
 .gallery{padding:3px 0 100px;contain:layout;}
 .grow{display:flex;gap:3px;margin-bottom:3px;}
-.gi{flex-shrink:0;overflow:hidden;cursor:pointer;position:relative;background:#e8e6e2;}
+.gi{flex-shrink:0;overflow:hidden;cursor:pointer;position:relative;background:#f0ebe0;}
 .gi img{width:100%;height:100%;object-fit:cover;display:block;}
 .gi img{-webkit-touch-callout:default;}
 @media(hover:hover){.gi img{transition:transform .3s ease;will-change:transform;}.gi:hover img{transform:scale(1.02);}}
-.gi-ck{position:absolute;top:8px;left:8px;width:22px;height:22px;border-radius:50%;background:rgba(255,255,255,.88);border:1.5px solid #fff;display:none;align-items:center;justify-content:center;box-shadow:0 1px 4px rgba(0,0,0,.2);z-index:5;}
+.gi-ck{position:absolute;top:8px;left:8px;width:22px;height:22px;border-radius:50%;background:rgba(255,255,255,.88);border:1.5px solid #fff;display:none;align-items:center;justify-content:center;box-shadow:0 1px 4px rgba(44,36,24,.25);z-index:5;}
 .sel-mode .gi-ck{display:flex;}
 .gi.sel .gi-ck{background:var(--text);border-color:var(--text);}
 .gi.sel::before{content:'';position:absolute;inset:0;box-shadow:inset 0 0 0 3px var(--text);pointer-events:none;z-index:4;}
@@ -132,36 +132,36 @@ body{font-family:-apple-system,'Hiragino Sans',sans-serif;background:var(--bg);c
 @keyframes sp{to{transform:rotate(360deg);}}
 
 /* ガイド */
-.guide{margin:0 16px 24px;background:#f8f6f2;border:1px solid var(--border);border-radius:10px;padding:12px 14px;font-size:12px;color:var(--muted);line-height:1.8;}
+.guide{margin:0 16px 24px;background:#f3ede0;border:1px solid var(--border);border-radius:10px;padding:12px 14px;font-size:12px;color:var(--muted);line-height:1.8;}
 .guide strong{color:var(--text);}
 .guide a{color:var(--text);font-weight:600;}
 
 /* 進行状況 */
-.progress-modal{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:2000;display:none;align-items:center;justify-content:center;}
+.progress-modal{position:fixed;inset:0;background:rgba(44,36,24,.6);z-index:2000;display:none;align-items:center;justify-content:center;}
 .progress-modal.on{display:flex;}
 .progress-card{background:#fff;border-radius:16px;padding:28px;min-width:280px;text-align:center;}
 .progress-ttl{font-size:15px;font-weight:600;margin-bottom:16px;}
-.progress-bar-wrap{background:#f0eeeb;border-radius:100px;height:8px;overflow:hidden;margin-bottom:10px;}
+.progress-bar-wrap{background:#ece4d4;border-radius:100px;height:8px;overflow:hidden;margin-bottom:10px;}
 .progress-bar{background:var(--text);height:100%;border-radius:100px;transition:width .3s;}
 .progress-txt{font-size:13px;color:var(--muted);}
 
-#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:#1a1a18;color:#fff;padding:10px 18px;border-radius:100px;font-size:13px;font-weight:500;z-index:9999;transition:transform .3s,opacity .3s;opacity:0;pointer-events:none;white-space:nowrap;}
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--text);color:#fff;padding:10px 18px;border-radius:100px;font-size:13px;font-weight:500;z-index:9999;transition:transform .3s,opacity .3s;opacity:0;pointer-events:none;white-space:nowrap;}
 
 /* 動画セクション */
 .video-section{padding:20px 0 0;}
 .video-hd{padding:0 0 12px;font-size:15px;font-weight:600;display:flex;align-items:center;gap:6px;border-bottom:1px solid var(--border);margin-bottom:12px;}
 .video-list{display:grid;gap:10px;padding-bottom:16px;}
 .video-item{display:flex;align-items:center;gap:10px;padding:10px 12px;background:#fff;border:1px solid var(--border);border-radius:10px;cursor:pointer;color:var(--text);transition:background .15s;min-width:0;overflow:hidden;}
-.video-item:hover{background:#f8f6f2;}
-.video-thumb{width:72px;height:52px;object-fit:cover;border-radius:6px;flex-shrink:0;background:#e8e6e2;}
-.video-thumb-ph{width:72px;height:52px;border-radius:6px;background:#e8e6e2;display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0;}
+.video-item:hover{background:#f3ede0;}
+.video-thumb{width:72px;height:52px;object-fit:cover;border-radius:6px;flex-shrink:0;background:#f0ebe0;}
+.video-thumb-ph{width:72px;height:52px;border-radius:6px;background:#f0ebe0;display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0;}
 .video-info{flex:1;min-width:0;overflow:hidden;}
 .video-name{font-size:12px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:2px;}
 .video-size{font-size:11px;color:var(--muted);}
 .video-play{background:var(--text);color:#fff;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0;}
 /* ガイドリンク */
-.guide-link-big{display:flex;align-items:center;justify-content:center;margin:16px 0 24px;padding:14px;background:#f8f6f2;border:1px solid var(--border);border-radius:10px;font-size:14px;font-weight:600;color:var(--text);text-decoration:none;}
-.guide-link-big:hover{background:#f0ede8;}
+.guide-link-big{display:flex;align-items:center;justify-content:center;margin:16px 0 24px;padding:14px;background:#f3ede0;border:1px solid var(--border);border-radius:10px;font-size:14px;font-weight:600;color:var(--text);text-decoration:none;}
+.guide-link-big:hover{background:#e8e0d0;}
 
 </style>
 </head>
@@ -726,7 +726,7 @@ function renderVideos(videos) {
   const wrap = document.getElementById('grid').parentNode
   const uploaded=JSON.parse(sessionStorage.getItem(`uploads_${token}`)||'[]')
   section.innerHTML = `<div class="video-hd"><span>🎬</span>${t('videoSection',videos.length)}</div>
-    <div style="font-size:12px;color:var(--muted);background:#f8f6f2;border:1px solid var(--border);border-radius:8px;padding:9px 12px;margin-bottom:10px;line-height:1.7;">${t('videoNotice')}</div>
+    <div style="font-size:12px;color:var(--muted);background:#f3ede0;border:1px solid var(--border);border-radius:8px;padding:9px 12px;margin-bottom:10px;line-height:1.7;">${t('videoNotice')}</div>
     <div class="video-list" id="videoList">${videos.map(v=>{
       const isOwn=uploaded.includes(v.id)
       return`<div class="video-item" id="vi_${v.id}" style="position:relative;" onclick="openVideoPlayer('${v.viewLink}')">
@@ -803,7 +803,7 @@ function openCustUpload(){
     saved.forEach(id=>{
       const row=document.createElement('div')
       row.id=`cuf_${id}`
-      row.style.cssText='display:flex;align-items:center;gap:8px;padding:7px 10px;background:#f5f5f3;border-radius:8px;font-size:13px;'
+      row.style.cssText='display:flex;align-items:center;gap:8px;padding:7px 10px;background:#f0ebe0;border-radius:8px;font-size:13px;'
       row.innerHTML=`<span style="flex:1;color:var(--muted);font-size:12px;">${t('uploadedFile')}</span><button onclick="deleteCustFile('${id}',this)" style="font-size:11px;padding:2px 6px;border:1px solid rgba(192,57,43,.3);border-radius:4px;background:transparent;color:#c0392b;cursor:pointer;">${t('videoDelBtn')}</button>`
       list.appendChild(row)
     })
@@ -838,14 +838,14 @@ async function uploadCustFiles(files){
     const key=f.name+f.size
     if(uploadedKeys.includes(fk)){
       const item=document.createElement('div')
-      item.style.cssText='display:flex;align-items:center;gap:8px;padding:7px 10px;background:#f5f5f3;border-radius:8px;font-size:13px;'
+      item.style.cssText='display:flex;align-items:center;gap:8px;padding:7px 10px;background:#f0ebe0;border-radius:8px;font-size:13px;'
       item.innerHTML=`<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${f.name}</span><span style="color:#c0392b;font-size:12px;flex-shrink:0;">${t('uploadDupl')}</span>`
       list.appendChild(item)
       skipped++
       continue
     }
     const item=document.createElement('div')
-    item.style.cssText='display:flex;flex-direction:column;gap:4px;padding:7px 10px;background:#f5f5f3;border-radius:8px;font-size:13px;'
+    item.style.cssText='display:flex;flex-direction:column;gap:4px;padding:7px 10px;background:#f0ebe0;border-radius:8px;font-size:13px;'
     const isVideo=f.type.startsWith('video/')
     const sizeStr=f.size>1048576?`${(f.size/1048576).toFixed(1)}MB`:`${Math.round(f.size/1024)}KB`
     item.innerHTML=`<div style="display:flex;align-items:center;gap:8px;"><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${f.name}</span><span style="color:var(--muted);font-size:11px;">${isVideo?'🎬':'🖼'} ${sizeStr}</span><span id="cst_${key}" style="color:var(--muted);font-size:12px;flex-shrink:0;">${t('uploadWait')}</span></div><div id="cpb_${key}" style="display:none;height:3px;background:#e0ddd8;border-radius:2px;overflow:hidden;"><div id="cpbi_${key}" style="height:100%;background:#8b7a38;width:0%;transition:width .3s;"></div></div>`
