@@ -274,6 +274,10 @@ body{font-family:-apple-system,'Hiragino Sans',sans-serif;background:var(--bg);c
     <div class="mh">📤 写真・動画をアップロード</div>
     <div class="mb" style="gap:14px;">
       <div style="font-size:13px;color:var(--mt);">このアルバムのGoogleドライブに直接アップロードします。</div>
+      <div class="sw-w" style="background:var(--bg);border:1px solid var(--bdm);border-radius:8px;padding:10px 12px;">
+        <span style="font-size:13px;">JPEGを長辺3000pxにリサイズしてアップロード<span style="display:block;font-size:11px;color:var(--mt);margin-top:2px;">一眼カメラの撮って出しJPGなど、大容量ファイルの共有を高速化</span></span>
+        <button class="sw on" id="uploadResizeSw" onclick="toggleUploadResize()"></button>
+      </div>
       <label style="display:block;border:2px dashed var(--bdm);border-radius:12px;padding:28px;text-align:center;cursor:pointer;background:var(--bg);" id="uploadDropZone">
         <div style="font-size:28px;margin-bottom:6px;">📁</div>
         <div style="font-size:14px;font-weight:500;margin-bottom:4px;">ここにドラッグ&amp;ドロップ<br>または<u>クリックして選択</u></div>
@@ -1063,7 +1067,7 @@ async function quickHeroChange(token,sel){
 // ─── アップロード ─────────────────────────────────
 let uploadAlbumToken=''
 
-function openUpload(albumToken){uploadAlbumToken=albumToken;document.getElementById('uploadList').innerHTML='';document.getElementById('uploadFileInput').value='';document.getElementById('moUpload').classList.add('on')}
+function openUpload(albumToken){uploadAlbumToken=albumToken;document.getElementById('uploadList').innerHTML='';document.getElementById('uploadFileInput').value='';document.getElementById('uploadResizeSw').className=`sw${uploadResizeOn?' on':''}`;document.getElementById('moUpload').classList.add('on')}
 function closeUpload(){document.getElementById('moUpload').classList.remove('on')}
 function onFilesSelected(){const files=Array.from(document.getElementById('uploadFileInput').files);if(!files.length)return;uploadFiles(files)}
 ;(()=>{
@@ -1171,10 +1175,34 @@ async function deleteMediaFile(fileId){
   }else{if(el)el.style.opacity='1';showToast('削除に失敗しました')}
 }
 
+let uploadResizeOn=localStorage.getItem('uploadResize3000')!=='false'
+function toggleUploadResize(){
+  uploadResizeOn=!uploadResizeOn
+  localStorage.setItem('uploadResize3000',uploadResizeOn?'true':'false')
+  document.getElementById('uploadResizeSw').className=`sw${uploadResizeOn?' on':''}`
+}
+async function resizeImageFile(f,maxEdge){
+  if(!/^image\/jpe?g$/i.test(f.type))return f
+  try{
+    const bitmap=await createImageBitmap(f)
+    const longEdge=Math.max(bitmap.width,bitmap.height)
+    if(longEdge<=maxEdge){bitmap.close?.();return f}
+    const scale=maxEdge/longEdge
+    const w=Math.round(bitmap.width*scale),h=Math.round(bitmap.height*scale)
+    const canvas=document.createElement('canvas')
+    canvas.width=w;canvas.height=h
+    canvas.getContext('2d').drawImage(bitmap,0,0,w,h)
+    bitmap.close?.()
+    const blob=await new Promise(res=>canvas.toBlob(res,'image/jpeg',0.92))
+    if(!blob)return f
+    return new File([blob],f.name,{type:'image/jpeg',lastModified:f.lastModified})
+  }catch{return f}
+}
 async function uploadFiles(files){
   const list=document.getElementById('uploadList')
   const items={}
-  for(const f of files){
+  for(let f of files){
+    if(uploadResizeOn)f=await resizeImageFile(f,3000)
     const key=f.name+f.size
     const item=document.createElement('div')
     item.style.cssText='display:flex;flex-direction:column;gap:4px;padding:8px 12px;background:var(--bg);border:1px solid var(--bdm);border-radius:8px;font-size:13px;'
