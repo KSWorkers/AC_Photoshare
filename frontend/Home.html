@@ -716,7 +716,10 @@ function renderThumbGrid(photos, currentCoverId) {
   }).join('')
 }
 
-let thumbToken='', thumbPhotos=[], selectedCoverId=null, thumbTab='pc'
+let thumbToken='', thumbPhotos=[], pendingCoverId=null, pendingCoverIdMobile=null, thumbTab='pc'
+
+function curPendingId(){return thumbTab==='pc'?pendingCoverId:pendingCoverIdMobile}
+function setCurPendingId(id){if(thumbTab==='pc')pendingCoverId=id;else pendingCoverIdMobile=id}
 
 function setThumbTab(tab){
   thumbTab=tab
@@ -724,15 +727,13 @@ function setThumbTab(tab){
   document.getElementById('thumbTabPc').style.cssText=`flex:1;padding:8px;border:none;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;transition:all .15s;background:${isPc?'var(--tx)':'transparent'};color:${isPc?'#fff':'var(--mt)'};`
   document.getElementById('thumbTabMobile').style.cssText=`flex:1;padding:8px;border:none;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;transition:all .15s;background:${isPc?'transparent':'var(--tx)'};color:${isPc?'var(--mt)':'#fff'};`
   document.getElementById('thumbTabHint').textContent=isPc?'PC・スマホ共通のカバー画像を選択します。':'スマホ専用カバー画像（縦長写真推奨）。未設定の場合はPC用と同じ画像が使われます。'
-  const album=albums.find(a=>a.token===thumbToken)
-  const currentId=isPc?(album?.coverId||null):(album?.coverIdMobile||null)
-  selectedCoverId=currentId
-  document.getElementById('thumbSaveBtn').disabled=false
-  document.getElementById('thumbGrid').innerHTML=renderThumbGrid(thumbPhotos,currentId)
+  // タブを切り替えても選択中の内容（未保存分）は保持したまま表示を切り替えるだけ
+  document.getElementById('thumbGrid').innerHTML=renderThumbGrid(thumbPhotos,curPendingId())
+  document.getElementById('thumbSaveBtn').disabled=!(pendingCoverId||pendingCoverIdMobile)
 }
 
 async function openThumb(token){
-  thumbToken=token;thumbPhotos=[];selectedCoverId=null;thumbTab='pc'
+  thumbToken=token;thumbPhotos=[];pendingCoverId=null;pendingCoverIdMobile=null;thumbTab='pc'
   document.getElementById('thumbSaveBtn').disabled=true
   document.getElementById('thumbGrid').innerHTML='<div style="text-align:center;padding:20px;color:var(--mt);">読み込み中...</div>'
   document.getElementById('moThumb').classList.add('on')
@@ -742,15 +743,14 @@ async function openThumb(token){
     if(!d.photos?.length){document.getElementById('thumbGrid').innerHTML='<div style="text-align:center;padding:20px;color:var(--mt);">写真がありません</div>';return}
     thumbPhotos=d.photos
     const album=albums.find(a=>a.token===token)
-    selectedCoverId=album?.coverId||null
-    document.getElementById('thumbGrid').innerHTML=renderThumbGrid(thumbPhotos,selectedCoverId)
-    if(selectedCoverId)document.getElementById('thumbSaveBtn').disabled=false
+    pendingCoverId=album?.coverId||null
+    pendingCoverIdMobile=album?.coverIdMobile||null
     setThumbTab('pc')
   }catch{document.getElementById('thumbGrid').innerHTML='<div style="text-align:center;padding:20px;color:#c0392b;">読み込みに失敗しました</div>'}
 }
 
 function selectThumb(id){
-  selectedCoverId=id
+  setCurPendingId(id)
   document.querySelectorAll('#thumbGrid [data-id]').forEach(d=>{
     const sel=d.dataset.id===id
     d.style.border=`3px solid ${sel?'var(--tx)':'transparent'}`
@@ -762,15 +762,15 @@ function selectThumb(id){
 function closeThumb(){document.getElementById('moThumb').classList.remove('on')}
 
 async function saveThumb(){
-  if(!selectedCoverId)return
+  if(!pendingCoverId&&!pendingCoverIdMobile)return
   const btn=document.getElementById('thumbSaveBtn');btn.innerHTML='<div class="sp"></div>';btn.disabled=true
-  const body=thumbTab==='pc'?{coverId:selectedCoverId}:{coverIdMobile:selectedCoverId}
+  const body={coverId:pendingCoverId,coverIdMobile:pendingCoverIdMobile}
   try{
     const res=await fetch(`${W}/api/admin/albums/${thumbToken}`,{method:'PATCH',headers:{Authorization:`Bearer ${tok}`,'Content-Type':'application/json'},body:JSON.stringify(body)})
     if(!res.ok)throw new Error()
     const a=albums.find(x=>x.token===thumbToken)
-    if(a){if(thumbTab==='pc')a.coverId=selectedCoverId;else a.coverIdMobile=selectedCoverId}
-    closeThumb();renderGrid();showToast(thumbTab==='pc'?'PC用サムネイルを変更しました':'スマホ用サムネイルを変更しました')
+    if(a){a.coverId=pendingCoverId;a.coverIdMobile=pendingCoverIdMobile}
+    closeThumb();renderGrid();showToast('サムネイルを変更しました')
   }catch{showToast('保存に失敗しました')}
   finally{btn.innerHTML='選択して保存';btn.disabled=false}
 }
