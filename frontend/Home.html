@@ -1201,6 +1201,12 @@ async function resizeImageFile(f,maxEdge){
 async function uploadFiles(files){
   const list=document.getElementById('uploadList')
   const items={}
+  // 既存ファイルとの重複（同名）チェック用に現在のアルバムのファイル名一覧を取得
+  const existingNames=new Set()
+  try{
+    const fr=await fetch(`${W}/api/admin/albums/${uploadAlbumToken}/files`,{headers:{Authorization:`Bearer ${tok}`}})
+    if(fr.ok){const fd=await fr.json();[...(fd.photos||[]),...(fd.videos||[])].forEach(f=>existingNames.add(f.name))}
+  }catch{}
   for(let f of files){
     if(uploadResizeOn)f=await resizeImageFile(f,3000)
     const key=f.name+f.size
@@ -1208,8 +1214,12 @@ async function uploadFiles(files){
     item.style.cssText='display:flex;flex-direction:column;gap:4px;padding:8px 12px;background:var(--bg);border:1px solid var(--bdm);border-radius:8px;font-size:13px;'
     const isVideo=f.type.startsWith('video/')
     const sizeStr=f.size>1048576?`${(f.size/1048576).toFixed(1)}MB`:`${Math.round(f.size/1024)}KB`
-    item.innerHTML=`<div style="display:flex;align-items:center;gap:8px;"><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${f.name}</span><span style="color:var(--mt);font-size:11px;">${isVideo?'🎬':'🖼'} ${sizeStr}</span><span id="st_${key}" style="color:var(--mt);font-size:12px;">待機中</span></div><div id="pb_${key}" style="display:none;height:3px;background:var(--bdm);border-radius:2px;overflow:hidden;"><div id="pbi_${key}" style="height:100%;background:var(--tx);width:0%;transition:width .3s;"></div></div>`
+    const isDupl=existingNames.has(f.name)
+    const stHtml=isDupl?`<span id="st_${key}" style="color:#c0392b;font-size:12px;">⚠️ 重複（スキップ）</span>`:`<span id="st_${key}" style="color:var(--mt);font-size:12px;">待機中</span>`
+    item.innerHTML=`<div style="display:flex;align-items:center;gap:8px;"><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${f.name}</span><span style="color:var(--mt);font-size:11px;">${isVideo?'🎬':'🖼'} ${sizeStr}</span>${stHtml}</div><div id="pb_${key}" style="display:none;height:3px;background:var(--bdm);border-radius:2px;overflow:hidden;"><div id="pbi_${key}" style="height:100%;background:var(--tx);width:0%;transition:width .3s;"></div></div>`
     list.appendChild(item)
+    if(isDupl)continue
+    existingNames.add(f.name) // 同じバッチ内での重複選択も1件目のみアップロード
     items[key]={f,item}
   }
   async function uploadOne(key,f){
