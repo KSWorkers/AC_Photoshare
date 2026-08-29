@@ -892,7 +892,7 @@ async function uploadCustFiles(files){
       // ファイルIDが取れなかった場合はWorkerに問い合わせ
       if(!uploadedId){
         try{
-          const idRes=await fetch(`${W}/api/album/${token}/upload/lookup`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:f.name})})
+          const idRes=await fetch(`${W}/api/album/${token}/upload/lookup`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:f.name,size:f.size})})
           if(idRes.ok){const d=await idRes.json();uploadedId=d.id}
         }catch{}
       }

@@ -507,12 +507,15 @@ export default {
         const t=pubLookupMatch[1],album=await getAlbum(env,t)
         if(!album)return errR('Not found',404)
         if(!album.allowCustomerUpload)return errR('Upload not allowed',403)
-        const{name}=await req.json()
+        const{name,size}=await req.json()
         if(!name)return errR('name required',400)
         const at=await getAccessToken(env,false)
+        // 複数人が同時にアップロードすると同名だが別内容のファイルが並ぶことがあるため、
+        // 直近の候補を複数取得しファイルサイズが一致するものを優先して特定する（誤って他人のファイルIDを掴まないように）
         const q=encodeURIComponent(`'${album.folderId}' in parents and name='${name.replace(/'/g,"\\'")}' and trashed=false`)
-        const r=await driveReq(`/files?q=${q}&fields=files(id,name)&supportsAllDrives=true&includeItemsFromAllDrives=true&orderBy=createdTime desc&pageSize=1`,at)
-        const file=r.files?.[0]
+        const r=await driveReq(`/files?q=${q}&fields=files(id,name,size)&supportsAllDrives=true&includeItemsFromAllDrives=true&orderBy=createdTime desc&pageSize=5`,at)
+        const files=r.files||[]
+        const file=(size!=null?files.find(f=>String(f.size)===String(size)):null)||files[0]
         if(!file)return errR('Not found',404)
         return jsonR({id:file.id,name:file.name})
       }
