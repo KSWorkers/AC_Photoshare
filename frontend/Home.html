@@ -406,6 +406,13 @@ body{font-family:-apple-system,'Hiragino Sans',sans-serif;background:var(--bg);c
           <label style="font-size:12px;">カード表示名（アルバム名・フォルダ名は変わりません）</label>
           <input type="text" id="qrCardLabel" style="font-size:13px;" placeholder="アルバム名" oninput="renderQrCard()">
         </div>
+        <div class="fd" style="gap:4px;margin-top:10px;">
+          <label style="font-size:12px;">会場Wi-Fi情報（カード下部に表示）</label>
+          <div style="display:flex;gap:6px;">
+            <input type="text" id="qrWifiSsid" style="font-size:13px;flex:1;" placeholder="SSID" oninput="onQrWifiInput()">
+            <input type="text" id="qrWifiPassword" style="font-size:13px;flex:1;" placeholder="パスワード" oninput="onQrWifiInput()">
+          </div>
+        </div>
       </div>
       <div id="qrCanvas" style="display:flex;justify-content:center;"></div>
       <canvas id="qrCardCanvas" style="display:none;border-radius:4px;max-width:100%;margin:0 auto;"></canvas>
@@ -1308,6 +1315,8 @@ function showQr(url,name,e){
   qrCurrentUrl=url;qrCurrentName=name
   document.getElementById('qrUrl').textContent=url
   document.getElementById('qrCardLabel').value=name
+  document.getElementById('qrWifiSsid').value=localStorage.getItem('qrWifiSsid')??'alcyone'
+  document.getElementById('qrWifiPassword').value=localStorage.getItem('qrWifiPassword')??'Alcyone1122'
   const wrap=document.getElementById('qrCanvas')
   wrap.innerHTML=''
   qrInstance=new QRCode(wrap,{text:url,width:200,height:200,correctLevel:QRCode.CorrectLevel.M})
@@ -1324,6 +1333,11 @@ function setQrMode(mode){
   cc.style.display=mode==='card'?'block':'none'
   document.getElementById('qrUrl').style.display=mode==='card'?'none':'block'
   if(mode==='card')renderQrCard()
+}
+function onQrWifiInput(){
+  localStorage.setItem('qrWifiSsid',document.getElementById('qrWifiSsid').value)
+  localStorage.setItem('qrWifiPassword',document.getElementById('qrWifiPassword').value)
+  renderQrCard()
 }
 function renderQrCard(){
   const qrEl=document.getElementById('qrCanvas').querySelector('canvas')||document.getElementById('qrCanvas').querySelector('img')
@@ -1378,8 +1392,10 @@ function renderQrCard(){
   ctx.font='500 21px Georgia,"Times New Roman",serif'
   ctx.fillStyle='#2c2418';ctx.textAlign='center'
   ctx.letterSpacing='0.02em'
-  ctx.fillText('SSID：alcyone',W/2,dy+46)
-  ctx.fillText('PASSWORD：Alcyone1122',W/2,dy+73)
+  const wifiSsid=document.getElementById('qrWifiSsid').value.trim()
+  const wifiPw=document.getElementById('qrWifiPassword').value.trim()
+  ctx.fillText(`SSID：${wifiSsid||'-'}`,W/2,dy+46)
+  ctx.fillText(`PASSWORD：${wifiPw||'-'}`,W/2,dy+73)
   ctx.letterSpacing='0'
 }
 function roundRect(ctx,x,y,w,h,r){ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);ctx.arcTo(x+w,y,x+w,y+r,r);ctx.lineTo(x+w,y+h-r);ctx.arcTo(x+w,y+h,x+w-r,y+h,r);ctx.lineTo(x+r,y+h);ctx.arcTo(x,y+h,x,y+h-r,r);ctx.lineTo(x,y+r);ctx.arcTo(x,y,x+r,y,r);ctx.closePath()}
