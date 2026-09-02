@@ -231,6 +231,12 @@ body{font-family:-apple-system,'Hiragino Sans',sans-serif;background:var(--bg);c
   <!-- ツールバー -->
   <div class="tb">
     <button class="btn btn-s btn-sm" id="selBtn" onclick="toggleSel()">選択</button>
+    <select id="sortSel" onchange="applySort()" style="padding:6px 10px;border:1px solid var(--border-md);border-radius:8px;font-size:12px;color:var(--text);background:#fff;outline:none;cursor:pointer;">
+      <option value="upload_desc" id="optSortUploadDesc">アップロード順（新しい順）</option>
+      <option value="upload_asc" id="optSortUploadAsc">アップロード順（古い順）</option>
+      <option value="capture_desc" id="optSortCaptureDesc">撮影時間（新しい順）</option>
+      <option value="capture_asc" id="optSortCaptureAsc">撮影時間（古い順）</option>
+    </select>
     <div class="dl-wrap">
       <button class="btn btn-p btn-sm" onclick="toggleDlMenu(event)">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
@@ -365,6 +371,8 @@ const T = {
     uploadTitle: '写真を追加', uploadLabel: 'ドラッグ&ドロップまたはタップして写真・動画を選択', uploadSub: 'JPG・PNG・HEIC・MP4・MOVなど',
     uploadClose: '閉じる', uploadDone: f => `完了（${f}件成功・`, uploadFail: n => `${n}件失敗）`,
     uploadedFile: 'アップロード済みファイル', uploadDupl: '⚠️ 送信済み',
+    sortUploadDesc: 'アップロード順（新しい順）', sortUploadAsc: 'アップロード順（古い順）',
+    sortCaptureDesc: '撮影時間（新しい順）', sortCaptureAsc: '撮影時間（古い順）',
     uploadWait: '待機中', uploadUploading: 'アップロード中', uploadOk: '✓', uploadFailed: '✗',
     custDelConfirm: 'このファイルを削除しますか？',
     guideLink: '📖 写真・動画の保存方法ガイドを見る →',
@@ -398,6 +406,8 @@ const T = {
     uploadTitle: 'Add photos', uploadLabel: 'Drag & drop or tap to select photos / videos', uploadSub: 'JPG, PNG, HEIC, MP4, MOV, etc.',
     uploadClose: 'Close', uploadDone: f => `Done (${f} succeeded, `, uploadFail: n => `${n} failed)`,
     uploadedFile: 'Uploaded file', uploadDupl: '⚠️ Already sent',
+    sortUploadDesc: 'Upload order (newest first)', sortUploadAsc: 'Upload order (oldest first)',
+    sortCaptureDesc: 'Capture time (newest first)', sortCaptureAsc: 'Capture time (oldest first)',
     uploadWait: 'Waiting', uploadUploading: 'Uploading', uploadOk: '✓', uploadFailed: '✗',
     custDelConfirm: 'Delete this file?',
     guideLink: '📖 How to save photos & videos →',
@@ -426,6 +436,10 @@ function applyLang(){
   // Toolbar
   const selBtn = document.getElementById('selBtn')
   if(selBtn) selBtn.textContent = selMode ? t('selCancel') : t('selBtn')
+  const optUD=document.getElementById('optSortUploadDesc');if(optUD)optUD.textContent=t('sortUploadDesc')
+  const optUA=document.getElementById('optSortUploadAsc');if(optUA)optUA.textContent=t('sortUploadAsc')
+  const optCD=document.getElementById('optSortCaptureDesc');if(optCD)optCD.textContent=t('sortCaptureDesc')
+  const optCA=document.getElementById('optSortCaptureAsc');if(optCA)optCA.textContent=t('sortCaptureAsc')
   // DL menus (static HTML rebuild)
   const allDlMenu = document.getElementById('allDlMenu')
   if(allDlMenu) allDlMenu.innerHTML = dlMenuItems()
@@ -519,6 +533,24 @@ function applyFont(fontKey) {
 }
 
 let photos=[], pw='', selMode=false, selIds=new Set(), cur=0, lastSel=-1
+let curSort=localStorage.getItem('albumSort')||'upload_desc'
+
+function sortPhotos(){
+  const key=curSort.startsWith('capture')?'captureTime':'createdTime'
+  const dir=curSort.endsWith('desc')?-1:1
+  photos.sort((a,b)=>{
+    const av=new Date(a[key]||a.createdTime||0).getTime()
+    const bv=new Date(b[key]||b.createdTime||0).getTime()
+    return (av-bv)*dir
+  })
+}
+function applySort(){
+  curSort=document.getElementById('sortSel').value
+  localStorage.setItem('albumSort',curSort)
+  sortPhotos()
+  if(selMode)cancelSel()
+  renderGrid()
+}
 
 function show(id) { document.querySelectorAll('.sc').forEach(s=>s.classList.remove('on')); document.getElementById(id).classList.add('on') }
 
@@ -552,6 +584,8 @@ async function load(password='') {
     }
     if (!res.ok) return showErr('error')
     pw=password; photos=d.photos
+    sortPhotos()
+    const sortSel=document.getElementById('sortSel');if(sortSel)sortSel.value=curSort
     // アルバム設定の言語を初回のみ適用（お客さまが手動で変更した場合は上書きしない）
     if(!_albumLangSet&&d.lang){lang=d.lang;_albumLangSet=true}
     if(d.siteTitle){document.getElementById('siteLogo').textContent=d.siteTitle;document.title=`フォトギャラリー | ${d.siteTitle}`}
@@ -599,6 +633,30 @@ async function load(password='') {
     show('scGal')
     applyLang()
   } catch(e) { showErr('error') }
+}
+
+// アップロード完了後、ページ全体を再読み込みせずギャラリーだけを更新する
+async function refreshGallery(){
+  try{
+    const qs = pw ? `?pw=${encodeURIComponent(pw)}` : ''
+    const res = await fetch(`${W}/api/album/${token}${qs}`)
+    const d = await res.json()
+    if (!res.ok || d.requirePassword) return
+    photos = d.photos
+    sortPhotos()
+    const meta=[]
+    if (d.count) meta.push(t('photoCount', d.count))
+    if (d.totalSizeLabel) meta.push(d.totalSizeLabel)
+    if (d.expiresAt) meta.push(t('expiry', d.expiresAt.slice(0,10)))
+    document.getElementById('albumMeta').innerHTML = meta.map((m,i)=>
+      i<meta.length-1 ? `<span>${m}</span><span class="dot">·</span>` : `<span>${m}</span>`
+    ).join('')
+    document.getElementById('grid').style.display = photos.length ? '' : 'none'
+    if (photos.length > 0) renderGrid()
+    document.querySelectorAll('.video-section, .guide-link-big').forEach(el=>el.remove())
+    if (d.videos && d.videos.length > 0) renderVideos(d.videos)
+    else addGuideLink(document.getElementById('grid').parentNode)
+  }catch{}
 }
 
 function submitPw() {
@@ -923,7 +981,7 @@ async function uploadCustFiles(files){
   document.getElementById('custUploadTtl').textContent=errors?(lang==='en'?`Done (${done} succeeded, ${errors} failed${skipMsg})`:`完了（${done}件成功・${errors}件失敗${skipMsg}）`):skipped&&!done?(lang==='en'?`${skipped} file(s) already sent`:`${skipped}件はすでに送信済みです`):(lang==='en'?`✅ Added ${done} file(s)${skipMsg}`:`✅ ${done}件を追加しました${skipMsg}`)
   custUploading=false
   document.getElementById('custCloseBtn').disabled=false
-  if(done>0)showToast(lang==='en'?`Added ${done} file(s)`:`${done}件を追加しました`)
+  if(done>0){showToast(lang==='en'?`Added ${done} file(s)`:`${done}件を追加しました`);refreshGallery()}
 }
 
 async function deleteCurrent(){
