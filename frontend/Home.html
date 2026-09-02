@@ -403,6 +403,10 @@ body{font-family:-apple-system,'Hiragino Sans',sans-serif;background:var(--bg);c
       </div>
       <div id="qrCardLabelWrap" style="display:none;width:100%;">
         <div class="fd" style="gap:4px;">
+          <label style="font-size:12px;">式場名（カード上部に表示）</label>
+          <input type="text" id="qrVenueName" style="font-size:13px;" placeholder="例：ALCYONE COURT. SANO" oninput="onQrVenueInput()">
+        </div>
+        <div class="fd" style="gap:4px;margin-top:10px;">
           <label style="font-size:12px;">カード表示名（アルバム名・フォルダ名は変わりません）</label>
           <input type="text" id="qrCardLabel" style="font-size:13px;" placeholder="アルバム名" oninput="renderQrCard()">
         </div>
@@ -1315,6 +1319,7 @@ function showQr(url,name,e){
   qrCurrentUrl=url;qrCurrentName=name
   document.getElementById('qrUrl').textContent=url
   document.getElementById('qrCardLabel').value=name
+  document.getElementById('qrVenueName').value=localStorage.getItem('qrVenueName')??'ALCYONE COURT. SANO'
   document.getElementById('qrWifiSsid').value=localStorage.getItem('qrWifiSsid')??'alcyone'
   document.getElementById('qrWifiPassword').value=localStorage.getItem('qrWifiPassword')??'Alcyone1122'
   const wrap=document.getElementById('qrCanvas')
@@ -1334,6 +1339,10 @@ function setQrMode(mode){
   document.getElementById('qrUrl').style.display=mode==='card'?'none':'block'
   if(mode==='card')renderQrCard()
 }
+function onQrVenueInput(){
+  localStorage.setItem('qrVenueName',document.getElementById('qrVenueName').value)
+  renderQrCard()
+}
 function onQrWifiInput(){
   localStorage.setItem('qrWifiSsid',document.getElementById('qrWifiSsid').value)
   localStorage.setItem('qrWifiPassword',document.getElementById('qrWifiPassword').value)
@@ -1351,7 +1360,9 @@ function renderQrCard(){
   ctx.textAlign='center'
   ctx.font='300 9px Georgia,"Times New Roman",serif'
   ctx.fillStyle='#8b7a38'
-  ctx.fillText('A L C Y O N E   C O U R T .   S A N O',W/2,33)
+  ctx.letterSpacing='0.25em'
+  ctx.fillText((document.getElementById('qrVenueName').value||'ALCYONE COURT. SANO').toUpperCase(),W/2,33)
+  ctx.letterSpacing='0'
   ctx.font='500 21px Georgia,"Times New Roman",serif'
   ctx.fillStyle='#2c2418'
   ctx.letterSpacing='0.08em'
