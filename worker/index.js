@@ -36,7 +36,7 @@ async function driveReq(path,token){
 
 async function listPhotos(folderId,token){
   const q=encodeURIComponent(`'${folderId}' in parents and mimeType contains 'image/' and trashed = false`)
-  const f=encodeURIComponent('files(id,name,size,thumbnailLink,imageMediaMetadata(width,height))')
+  const f=encodeURIComponent('files(id,name,size,thumbnailLink,createdTime,imageMediaMetadata(width,height,time))')
   const d=await driveReq(`/files?q=${q}&fields=${f}&orderBy=name&pageSize=500`,token)
   return d.files||[]
 }
@@ -433,7 +433,7 @@ export default {
         const at=await getAccessToken(env,true)
         const files=await listPhotos(album.folderId,at)
         const totalSize=files.reduce((s,f)=>s+parseInt(f.size||0),0)
-        const photos=files.map(f=>({id:f.id,name:f.name,thumb:f.thumbnailLink?.replace('=s220','=s800')||null,width:f.imageMediaMetadata?.width||1200,height:f.imageMediaMetadata?.height||800,size:parseInt(f.size||0)}))
+        const photos=files.map(f=>({id:f.id,name:f.name,thumb:f.thumbnailLink?.replace('=s220','=s800')||null,width:f.imageMediaMetadata?.width||1200,height:f.imageMediaMetadata?.height||800,size:parseInt(f.size||0),createdTime:f.createdTime||null,captureTime:f.imageMediaMetadata?.time||null}))
         // 動画（初回アクセス時に権限を付与）
         const videoFiles=await listVideos(album.folderId,at)
         if(videoFiles.length>0){ctx.waitUntil(getAccessToken(env,false).then(rwAt=>Promise.all(videoFiles.map(v=>grantAnyoneRead(v.id,rwAt)))).catch(()=>{}))}
