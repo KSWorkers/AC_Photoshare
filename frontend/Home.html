@@ -309,11 +309,26 @@ body{font-family:-apple-system,'Hiragino Sans',sans-serif;background:var(--bg);c
 <!-- システム設定モーダル -->
 <div class="mo" id="moSettings" onclick="if(event.target===this)closeSettings()">
   <div class="md">
-    <div class="mh">⚙️ システム設定（フラグ定義）</div>
+    <div class="mh">⚙️ システム設定</div>
     <div class="mb" id="settingsBody" style="gap:10px;">
-      <div style="font-size:13px;color:var(--mt);">選定機能のフラグ種類・枚数制限を設定します。アルバムごとに上書きも可能です。</div>
-      <div id="flagDefsEditor" style="display:grid;gap:8px;"></div>
-      <button class="btn btn-s btn-sm" onclick="addFlagDef()" style="align-self:flex-start;">＋ フラグを追加</button>
+      <div>
+        <div style="font-size:13px;font-weight:600;color:var(--mt);margin-bottom:8px;">マスタ設定（QRデザインカードの初期値）</div>
+        <div class="fd" style="gap:4px;"><label style="font-size:12px;">式場名</label><input type="text" id="masterVenueName" placeholder="例：ALCYONE COURT. SANO"></div>
+        <div class="fd" style="gap:4px;margin-top:8px;"><label style="font-size:12px;">アクセントカラー</label>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <input type="color" id="masterAccentColor" style="width:36px;height:32px;border:1px solid var(--bdm);border-radius:6px;padding:2px;cursor:pointer;" oninput="document.getElementById('masterAccentColorHex').value=this.value">
+            <input type="text" id="masterAccentColorHex" placeholder="#8b7a38" style="flex:1;" oninput="syncAccentColorFromHex()">
+          </div>
+        </div>
+        <div class="fd" style="gap:4px;margin-top:8px;"><label style="font-size:12px;">会場Wi-Fi SSID</label><input type="text" id="masterWifiSsid" placeholder="SSID"></div>
+        <div class="fd" style="gap:4px;margin-top:8px;"><label style="font-size:12px;">会場Wi-Fiパスワード</label><input type="text" id="masterWifiPassword" placeholder="パスワード"></div>
+      </div>
+      <div style="border-top:1px solid var(--bd);padding-top:14px;">
+        <div style="font-size:13px;font-weight:600;color:var(--mt);margin-bottom:8px;">選定機能フラグ</div>
+        <div style="font-size:13px;color:var(--mt);margin-bottom:8px;">選定機能のフラグ種類・枚数制限を設定します。アルバムごとに上書きも可能です。</div>
+        <div id="flagDefsEditor" style="display:grid;gap:8px;"></div>
+        <button class="btn btn-s btn-sm" onclick="addFlagDef()" style="align-self:flex-start;margin-top:8px;">＋ フラグを追加</button>
+      </div>
     </div>
     <div class="mf"><button class="btn btn-s" onclick="closeSettings()">キャンセル</button><button class="btn btn-p" id="saveSettingsBtn" onclick="saveSettings()">保存</button></div>
   </div>
@@ -466,6 +481,7 @@ function initMain(){
   document.getElementById('bulkBtn').style.display='inline-flex'
   document.getElementById('settingsBtn').style.display='inline-flex'
   loadAlbums()
+  fetch(`${W}/api/admin/settings`,{headers:{Authorization:`Bearer ${tok}`}}).then(r=>r.json()).then(s=>sysSettings=s).catch(()=>{})
 }
 
 let pinnedTokens=new Set(JSON.parse(localStorage.getItem('pinnedAlbums')||'[]'))
@@ -851,9 +867,18 @@ async function openSettings(){
   const res=await fetch(`${W}/api/admin/settings`,{headers:{Authorization:`Bearer ${tok}`}})
   sysSettings=await res.json()
   renderFlagDefsEditor(sysSettings.flagDefs)
+  document.getElementById('masterVenueName').value=sysSettings.venueName||''
+  document.getElementById('masterAccentColor').value=sysSettings.accentColor||'#8b7a38'
+  document.getElementById('masterAccentColorHex').value=sysSettings.accentColor||'#8b7a38'
+  document.getElementById('masterWifiSsid').value=sysSettings.wifiSsid||''
+  document.getElementById('masterWifiPassword').value=sysSettings.wifiPassword||''
   document.getElementById('moSettings').classList.add('on')
 }
 function closeSettings(){document.getElementById('moSettings').classList.remove('on')}
+function syncAccentColorFromHex(){
+  const v=document.getElementById('masterAccentColorHex').value
+  if(/^#[0-9a-fA-F]{6}$/.test(v))document.getElementById('masterAccentColor').value=v
+}
 
 function renderFlagDefsEditor(flagDefs){
   const editor=document.getElementById('flagDefsEditor')
@@ -873,6 +898,10 @@ function removeFlagDef(i){sysSettings.flagDefs.splice(i,1);renderFlagDefsEditor(
 
 async function saveSettings(){
   const btn=document.getElementById('saveSettingsBtn');btn.innerHTML='<div class="sp-sm"></div>';btn.disabled=true
+  sysSettings.venueName=document.getElementById('masterVenueName').value.trim()
+  sysSettings.accentColor=document.getElementById('masterAccentColorHex').value.trim()||'#8b7a38'
+  sysSettings.wifiSsid=document.getElementById('masterWifiSsid').value.trim()
+  sysSettings.wifiPassword=document.getElementById('masterWifiPassword').value.trim()
   try{
     await fetch(`${W}/api/admin/settings`,{method:'PATCH',headers:{Authorization:`Bearer ${tok}`,'Content-Type':'application/json'},body:JSON.stringify(sysSettings)})
     closeSettings();showToast('設定を保存しました')
@@ -1319,9 +1348,9 @@ function showQr(url,name,e){
   qrCurrentUrl=url;qrCurrentName=name
   document.getElementById('qrUrl').textContent=url
   document.getElementById('qrCardLabel').value=name
-  document.getElementById('qrVenueName').value=localStorage.getItem('qrVenueName')??'ALCYONE COURT. SANO'
-  document.getElementById('qrWifiSsid').value=localStorage.getItem('qrWifiSsid')??'alcyone'
-  document.getElementById('qrWifiPassword').value=localStorage.getItem('qrWifiPassword')??'Alcyone1122'
+  document.getElementById('qrVenueName').value=localStorage.getItem('qrVenueName')??sysSettings?.venueName??'ALCYONE COURT. SANO'
+  document.getElementById('qrWifiSsid').value=localStorage.getItem('qrWifiSsid')??sysSettings?.wifiSsid??'alcyone'
+  document.getElementById('qrWifiPassword').value=localStorage.getItem('qrWifiPassword')??sysSettings?.wifiPassword??'Alcyone1122'
   const wrap=document.getElementById('qrCanvas')
   wrap.innerHTML=''
   qrInstance=new QRCode(wrap,{text:url,width:200,height:200,correctLevel:QRCode.CorrectLevel.M})
@@ -1351,6 +1380,7 @@ function onQrWifiInput(){
 function renderQrCard(){
   const qrEl=document.getElementById('qrCanvas').querySelector('canvas')||document.getElementById('qrCanvas').querySelector('img')
   if(!qrEl)return
+  const ac=sysSettings?.accentColor||'#8b7a38'
   const W=400,H=Math.round(W*91/55),pad=40,qrSize=220,headerH=110,footerH=100
   const cc=document.getElementById('qrCardCanvas')
   cc.width=W;cc.height=H
@@ -1359,7 +1389,7 @@ function renderQrCard(){
   ctx.fillStyle='#f0ebe0';ctx.fillRect(0,0,W,headerH)
   ctx.textAlign='center'
   ctx.font='300 9px Georgia,"Times New Roman",serif'
-  ctx.fillStyle='#8b7a38'
+  ctx.fillStyle=ac
   ctx.letterSpacing='0.25em'
   ctx.fillText((document.getElementById('qrVenueName').value||'ALCYONE COURT. SANO').toUpperCase(),W/2,33)
   ctx.letterSpacing='0'
@@ -1369,9 +1399,9 @@ function renderQrCard(){
   ctx.fillText('ShareGraph',W/2,63)
   ctx.letterSpacing='0'
   ctx.font='300 9px Georgia,"Times New Roman",serif'
-  ctx.fillStyle='#8b7a38'
+  ctx.fillStyle=ac
   ctx.fillText('— PHOTO  SHARING  SERVICE —',W/2,86)
-  ctx.strokeStyle='#8b7a38';ctx.lineWidth=0.8
+  ctx.strokeStyle=ac;ctx.lineWidth=0.8
   ctx.beginPath();ctx.moveTo(pad,headerH);ctx.lineTo(W-pad,headerH);ctx.stroke()
   // QRブロック（name+scan含む）を上下中央に配置
   const frameP=14,blockH=(qrSize+frameP*2)+18+28+18
@@ -1391,11 +1421,11 @@ function renderQrCard(){
   wrapText(ctx,nameStr,W/2,qy+qrSize+frameP+24,W-pad*2,28)
   ctx.letterSpacing='0'
   ctx.font='300 9px Georgia,"Times New Roman",serif'
-  ctx.fillStyle='#8b7a38';ctx.textAlign='center'
+  ctx.fillStyle=ac;ctx.textAlign='center'
   ctx.fillText('QRコードをスキャンしてください',W/2,qy+qrSize+frameP+52)
   // フッター（会場Wi-Fi情報）
   const dy=H-footerH+4
-  ctx.strokeStyle='#8b7a38';ctx.lineWidth=0.8
+  ctx.strokeStyle=ac;ctx.lineWidth=0.8
   ctx.beginPath();ctx.moveTo(pad,dy);ctx.lineTo(W-pad,dy);ctx.stroke()
   ctx.font='300 9px Georgia,"Times New Roman",serif'
   ctx.fillStyle='rgba(139,122,56,0.85)';ctx.textAlign='center'
