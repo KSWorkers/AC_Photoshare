@@ -95,9 +95,10 @@ const DEFAULT_FLAG_DEFS=[
   {key:'page',label:'📄 中ページ',max:10}
 ]
 
+const DEFAULT_SYSTEM_SETTINGS={flagDefs:DEFAULT_FLAG_DEFS,venueName:'ALCYONE COURT. SANO',accentColor:'#8b7a38',wifiSsid:'',wifiPassword:''}
 async function getSystemSettings(env){
   const s=await env.ALBUMS.get('system:settings','json')
-  return s||{flagDefs:DEFAULT_FLAG_DEFS}
+  return{...DEFAULT_SYSTEM_SETTINGS,...s}
 }
 
 async function getEffectiveFlagDefs(env,album){
