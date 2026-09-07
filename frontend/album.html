@@ -669,6 +669,14 @@ window.addEventListener('scroll',()=>{
   document.getElementById('header').classList.toggle('solid', window.scrollY > window.innerHeight*0.65)
 },{passive:true})
 
+// Google Drive発行のthumbnailLinkは一定時間で失効するため、読み込み失敗時はWorker経由の取得にフォールバックする
+function thumbFallback(el,id){
+  if(el.dataset.fallback)return
+  el.dataset.fallback='1'
+  const p=photos.find(x=>x.id===id)
+  if(p)el.src=photoUrl(p,'small')
+}
+
 // ジャスティファイドグリッド
 function renderGrid() {
   const grid=document.getElementById('grid')
@@ -678,16 +686,16 @@ function renderGrid() {
   if (isMob) {
     const rows=[];for(let i=0;i<photos.length;i+=2)rows.push(photos.slice(i,i+2).map((p,j)=>({...p,_i:i+j})))
     grid.innerHTML=rows.map(row=>{
-      if(row.length===1){const p=row[0];const ar=(p.width||4)/(p.height||3);const h=Math.round(cw/ar);return`<div class="grow"><div class="gi" id="gi${p._i}" style="width:${cw}px;height:${h}px;" onclick="onClick(${p._i},event)"><img class="ld" src="${p.thumb}" loading="lazy" onload="this.classList.remove('ld')" onerror="this.classList.remove('ld')"><div class="gi-ck"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></div></div></div>`}
+      if(row.length===1){const p=row[0];const ar=(p.width||4)/(p.height||3);const h=Math.round(cw/ar);return`<div class="grow"><div class="gi" id="gi${p._i}" style="width:${cw}px;height:${h}px;" onclick="onClick(${p._i},event)"><img class="ld" src="${p.thumb}" loading="lazy" onload="this.classList.remove('ld')" onerror="this.classList.remove('ld');thumbFallback(this,'${p.id}')"><div class="gi-ck"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></div></div></div>`}
       const ar0=(row[0].width||4)/(row[0].height||3),ar1=(row[1].width||4)/(row[1].height||3)
       const rh=Math.round((cw-gap)/(ar0+ar1)),w0=Math.round(rh*ar0),w1=cw-gap-w0
-      return`<div class="grow">${[[row[0],w0],[row[1],w1]].map(([p,w])=>`<div class="gi" id="gi${p._i}" style="width:${w}px;height:${rh}px;" onclick="onClick(${p._i},event)"><img src="${p.thumb}" loading="lazy"><div class="gi-ck"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></div></div>`).join('')}</div>`
+      return`<div class="grow">${[[row[0],w0],[row[1],w1]].map(([p,w])=>`<div class="gi" id="gi${p._i}" style="width:${w}px;height:${rh}px;" onclick="onClick(${p._i},event)"><img src="${p.thumb}" loading="lazy" onerror="thumbFallback(this,'${p.id}')"><div class="gi-ck"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></div></div>`).join('')}</div>`
     }).join('')
   } else {
     const th=Math.min(320,window.innerHeight*.4),rows=[],row=[];let rw=0
     photos.forEach((p,i)=>{const ar=(p.width||4)/(p.height||3),w=th*ar;if(rw+w+gap*row.length>cw&&row.length>0){rows.push([...row]);row.length=0;rw=0}row.push({...p,_w:w,_i:i});rw+=w})
     if(row.length)rows.push([...row])
-    grid.innerHTML=rows.map(r=>{const tg=(r.length-1)*gap,tw=r.reduce((s,p)=>s+p._w,0),sc=(cw-tg)/tw,rh=Math.round(th*sc);return`<div class="grow">${r.map(p=>`<div class="gi" id="gi${p._i}" style="width:${Math.round(p._w*sc)}px;height:${rh}px;" onclick="onClick(${p._i},event)"><img src="${p.thumb}" loading="lazy"><div class="gi-ck"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></div></div>`).join('')}</div>`}).join('')
+    grid.innerHTML=rows.map(r=>{const tg=(r.length-1)*gap,tw=r.reduce((s,p)=>s+p._w,0),sc=(cw-tg)/tw,rh=Math.round(th*sc);return`<div class="grow">${r.map(p=>`<div class="gi" id="gi${p._i}" style="width:${Math.round(p._w*sc)}px;height:${rh}px;" onclick="onClick(${p._i},event)"><img src="${p.thumb}" loading="lazy" onerror="thumbFallback(this,'${p.id}')"><div class="gi-ck"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></div></div>`).join('')}</div>`}).join('')
   }
   if(selMode){grid.classList.add('sel-mode');selIds.forEach(i=>document.getElementById(`gi${i}`)?.classList.add('sel'))}
 }
@@ -752,10 +760,16 @@ function updLb(){
   const wrap=document.getElementById('lbWrap')
   const img=document.getElementById('lbImg')
   // 表示はthumb（高速CDN）、DLボタンはphotoUrlで別途
+  // Google Drive発行のthumbnailLinkは一定時間で失効するため、読み込み失敗時はWorker経由の取得にフォールバックする
   const displaySrc = p.thumb
   wrap.style.opacity='0'
   img.onload=()=>{ wrap.style.opacity='1' }
-  img.onerror=()=>{ wrap.style.opacity='1' }
+  img.onerror=()=>{
+    if(img.dataset.fallback){wrap.style.opacity='1';return}
+    img.dataset.fallback='1'
+    img.src=photoUrl(p,'medium')
+  }
+  delete img.dataset.fallback
   img.src=displaySrc
   document.getElementById('lbCnt').textContent=`${cur+1} / ${photos.length}`
   document.getElementById('lbPrev').disabled=cur===0
