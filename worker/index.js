@@ -205,6 +205,39 @@ async function sha256hex(str){const buf=await crypto.subtle.digest('SHA-256',new
 async function hashPassword(password){const salt=Array.from(crypto.getRandomValues(new Uint8Array(16))).map(b=>b.toString(16).padStart(2,'0')).join('');const hash=await sha256hex(salt+password);return`${salt}:${hash}`}
 async function verifyPassword(input,stored){if(!stored)return false;if(stored.includes(':')){const[salt,hash]=stored.split(':');return await sha256hex(salt+input)===hash};if(stored.length===64&&/^[0-9a-f]+$/.test(stored))return await sha256hex(input)===stored;return input===stored}
 
+// ─── 管理用の強いハッシュ（PBKDF2） ──────────────────
+// 管理パスワードと復旧コードだけに使う。KVの中身が漏れたときに総当たりされにくくするため、
+// 1回のSHA-256ではなく PBKDF2 を10万回まわす。
+// アルバムのパスワード（hashPassword/verifyPassword）はお客様がギャラリーを開くたびに
+// 検証が走る＝毎回この計算をさせるとCPU時間を食うので、あえて据え置いている。
+const PBKDF2_ITER=100000
+async function pbkdf2Hex(password,saltHex,iter){
+  const key=await crypto.subtle.importKey('raw',new TextEncoder().encode(password),'PBKDF2',false,['deriveBits'])
+  const salt=Uint8Array.from(saltHex.match(/../g).map(h=>parseInt(h,16)))
+  const bits=await crypto.subtle.deriveBits({name:'PBKDF2',hash:'SHA-256',salt,iterations:iter},key,256)
+  return Array.from(new Uint8Array(bits)).map(b=>b.toString(16).padStart(2,'0')).join('')
+}
+// 形式: pbkdf2$<繰り返し回数>$<ソルト>$<ハッシュ>
+async function hashSecret(secret){
+  const salt=Array.from(crypto.getRandomValues(new Uint8Array(16))).map(b=>b.toString(16).padStart(2,'0')).join('')
+  return `pbkdf2$${PBKDF2_ITER}$${salt}$${await pbkdf2Hex(secret,salt,PBKDF2_ITER)}`
+}
+// 旧形式（salt:sha256、または生のSHA-256）で保存されたものも引き続き検証できる
+async function verifySecret(input,stored){
+  if(!stored)return false
+  if(stored.startsWith('pbkdf2$')){
+    const[,iter,salt,hash]=stored.split('$')
+    return await pbkdf2Hex(input,salt,parseInt(iter,10))===hash
+  }
+  return await verifyPassword(input,stored)
+}
+// 旧形式で保存されていたら、正しく認証できた時点で新形式へ静かに作り直す
+async function upgradeSecretIfNeeded(env,key,stored,plain){
+  if(stored&&!stored.startsWith('pbkdf2$')){
+    try{await env.ALBUMS.put(key,await hashSecret(plain))}catch{}
+  }
+}
+
 // ─── セッション管理 ─────────────────────────────────
 
 const SESSION_TTL=24*60*60
