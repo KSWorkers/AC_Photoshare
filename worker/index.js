@@ -138,6 +138,40 @@ async function recordFailedLogin(env,ip){const key=`ratelimit:${ip}`;const d=awa
 const getAlbum=(env,t)=>env.ALBUMS.get(`album:${t}`,'json')
 const saveAlbum=(env,t,a)=>env.ALBUMS.put(`album:${t}`,JSON.stringify(a))
 async function listAlbums(env){const l=await env.ALBUMS.list({prefix:'album:'});return Promise.all(l.keys.map(async k=>{const d=await env.ALBUMS.get(k.name,'json');return{token:k.name.replace('album:',''),...d}}))}
+
+// ─── アルバム枚数・容量の記録（Driveへ都度問い合わせずに一覧表示するためのキャッシュ） ───
+// 表紙未設定時の1枚目はlistPhotosの並び順（=一覧・管理画面での表示順）で決める
+function computeAlbumCounts(photos){
+  const totalSize=photos.reduce((s,f)=>s+parseInt(f.size||0),0)
+  return{photoCount:photos.length,totalSize,coverFallbackId:photos[0]?.id||null}
+}
+// 書き戻し直前にアルバムを再読込し、数えた4項目だけを重ねる（他タブでの編集を巻き戻さないため）
+async function persistAlbumCounts(env,token,counts){
+  const fresh=await getAlbum(env,token)
+  if(!fresh)return
+  await saveAlbum(env,token,{...fresh,photoCount:counts.photoCount,totalSize:counts.totalSize,coverFallbackId:counts.coverFallbackId,countedAt:new Date().toISOString()})
+}
+// カバー写真の参照切れ自己修復（削除済みファイルを指したままにしない）。カウント項目とは別の独立した書き込みとして行う
+async function healDanglingCover(env,token,album,photos){
+  const coverValid=!album.coverId||photos.some(p=>p.id===album.coverId)
+  const coverMobileValid=!album.coverIdMobile||photos.some(p=>p.id===album.coverIdMobile)
+  if(coverValid&&coverMobileValid)return{coverId:album.coverId||null,coverIdMobile:album.coverIdMobile||null}
+  const fresh=await getAlbum(env,token)
+  const coverId=coverValid?(fresh?fresh.coverId:album.coverId)||null:null
+  const coverIdMobile=coverMobileValid?(fresh?fresh.coverIdMobile:album.coverIdMobile)||null:null
+  if(fresh)await saveAlbum(env,token,{...fresh,coverId,coverIdMobile})
+  return{coverId,coverIdMobile}
+}
+// アルバム1件をDriveから数え直して記録を更新する（一覧のstale分・個別オープン時の両方から呼ばれる）
+async function recountAlbum(env,token,at){
+  const album=await getAlbum(env,token)
+  if(!album)return null
+  const photos=await listPhotos(album.folderId,at)
+  const counts=computeAlbumCounts(photos)
+  await persistAlbumCounts(env,token,counts)
+  const cover=await healDanglingCover(env,token,album,photos)
+  return{...counts,...cover}
+}
 const getSelect=(env,t)=>env.ALBUMS.get(`select:${t}`,'json')
 const saveSelect=(env,t,d)=>env.ALBUMS.put(`select:${t}`,JSON.stringify(d))
 
@@ -210,25 +244,34 @@ export default {
       if(path==='/api/admin/albums'&&req.method==='GET'){
         if(!await isAdmin(req,env))return errR('Unauthorized',401)
         const albums=await listAlbums(env)
-        let at=null
-        try{at=await getAccessToken(env,true)}catch(e){console.error('getAccessToken failed',e)}
-        if(!at){
-          // Drive側のトークン取得に失敗しても、写真枚数などが空でも一覧自体は返す
-          return jsonR({albums:albums.map(a=>({...a,count:undefined,totalSize:0,totalSizeLabel:'',coverId:a.coverId||null}))})
-        }
-        const enriched=await Promise.all(albums.map(async a=>{
-          try{
-            const photos=await listPhotos(a.folderId,at);const totalSize=photos.reduce((s,f)=>s+parseInt(f.size||0),0)
-            // カバー写真が削除済みなら参照が残らないよう検証してフォールバック
-            const coverValid=a.coverId&&photos.some(p=>p.id===a.coverId)
-            const coverMobileValid=a.coverIdMobile&&photos.some(p=>p.id===a.coverIdMobile)
-            if(a.coverId&&!coverValid||a.coverIdMobile&&!coverMobileValid){
-              ctx.waitUntil(saveAlbum(env,a.token,{...a,coverId:coverValid?a.coverId:null,coverIdMobile:coverMobileValid?a.coverIdMobile:null}))
-            }
-            return{...a,count:photos.length,totalSize,totalSizeLabel:fmtSize(totalSize),coverId:(coverValid?a.coverId:null)||photos[0]?.id||null}
+        // 一覧表示はDriveへ問い合わせず、各アルバムに記録済みの枚数・容量・表紙候補をそのまま返す。
+        // Cloudflareの1リクエストあたりのサブリクエスト上限に当たらないよう、アルバム件数分のDrive呼び出しはしない。
+        const STALE_MS=6*60*60*1000,MAX_RECOUNT=8
+        const now=Date.now()
+        const stale=albums
+          .filter(a=>!a.countedAt||now-new Date(a.countedAt).getTime()>STALE_MS)
+          .sort((a,b)=>(a.countedAt?new Date(a.countedAt).getTime():0)-(b.countedAt?new Date(b.countedAt).getTime():0))
+          .slice(0,MAX_RECOUNT)
+        const recounted=new Map()
+        if(stale.length){
+          let at=null
+          try{at=await getAccessToken(env,true)}catch(e){console.error('getAccessToken failed',e)}
+          if(at){
+            await Promise.all(stale.map(async a=>{
+              try{recounted.set(a.token,await recountAlbum(env,a.token,at))}
+              catch(e){console.error(`recount album ${a.token} failed`,e)}
+            }))
           }
-          catch(e){console.error(`enrich album ${a.token} failed`,e);return{...a,count:0,totalSize:0,totalSizeLabel:'0 B',coverId:null}}
-        }))
+        }
+        const enriched=albums.map(a=>{
+          const r=recounted.get(a.token)
+          const photoCount=r?r.photoCount:(a.photoCount??0)
+          const totalSize=r?r.totalSize:(a.totalSize??0)
+          const coverFallbackId=r?r.coverFallbackId:(a.coverFallbackId??null)
+          const coverId=r?r.coverId:a.coverId
+          const coverIdMobile=r?r.coverIdMobile:a.coverIdMobile
+          return{...a,count:photoCount,totalSize,totalSizeLabel:fmtSize(totalSize),coverId:coverId||coverFallbackId||null,coverIdMobile:coverIdMobile||null}
+        })
         return jsonR({albums:enriched})
       }
 
@@ -239,7 +282,7 @@ export default {
         const token=genToken()
         const at=await getAccessToken(env,false)
         const folder=await createFolder(buildFolderName(name),env.DRIVE_ROOT_FOLDER_ID,at)
-        const album={name,folderId:folder.id,createdAt:new Date().toISOString(),expiresAt:normalizeExpiresAt(expiresAt),password:password?await hashPassword(password):null,published:true,heroText:heroText||'Photography',heroFont:heroFont||'josefin',allowCustomerUpload:!!allowCustomerUpload,allowVideoUpload:!!allowVideoUpload,lang:lang||'ja',siteTitle:siteTitle||null}
+        const album={name,folderId:folder.id,createdAt:new Date().toISOString(),expiresAt:normalizeExpiresAt(expiresAt),password:password?await hashPassword(password):null,published:true,heroText:heroText||'Photography',heroFont:heroFont||'josefin',allowCustomerUpload:!!allowCustomerUpload,allowVideoUpload:!!allowVideoUpload,lang:lang||'ja',siteTitle:siteTitle||null,photoCount:0,totalSize:0,coverFallbackId:null,countedAt:new Date().toISOString()}
         await saveAlbum(env,token,album)
         return jsonR({token,url:`${env.SITE_URL}/album.html?token=${token}`,folderId:folder.id,album})
       }
@@ -356,6 +399,11 @@ export default {
         if(!album)return errR('Not found',404)
         const at=await getAccessToken(env,true)
         const files=await listPhotos(album.folderId,at)
+        // アルバムを個別に開いたタイミングで必ず数え直す（一覧はDriveに問い合わせないため、ここで記録を最新化する）
+        ctx.waitUntil((async()=>{
+          try{await persistAlbumCounts(env,t,computeAlbumCounts(files));await healDanglingCover(env,t,album,files)}
+          catch(e){console.error(`recount on open (photos) ${t} failed`,e)}
+        })())
         return jsonR({photos:files.map(f=>({id:f.id,name:f.name,thumb:f.thumbnailLink?.replace('=s220','=s400')||null,width:f.imageMediaMetadata?.width||1200,height:f.imageMediaMetadata?.height||800}))})
       }
 
@@ -577,6 +625,11 @@ export default {
         if(!album)return errR('Not found',404)
         const at=await getAccessToken(env,false)
         const[photos,videos]=await Promise.all([listPhotos(album.folderId,at),listVideos(album.folderId,at)])
+        // アルバムを個別に開いたタイミングで必ず数え直す（一覧はDriveに問い合わせないため、ここで記録を最新化する）
+        ctx.waitUntil((async()=>{
+          try{await persistAlbumCounts(env,t,computeAlbumCounts(photos));await healDanglingCover(env,t,album,photos)}
+          catch(e){console.error(`recount on open (files) ${t} failed`,e)}
+        })())
         return jsonR({photos,videos})
       }
 
