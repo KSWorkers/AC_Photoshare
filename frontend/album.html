@@ -732,12 +732,22 @@ function showProgress(title){document.getElementById('progressTtl').textContent=
 function hideProgress(){document.getElementById('progressModal').classList.remove('on')}
 function updateProgress(done,total){document.getElementById('progressBar').style.width=Math.round(done/total*100)+'%';document.getElementById('progressTxt').textContent=t('progressCount',done,total)}
 
+function triggerBlobDownload(blob,filename){
+  const url=URL.createObjectURL(blob)
+  const a=document.createElement('a');a.href=url;a.download=filename;a.click()
+  setTimeout(()=>URL.revokeObjectURL(url),1000)
+}
+
 async function downloadZip(list,size){
+  if(!list.length){showToast(t('toastZeroPhotos'));return}
   const SPLIT_BYTES=700*1024*1024 // このサイズに達するごとにZIPを書き出し、新しいZIPに続きを入れる
+  const FETCH_CONCURRENCY=6 // フェッチを絞り、圧縮待ちで未圧縮の写真がメモリに溜まり過ぎないようにする
   showProgress(t('zipGenPart',1));updateProgress(0,list.length)
   let zip=new JSZip(),zipBytes=0,partNum=1,doneCount=0,okCount=0
-  const finished=[]
-  // フェッチは並行のまま、ZIPへの追加と分割判定はここで直列化して競合を防ぐ
+  // 1個目のZIPは、2個目が実際に出るまで連番を付けるかどうか決められないので保留する。
+  // 2個目以降が確定した時点で、1個目も含めてすぐにダウンロードしメモリを解放する。
+  let pendingPart=null,downloadedParts=0
+  // フェッチは並行のまま、ZIPへの追加・分割判定・書き出しはここで直列化して競合を防ぐ
   let chain=Promise.resolve()
   function addToZip(p,blob){
     chain=chain.then(async()=>{
@@ -745,38 +755,63 @@ async function downloadZip(list,size){
       zipBytes+=blob.size
       if(zipBytes>=SPLIT_BYTES){
         const zipToFlush=zip
-        partNum++
         zip=new JSZip();zipBytes=0
+        document.getElementById('progressTtl').textContent=t('zipComp')
+        try{
+          const partBlob=await zipToFlush.generateAsync({type:'blob'})
+          if(pendingPart===null&&downloadedParts===0){
+            pendingPart=partBlob // まだ1個目。連番が要るかどうかは後で分かる
+          }else{
+            if(pendingPart){downloadedParts=1;triggerBlobDownload(pendingPart,`photos_${size}_1.zip`);pendingPart=null}
+            downloadedParts++
+            triggerBlobDownload(partBlob,`photos_${size}_${downloadedParts}.zip`)
+          }
+        }catch(e){console.error('zip part generation failed',e)} // このパートの書き出しに失敗しても後続の写真の処理は続ける（chainを壊さない）
+        partNum++
         document.getElementById('progressTtl').textContent=t('zipGenPart',partNum)
-        finished.push(await zipToFlush.generateAsync({type:'blob'})) // 書き出し済みのJSZipインスタンスはここで手放し、メモリを解放する
       }
     })
     return chain
   }
   try{
-    await Promise.all(list.map(async p=>{
-      try{
-        const res=await fetch(photoUrl(p,size))
-        if(!res.ok)throw new Error(`fetch failed: ${res.status}`)
-        const blob=await res.blob()
-        await addToZip(p,blob)
-        okCount++
-      }catch(e){console.error('photo download failed',p.id,e)} // 1枚失敗しても他の写真は続行し、取れた分だけ渡す
-      finally{doneCount++;updateProgress(doneCount,list.length)}
-    }))
+    for(let i=0;i<list.length;i+=FETCH_CONCURRENCY){
+      const batch=list.slice(i,i+FETCH_CONCURRENCY)
+      await Promise.all(batch.map(async p=>{
+        try{
+          const res=await fetch(photoUrl(p,size))
+          if(!res.ok)throw new Error(`fetch failed: ${res.status}`)
+          const blob=await res.blob()
+          await addToZip(p,blob)
+          okCount++
+        }catch(e){console.error('photo download failed',p.id,e)} // 1枚失敗しても他の写真は続行し、取れた分だけ渡す
+        finally{doneCount++;updateProgress(doneCount,list.length)}
+      }))
+    }
     await chain
     if(okCount===0){showToast(t('toastZeroPhotos'));return}
-    if(zipBytes>0||finished.length===0){
+    if(zipBytes>0&&pendingPart===null&&downloadedParts===0){
+      // 一度も分割されなかった＝これまでどおり1個のZIPで完結
       document.getElementById('progressTtl').textContent=t('zipComp')
-      finished.push(await zip.generateAsync({type:'blob'}))
+      try{
+        const blob=await zip.generateAsync({type:'blob'})
+        triggerBlobDownload(blob,`photos_${size}.zip`)
+        downloadedParts=1
+      }catch(e){console.error('zip generation failed',e)}
+    }else if(zipBytes>0){
+      document.getElementById('progressTtl').textContent=t('zipComp')
+      try{
+        const lastBlob=await zip.generateAsync({type:'blob'})
+        if(pendingPart){downloadedParts=1;triggerBlobDownload(pendingPart,`photos_${size}_1.zip`);pendingPart=null}
+        downloadedParts++
+        triggerBlobDownload(lastBlob,`photos_${size}_${downloadedParts}.zip`)
+      }catch(e){console.error('zip generation failed',e)}
+    }else if(pendingPart){
+      // 分割は1回だけ発生し、そのあと写真が残っていなかった＝結局1個のZIPで収まった
+      triggerBlobDownload(pendingPart,`photos_${size}.zip`)
+      downloadedParts=1
     }
-    finished.forEach((blob,i)=>{
-      const a=document.createElement('a')
-      a.href=URL.createObjectURL(blob)
-      a.download=finished.length>1?`photos_${size}_${i+1}.zip`:`photos_${size}.zip`
-      a.click()
-    })
-    showToast(finished.length>1?t('toastDlDoneMulti',finished.length):t('toastDlDone'))
+    const totalParts=downloadedParts||1
+    showToast(totalParts>1?t('toastDlDoneMulti',totalParts):t('toastDlDone'))
   }catch{showToast(t('toastErr'))}
   finally{setTimeout(hideProgress,800)}
 }
