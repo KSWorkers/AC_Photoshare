@@ -95,6 +95,72 @@ async function syncVideoPerms(folderId,grant,token){
   await Promise.all(videos.map(v=>grant?grantAnyoneRead(v.id,token):revokeAnyoneRead(v.id,token)))
 }
 
+// ─── 期限切れ・非公開アルバムの動画アクセス取り消し ──────────────
+// 動画1本の公開を取り消す。成功/失敗と、消費したDrive呼び出し回数を返す（エラーはログに残す）
+async function revokeVideoAccess(fileId,token){
+  let callsUsed=0
+  try{
+    const d=await driveReq(`/files/${fileId}/permissions?fields=permissions(id,type)`,token)
+    callsUsed++
+    const p=(d.permissions||[]).find(p=>p.type==='anyone')
+    if(!p)return{ok:true,callsUsed}
+    const res=await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}/permissions/${p.id}?supportsAllDrives=true`,{method:'DELETE',headers:{Authorization:`Bearer ${token}`}})
+    callsUsed++
+    if(!res.ok)throw new Error(`revoke delete failed: ${res.status} ${await res.text()}`)
+    return{ok:true,callsUsed}
+  }catch(e){
+    console.error(`revokeVideoAccess failed for ${fileId}`,e)
+    return{ok:false,callsUsed}
+  }
+}
+
+// アルバム1件ぶんの動画公開を、控え（gv:トークン:ファイルID）を頼りに取り消す。
+// Driveへの呼び出し回数は呼び出し元と共有するbudgetオブジェクトで管理し、
+// 予算が尽きたら取り消しきれなかった分の控えを残したまま打ち切る（次回の巡回で拾われる）。
+const VIDEO_MIMES=['video/mp4','video/quicktime','video/x-msvideo','video/webm','video/x-matroska']
+async function sweepAlbumVideoGrants(env,token,folderId,at,budget){
+  const prefix=`gv:${token}:`
+  let fileIds
+  try{
+    const listed=await env.ALBUMS.list({prefix})
+    fileIds=listed.keys.map(k=>k.name.slice(prefix.length))
+  }catch(e){console.error(`list gv markers failed for ${token}`,e);return}
+
+  // 控えが1件も無い場合は、控えの仕組みより前から公開されたままの動画が無いか、
+  // 一度だけDriveに直接問い合わせて確認する（fields内のpermissionsを使い、動画1本ずつの個別確認は行わない）
+  if(fileIds.length===0){
+    if(budget.remaining<1)return
+    let videos
+    try{
+      const mimeQ=VIDEO_MIMES.map(m=>`mimeType='${m}'`).join(' or ')
+      const q=encodeURIComponent(`'${folderId}' in parents and (${mimeQ}) and trashed = false`)
+      videos=await driveListAllPages(q,'files(id,permissions(type))',at)
+      budget.remaining--
+    }catch(e){console.error(`backfill video list failed for ${token}`,e);return}
+    const publicIds=videos.filter(v=>(v.permissions||[]).some(p=>p.type==='anyone')).map(v=>v.id)
+    if(publicIds.length===0)return
+    // 控えを全部書けたときだけ先へ進む。一部しか書けなければ何もせず次回に委ねる
+    let allWritten=true
+    for(const id of publicIds){
+      try{await env.ALBUMS.put(`gv:${token}:${id}`,JSON.stringify({grantedAt:new Date().toISOString(),backfilled:true}))}
+      catch(e){console.error(`backfill marker write failed ${token}:${id}`,e);allWritten=false;break}
+    }
+    if(!allWritten)return
+    fileIds=publicIds
+  }
+
+  for(const fileId of fileIds){
+    if(budget.remaining<2)return // 1本あたり最大2回分の余裕が無ければ打ち切り。控えは残る
+    const{ok,callsUsed}=await revokeVideoAccess(fileId,at)
+    budget.remaining-=callsUsed
+    if(ok){
+      try{await env.ALBUMS.delete(`gv:${token}:${fileId}`)}
+      catch(e){console.error(`gv marker delete failed ${token}:${fileId}`,e)}
+    }
+    // 失敗した場合は控えをそのまま残す（次回の巡回で再試行される）
+  }
+}
+
 function isAlbumActive(album){
   if(album.published===false)return false
   if(album.expiresAt&&new Date(album.expiresAt)<new Date())return false
@@ -277,6 +343,39 @@ export default {
             }))
           }
         }
+        // ① 期限切れなのにまだ公開中のアルバムを閉じ、動画の公開も取り消す
+        // ② 非公開・期限切れなのに動画の公開が残っているアルバムを片付ける（①で予算切れになった分の受け皿）
+        // Driveへの呼び出しは①②合わせて上限を設け、上のカウント数え直し分の余地を残す。
+        const REVOKE_BUDGET=40
+        const budget={remaining:REVOKE_BUDGET}
+        const toAutoClose=albums.filter(a=>a.published!==false&&a.expiresAt&&new Date(a.expiresAt)<new Date())
+        const alreadyInactive=albums.filter(a=>!toAutoClose.includes(a)&&!isAlbumActive(a))
+        const closedTokens=new Set()
+        // 動画の取り消しにはDriveの書き込みトークンが要るが、取得に失敗してもアルバムを
+        // 閉じる処理（KV書き込みのみ）自体は続行する。取り消しだけをスキップする。
+        let videoAt=null
+        if(toAutoClose.length||alreadyInactive.length){
+          try{videoAt=await getAccessToken(env,false)}catch(e){console.error('getAccessToken (video revoke) failed',e)}
+        }
+        for(const a of toAutoClose){
+          try{
+            // 閉じる直前にもう一度読み直し、既に非公開・期限延長されていないか確かめる
+            // （読んでいる間に別タブで期限が延ばされていた場合、古い内容で上書きしないため）
+            const fresh=await getAlbum(env,a.token)
+            if(!fresh)continue
+            const stillExpired=fresh.published!==false&&fresh.expiresAt&&new Date(fresh.expiresAt)<new Date()
+            if(!stillExpired)continue
+            await saveAlbum(env,a.token,{...fresh,published:false,updatedAt:new Date().toISOString()})
+            closedTokens.add(a.token)
+          }catch(e){console.error(`auto-close album ${a.token} failed`,e);continue}
+          if(videoAt&&budget.remaining>=1)await sweepAlbumVideoGrants(env,a.token,a.folderId,videoAt,budget)
+        }
+        if(videoAt){
+          for(const a of alreadyInactive){
+            if(budget.remaining<1)break
+            await sweepAlbumVideoGrants(env,a.token,a.folderId,videoAt,budget)
+          }
+        }
         const enriched=albums.map(a=>{
           const r=recounted.get(a.token)
           const photoCount=r?r.photoCount:(a.photoCount??0)
@@ -284,7 +383,8 @@ export default {
           const coverFallbackId=r?r.coverFallbackId:(a.coverFallbackId??null)
           const coverId=r?r.coverId:a.coverId
           const coverIdMobile=r?r.coverIdMobile:a.coverIdMobile
-          return{...a,count:photoCount,totalSize,totalSizeLabel:fmtSize(totalSize),coverId:coverId||coverFallbackId||null,coverIdMobile:coverIdMobile||null}
+          const published=closedTokens.has(a.token)?false:a.published
+          return{...a,published,count:photoCount,totalSize,totalSizeLabel:fmtSize(totalSize),coverId:coverId||coverFallbackId||null,coverIdMobile:coverIdMobile||null}
         })
         return jsonR({albums:enriched})
       }
@@ -330,9 +430,18 @@ export default {
           const _r=getAccessToken(env,false).then(at=>fetch(`https://www.googleapis.com/drive/v3/files/${album.folderId}?supportsAllDrives=true`,{method:'PATCH',headers:{Authorization:`Bearer ${at}`,'Content-Type':'application/json'},body:JSON.stringify({name:body.name})})).catch(()=>{})
           ctx.waitUntil(_r)
         }
-        // 動画権限を同期
+        // 動画権限: 非公開・期限切れへ変わったときだけ、控え(gv:)を元に個別の公開を取り消す。
+        // 公開・期限延長側では何もしない（動画は再生時に個別公開する方式のため、まとめて公開し直す必要は無い）
         const wasActive=isAlbumActive(album),willBeActive=isAlbumActive(updated)
-        if(wasActive!==willBeActive){const _p=getAccessToken(env,false).then(at=>syncVideoPerms(updated.folderId,willBeActive,at)).catch(()=>{});ctx.waitUntil(_p)}
+        if(wasActive&&!willBeActive){
+          const _p=(async()=>{
+            try{
+              const at=await getAccessToken(env,false)
+              await sweepAlbumVideoGrants(env,t,updated.folderId,at,{remaining:40})
+            }catch(e){console.error(`revoke video grants on publish/expiry change failed ${t}`,e)}
+          })()
+          ctx.waitUntil(_p)
+        }
         await saveAlbum(env,t,updated)
         return jsonR({ok:true,album:updated})
       }
@@ -487,8 +596,14 @@ export default {
         if(!album)return errR('Not found',404)
         if(album.published===false)return errR('Not published',403)
         if(album.expiresAt&&new Date(album.expiresAt)<new Date()){
-          // 期限切れ時は動画権限を取り消す
-          ctx.waitUntil(getAccessToken(env,false).then(at=>syncVideoPerms(album.folderId,false,at)).catch(()=>{}))
+          // 期限切れ時は動画の公開を取り消す（控えを元に、失敗はログに残す）
+          const _p=(async()=>{
+            try{
+              const at=await getAccessToken(env,false)
+              await sweepAlbumVideoGrants(env,t,album.folderId,at,{remaining:40})
+            }catch(e){console.error(`revoke video grants on expired view failed ${t}`,e)}
+          })()
+          ctx.waitUntil(_p)
           return errR('Expired',410)
         }
         if(album.password){const pw=url.searchParams.get('pw');if(!pw||!await verifyPassword(pw,album.password))return jsonR({requirePassword:true,name:album.name})}
