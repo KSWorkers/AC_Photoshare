@@ -34,20 +34,34 @@ async function driveReq(path,token){
   return res.json()
 }
 
+// Drive files.list はnextPageTokenが続く限り1ページ（最大1000件）ずつしか返さないため、
+// 全件取得したい呼び出し元はこの関数を通す。fieldsにnextPageTokenを含め忘れると
+// 次ページの合図が返らず1ページで止まるので、必ずfields側でも付与する。
+async function driveListAllPages(q,fields,token){
+  const fieldsWithPageToken=fields.includes('nextPageToken')?fields:`nextPageToken,${fields}`
+  let files=[],pageToken=null
+  for(let i=0;i<50;i++){
+    const pt=pageToken?`&pageToken=${encodeURIComponent(pageToken)}`:''
+    const d=await driveReq(`/files?q=${q}&fields=${encodeURIComponent(fieldsWithPageToken)}&orderBy=name&pageSize=1000${pt}`,token)
+    files=files.concat(d.files||[])
+    pageToken=d.nextPageToken||null
+    if(!pageToken)return files
+  }
+  throw new Error('Drive pagination exceeded 50 pages')
+}
+
 async function listPhotos(folderId,token){
   const q=encodeURIComponent(`'${folderId}' in parents and mimeType contains 'image/' and trashed = false`)
-  const f=encodeURIComponent('files(id,name,size,thumbnailLink,createdTime,imageMediaMetadata(width,height,time))')
-  const d=await driveReq(`/files?q=${q}&fields=${f}&orderBy=name&pageSize=500`,token)
-  return d.files||[]
+  const f='files(id,name,size,thumbnailLink,createdTime,imageMediaMetadata(width,height,time))'
+  return await driveListAllPages(q,f,token)
 }
 
 async function listVideos(folderId,token){
   const mimes=['video/mp4','video/quicktime','video/x-msvideo','video/webm','video/x-matroska']
   const mimeQ=mimes.map(m=>`mimeType='${m}'`).join(' or ')
   const q=encodeURIComponent(`'${folderId}' in parents and (${mimeQ}) and trashed = false`)
-  const f=encodeURIComponent('files(id,name,size,mimeType,thumbnailLink,webViewLink)')
-  const d=await driveReq(`/files?q=${q}&fields=${f}&orderBy=name&pageSize=100`,token)
-  return d.files||[]
+  const f='files(id,name,size,mimeType,thumbnailLink,webViewLink)'
+  return await driveListAllPages(q,f,token)
 }
 
 async function createFolder(name,parentId,token){
