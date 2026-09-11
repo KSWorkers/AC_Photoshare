@@ -429,7 +429,7 @@ let tok = sessionStorage.getItem('adminToken') || localStorage.getItem('adminTok
 
 let albums=[], filtered=[]
 let filter='all', bulk=false, selToks=new Set(), lastBulkSel=-1
-let editTok='', nExpOn=true, nPwOn=false, ePubOn=true, eExpOn=false, ePwOn=false, eUploadOn=false, eVideoUploadOn=false
+let editTok='', nExpOn=true, nPwOn=false, ePubOn=true, eExpOn=false, ePwOn=false, eUploadOn=false, eVideoUploadOn=false, eManualPub=false
 let deleteTarget=null
 
 if (tok) initMain()
@@ -648,7 +648,7 @@ function openEdit(token){
   const a=albums.find(x=>x.token===token);if(!a)return
   editTok=token
   document.getElementById('eName').value=a.name
-  ePubOn=a.published!==false;eExpOn=!!a.expiresAt;ePwOn=false;eUploadOn=!!a.allowCustomerUpload;eVideoUploadOn=!!a.allowVideoUpload
+  ePubOn=a.published!==false;eExpOn=!!a.expiresAt;ePwOn=false;eUploadOn=!!a.allowCustomerUpload;eVideoUploadOn=!!a.allowVideoUpload;eManualPub=false
   document.getElementById('eAlbumLang').value=a.lang||'ja'
   document.getElementById('eSiteTitle').value=a.siteTitle||''
   document.getElementById('ePubSw').className=`sw${ePubOn?' on':''}`
@@ -674,7 +674,7 @@ function openEdit(token){
   document.getElementById('moEdit').classList.add('on')
 }
 function closeEdit(){document.getElementById('moEdit').classList.remove('on')}
-function toggleEPub(){ePubOn=!ePubOn;document.getElementById('ePubSw').className=`sw${ePubOn?' on':''}`}
+function toggleEPub(){ePubOn=!ePubOn;eManualPub=true;document.getElementById('ePubSw').className=`sw${ePubOn?' on':''}`}
 function toggleEUpload(){eUploadOn=!eUploadOn;document.getElementById('eUploadSw').className=`sw${eUploadOn?' on':''}`}
 function toggleEVideoUpload(){eVideoUploadOn=!eVideoUploadOn;document.getElementById('eVideoUploadSw').className=`sw${eVideoUploadOn?' on':''}`}
 function toggleEExp(){eExpOn=!eExpOn;document.getElementById('eExpSw').className=`sw${eExpOn?' on':''}`;document.getElementById('eExpFd').style.display=eExpOn?'flex':'none'}
@@ -688,7 +688,15 @@ function clearPassword(){
 async function saveEdit(){
   const btn=document.getElementById('editBtn');btn.innerHTML='<div class="sp"></div>';btn.disabled=true
   try{
-    const body={name:document.getElementById('eName').value.trim(),published:ePubOn,allowCustomerUpload:eUploadOn,allowVideoUpload:eVideoUploadOn,expiresAt:eExpOn?document.getElementById('eExp').value||null:null,heroText:getHeroText('eHeroTextSel','eHeroCustom'),heroFont:document.getElementById('eHeroFont').value,flagDefs:albumFlagOn?albumFlagDefs:null,lang:document.getElementById('eAlbumLang').value,siteTitle:document.getElementById('eSiteTitle').value.trim()||null}
+    const a=albums.find(x=>x.token===editTok)
+    const newExp=eExpOn?document.getElementById('eExp').value||null:null
+    const wasExpired=!!(a&&a.expiresAt&&new Date(a.expiresAt)<new Date())
+    const willBeFuture=!newExp||new Date(newExp)>=new Date()
+    if(wasExpired&&willBeFuture&&!eManualPub){
+      ePubOn=true
+      document.getElementById('ePubSw').className='sw on'
+    }
+    const body={name:document.getElementById('eName').value.trim(),published:ePubOn,allowCustomerUpload:eUploadOn,allowVideoUpload:eVideoUploadOn,expiresAt:newExp,heroText:getHeroText('eHeroTextSel','eHeroCustom'),heroFont:document.getElementById('eHeroFont').value,flagDefs:albumFlagOn?albumFlagDefs:null,lang:document.getElementById('eAlbumLang').value,siteTitle:document.getElementById('eSiteTitle').value.trim()||null}
     const pwInput=document.getElementById('ePw')
     if(ePwOn){
       if(pwInput.dataset.clear==='true'){body.password=null;delete pwInput.dataset.clear}
@@ -696,7 +704,6 @@ async function saveEdit(){
     }
     const r=await fetch(`${W}/api/admin/albums/${editTok}`,{method:'PATCH',headers:{Authorization:`Bearer ${tok}`,'Content-Type':'application/json'},body:JSON.stringify(body)})
     if(!r.ok){const d=await r.json();throw new Error(d.error||'Error')}
-    const a=albums.find(x=>x.token===editTok)
     if(a){Object.assign(a,body);if(!('updatedAt'in body))a.updatedAt=new Date().toISOString()}
     closeEdit();applyFilter();showToast('設定を保存しました')
   }catch(e){showToast(`保存に失敗しました: ${e.message}`)}
