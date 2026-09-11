@@ -362,7 +362,10 @@ const T = {
     loading: '読み込み中...',
     toastUrl: 'URLをコピーしました', toastDlDone: 'ダウンロード完了！', toastErr: 'エラーが発生しました',
     toastDel: '削除しました', toastDelFail: '削除に失敗しました',
+    toastDlDoneMulti: n => `${n}つのファイルに分けてダウンロードしました`,
+    toastZeroPhotos: '写真を取得できませんでした。少し時間をおいて、もう一度お試しください。',
     zipGen: 'ZIPを生成中...', zipComp: 'ZIPを圧縮中...',
+    zipGenPart: n => `${n}つ目のファイルを作成中...`,
     progressCount: (d,t) => `${d} / ${t} 枚`,
     pwProtected: 'パスワードで保護されています', pwPlaceholder: 'パスワード', pwOpen: '開く', pwErr: 'パスワードが違います',
     videoSection: n => `動画（${n}件）`,
@@ -398,7 +401,10 @@ const T = {
     loading: 'Loading...',
     toastUrl: 'URL copied', toastDlDone: 'Download complete!', toastErr: 'An error occurred',
     toastDel: 'Deleted', toastDelFail: 'Failed to delete',
+    toastDlDoneMulti: n => `Downloaded as ${n} files`,
+    toastZeroPhotos: 'Could not retrieve any photos. Please wait a moment and try again.',
     zipGen: 'Creating ZIP...', zipComp: 'Compressing ZIP...',
+    zipGenPart: n => `Creating file ${n}...`,
     progressCount: (d,t) => `${d} / ${t} photos`,
     pwProtected: 'This album is password protected', pwPlaceholder: 'Password', pwOpen: 'Open', pwErr: 'Incorrect password',
     videoSection: n => `Videos (${n})`,
@@ -727,14 +733,50 @@ function hideProgress(){document.getElementById('progressModal').classList.remov
 function updateProgress(done,total){document.getElementById('progressBar').style.width=Math.round(done/total*100)+'%';document.getElementById('progressTxt').textContent=t('progressCount',done,total)}
 
 async function downloadZip(list,size){
-  showProgress(t('zipGen'));updateProgress(0,list.length)
+  const SPLIT_BYTES=700*1024*1024 // このサイズに達するごとにZIPを書き出し、新しいZIPに続きを入れる
+  showProgress(t('zipGenPart',1));updateProgress(0,list.length)
+  let zip=new JSZip(),zipBytes=0,partNum=1,doneCount=0,okCount=0
+  const finished=[]
+  // フェッチは並行のまま、ZIPへの追加と分割判定はここで直列化して競合を防ぐ
+  let chain=Promise.resolve()
+  function addToZip(p,blob){
+    chain=chain.then(async()=>{
+      zip.file(`${size==='full'?'':size+'_'}${p.name}`,blob)
+      zipBytes+=blob.size
+      if(zipBytes>=SPLIT_BYTES){
+        const zipToFlush=zip
+        partNum++
+        zip=new JSZip();zipBytes=0
+        document.getElementById('progressTtl').textContent=t('zipGenPart',partNum)
+        finished.push(await zipToFlush.generateAsync({type:'blob'})) // 書き出し済みのJSZipインスタンスはここで手放し、メモリを解放する
+      }
+    })
+    return chain
+  }
   try{
-    const zip=new JSZip();let done=0
-    await Promise.all(list.map(async p=>{const res=await fetch(photoUrl(p,size));zip.file(`${size==='full'?'':size+'_'}${p.name}`,await res.blob());done++;updateProgress(done,list.length)}))
-    document.getElementById('progressTtl').textContent=t('zipComp')
-    const blob=await zip.generateAsync({type:'blob'})
-    const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`photos_${size}.zip`;a.click()
-    showToast(t('toastDlDone'))
+    await Promise.all(list.map(async p=>{
+      try{
+        const res=await fetch(photoUrl(p,size))
+        if(!res.ok)throw new Error(`fetch failed: ${res.status}`)
+        const blob=await res.blob()
+        await addToZip(p,blob)
+        okCount++
+      }catch(e){console.error('photo download failed',p.id,e)} // 1枚失敗しても他の写真は続行し、取れた分だけ渡す
+      finally{doneCount++;updateProgress(doneCount,list.length)}
+    }))
+    await chain
+    if(okCount===0){showToast(t('toastZeroPhotos'));return}
+    if(zipBytes>0||finished.length===0){
+      document.getElementById('progressTtl').textContent=t('zipComp')
+      finished.push(await zip.generateAsync({type:'blob'}))
+    }
+    finished.forEach((blob,i)=>{
+      const a=document.createElement('a')
+      a.href=URL.createObjectURL(blob)
+      a.download=finished.length>1?`photos_${size}_${i+1}.zip`:`photos_${size}.zip`
+      a.click()
+    })
+    showToast(finished.length>1?t('toastDlDoneMulti',finished.length):t('toastDlDone'))
   }catch{showToast(t('toastErr'))}
   finally{setTimeout(hideProgress,800)}
 }
