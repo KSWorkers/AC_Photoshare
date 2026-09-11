@@ -295,6 +295,12 @@ const jsonR=(d,s=200)=>new Response(JSON.stringify(d),{status:s,headers:{'Conten
 const errR=(m,s=400)=>jsonR({error:m},s)
 // HTMLに直接埋め込む値のエスケープ（アルバム名などに &<>"' が含まれても表示が崩れないように）
 const escapeHtml=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))
+// お客様ページに出すURLの検証。javascript: 等が混ざらないよう、安全なスキームだけ通す
+function safePublicUrl(u){
+  const v=(u||'').trim()
+  if(!v)return ''
+  return /^(https?:\/\/|mailto:|tel:)/i.test(v)?v:''
+}
 
 // ─── メインハンドラ ──────────────────────────────────
 
