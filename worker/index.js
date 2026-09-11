@@ -497,11 +497,61 @@ export default {
         const files=await listPhotos(album.folderId,at)
         const totalSize=files.reduce((s,f)=>s+parseInt(f.size||0),0)
         const photos=files.map(f=>({id:f.id,name:f.name,thumb:f.thumbnailLink?.replace('=s220','=s800')||null,width:f.imageMediaMetadata?.width||1200,height:f.imageMediaMetadata?.height||800,size:parseInt(f.size||0),createdTime:f.createdTime||null,captureTime:f.imageMediaMetadata?.time||null}))
-        // 動画（初回アクセス時に権限を付与）
+        // 動画一覧はサムネイル・名前・サイズの表示のみ。公開設定は写真と同様に不要（再生時に/api/video-openで個別に公開する）
         const videoFiles=await listVideos(album.folderId,at)
-        if(videoFiles.length>0){ctx.waitUntil(getAccessToken(env,false).then(rwAt=>Promise.all(videoFiles.map(v=>grantAnyoneRead(v.id,rwAt)))).catch(()=>{}))}
         const videos=videoFiles.map(v=>({id:v.id,name:v.name,thumb:v.thumbnailLink?.replace('=s220','=s400')||null,viewLink:v.webViewLink,size:parseInt(v.size||0)}))
         return jsonR({name:album.name,expiresAt:album.expiresAt,count:photos.length,totalSize,totalSizeLabel:fmtSize(totalSize),heroText:album.heroText||'Photography',heroFont:album.heroFont||'josefin',coverId:album.coverId||null,coverIdMobile:album.coverIdMobile||null,selectToken:album.selectToken||null,allowCustomerUpload:album.allowCustomerUpload||false,allowVideoUpload:album.allowVideoUpload||false,lang:album.lang||'ja',siteTitle:album.siteTitle||null,photos,videos})
+      }
+
+      // 動画の個別公開（再生ボタンが押されたときだけ、その動画1本をDrive上で公開する）
+      const videoOpenMatch=path.match(/^\/api\/video-open\/([^/]+)$/)
+      if(videoOpenMatch&&req.method==='POST'){
+        const fileId=videoOpenMatch[1]
+        const t=url.searchParams.get('token')
+        if(!t)return errR('token required',400)
+        const album=await getAlbum(env,t)
+        if(!album)return errR('Not found',404)
+        if(album.published===false)return errR('Not published',403)
+        if(album.expiresAt&&new Date(album.expiresAt)<new Date())return errR('Expired',410)
+        if(album.password){
+          const pw=url.searchParams.get('pw')
+          if(!pw||!await verifyPassword(pw,album.password))return errR('Unauthorized',401)
+        }
+        const at=await getAccessToken(env,false)
+        // 指定ファイルが本当にこのアルバムのフォルダに属し、かつ動画であることを確認する
+        // （所属確認が無いと、有効なアルバムURLを1つ持っているだけで別アルバムの動画を公開させられてしまう）
+        let meta
+        try{meta=await driveReq(`/files/${fileId}?fields=parents,mimeType`,at)}
+        catch(e){return errR('Not found',404)}
+        if(!meta.parents?.includes(album.folderId))return errR('Forbidden',403)
+        if(!meta.mimeType?.startsWith('video/'))return errR('Not a video',400)
+
+        const kvKey=`gv:${t}:${fileId}`
+        // 控えがあっても素通りさせず、毎回Driveに直接聞く（Drive側の設定はこちらを介さず変更され得るため）
+        let alreadyPublic=false
+        try{
+          const permData=await driveReq(`/files/${fileId}/permissions?fields=permissions(id,type)`,at)
+          alreadyPublic=(permData.permissions||[]).some(p=>p.type==='anyone')
+        }catch(e){console.error(`video-open permission check failed ${t}:${fileId}`,e);return errR('Failed to open video',502)}
+
+        if(!alreadyPublic){
+          try{
+            const res=await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}/permissions?supportsAllDrives=true`,{method:'POST',headers:{Authorization:`Bearer ${at}`,'Content-Type':'application/json'},body:JSON.stringify({type:'anyone',role:'reader'})})
+            if(!res.ok)throw new Error(`grant failed: ${res.status} ${await res.text()}`)
+          }catch(e){console.error(`video-open grant failed ${t}:${fileId}`,e);return errR('Failed to open video',502)}
+        }
+
+        // 公開できたら控えを書く。動画1本ごとに独立したKVキーにする
+        // （アルバムの記録内に配列で持つと、複数動画を同時に開いたときに読み込み-追加-書き戻しの競合で片方の控えが消える）
+        try{
+          await env.ALBUMS.put(kvKey,JSON.stringify({grantedAt:new Date().toISOString()}))
+        }catch(e){
+          // 控えを書けなかった場合は公開したままにしない。その場で公開を取り消す
+          console.error(`video-open record failed ${t}:${fileId}`,e)
+          await revokeAnyoneRead(fileId,at).catch(()=>{})
+          return errR('Failed to open video',502)
+        }
+        return jsonR({ok:true})
       }
 
       // 写真DL（認証付き）

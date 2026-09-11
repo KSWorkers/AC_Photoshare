@@ -368,6 +368,7 @@ const T = {
     videoSection: n => `動画（${n}件）`,
     videoNotice: 'アップロードした動画はサムネイルが表示されるまで再生できない場合があります。しばらく経ってからページを再読み込みしてください。',
     videoDl: '動画をダウンロード', videoDelBtn: '削除', videoDelConfirm: 'この動画を削除しますか？',
+    videoOpenFail: '動画を再生できませんでした。少し時間をおいて、もう一度お試しください。',
     uploadTitle: '写真を追加', uploadLabel: 'ドラッグ&ドロップまたはタップして写真・動画を選択', uploadSub: 'JPG・PNG・HEIC・MP4・MOVなど',
     uploadClose: '閉じる', uploadDone: f => `完了（${f}件成功・`, uploadFail: n => `${n}件失敗）`,
     uploadedFile: 'アップロード済みファイル', uploadDupl: '⚠️ 送信済み',
@@ -403,6 +404,7 @@ const T = {
     videoSection: n => `Videos (${n})`,
     videoNotice: 'Uploaded videos may not be playable until a thumbnail appears. Please reload the page after a while.',
     videoDl: 'Download video', videoDelBtn: 'Delete', videoDelConfirm: 'Delete this video?',
+    videoOpenFail: 'Could not play this video. Please wait a moment and try again.',
     uploadTitle: 'Add photos', uploadLabel: 'Drag & drop or tap to select photos / videos', uploadSub: 'JPG, PNG, HEIC, MP4, MOV, etc.',
     uploadClose: 'Close', uploadDone: f => `Done (${f} succeeded, `, uploadFail: n => `${n} failed)`,
     uploadedFile: 'Uploaded file', uploadDupl: '⚠️ Already sent',
@@ -801,7 +803,7 @@ function renderVideos(videos) {
     <div style="font-size:12px;color:var(--muted);background:#f3ede0;border:1px solid var(--border);border-radius:8px;padding:9px 12px;margin-bottom:10px;line-height:1.7;">${t('videoNotice')}</div>
     <div class="video-list" id="videoList">${videos.map(v=>{
       const isOwn=uploaded.includes(v.id)
-      return`<div class="video-item" id="vi_${v.id}" style="position:relative;" onclick="openVideoPlayer('${v.viewLink}')">
+      return`<div class="video-item" id="vi_${v.id}" style="position:relative;" onclick="openVideoPlayer('${v.viewLink}','${v.id}')">
         ${v.thumb?`<img class="video-thumb" src="${v.thumb}" alt="">`:'<div class="video-thumb-ph">🎬</div>'}
         <div class="video-info">
           <div class="video-name">${v.name}</div>
@@ -827,8 +829,19 @@ async function deleteVideo(videoId){
   }else{showToast(t('toastDelFail'))}
 }
 
-function openVideoPlayer(viewLink) {
-  const fileId = viewLink.match(/\/d\/([^/]+)\//)?.[1] || ''
+async function openVideoPlayer(viewLink, fileId) {
+  fileId = fileId || (viewLink.match(/\/d\/([^/]+)\//)?.[1] || '')
+  if(!fileId){showToast(t('videoOpenFail'));return}
+  // 再生ボタンが押されたこの動画1本だけを、このタイミングでGoogle Drive側に公開する
+  try{
+    const params=new URLSearchParams({token})
+    if(pw)params.set('pw',pw)
+    const res=await fetch(`${W}/api/video-open/${fileId}?${params}`,{method:'POST'})
+    if(!res.ok)throw new Error()
+  }catch{
+    showToast(t('videoOpenFail'))
+    return
+  }
   const previewUrl = viewLink.replace('/view', '/preview').replace('/edit', '/preview')
   const downloadUrl = `https://drive.google.com/uc?export=download&id=${fileId}`
   const overlay = document.createElement('div')
