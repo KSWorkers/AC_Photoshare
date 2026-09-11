@@ -494,7 +494,7 @@ export default {
         if(album.selectToken){return jsonR({selectToken:album.selectToken,url:`${env.SITE_URL}/select.html?token=${album.selectToken}`})}
         const selectToken=genSelectToken()
         const flagDefs=await getEffectiveFlagDefs(env,album)
-        await saveSelect(env,selectToken,{albumToken:t,createdAt:new Date().toISOString(),submitted:false,submittedAt:null,flagDefs,selections:{}})
+        await saveSelect(env,selectToken,{albumToken:t,createdAt:new Date().toISOString(),submitted:false,submittedAt:null,flagDefs,selections:{},rev:0})
         await saveAlbum(env,t,{...album,selectToken,updatedAt:new Date().toISOString()})
         return jsonR({selectToken,url:`${env.SITE_URL}/select.html?token=${selectToken}`})
       }
@@ -567,7 +567,7 @@ export default {
         const at=await getAccessToken(env,true)
         const files=await listPhotos(album.folderId,at)
         const photos=files.map(f=>({id:f.id,name:f.name,thumb:f.thumbnailLink?.replace('=s220','=s800')||null,width:f.imageMediaMetadata?.width||1200,height:f.imageMediaMetadata?.height||800}))
-        return jsonR({name:album.name,expiresAt:album.expiresAt,flagDefs:selectData.flagDefs,submitted:selectData.submitted,submittedAt:selectData.submittedAt,selections:selectData.selections||{},photos})
+        return jsonR({name:album.name,expiresAt:album.expiresAt,flagDefs:selectData.flagDefs,submitted:selectData.submitted,submittedAt:selectData.submittedAt,selections:selectData.selections||{},rev:selectData.rev||0,photos})
       }
 
       if(selectMatch&&req.method==='POST'){
@@ -578,7 +578,12 @@ export default {
         if(!album||album.published===false)return errR('Unauthorized',403)
         if(album.expiresAt&&new Date(album.expiresAt)<new Date())return errR('Expired',410)
         const body=await req.json()
-        const updated={...selectData,selections:body.selections??selectData.selections}
+        const currentRev=selectData.rev||0
+        // 別端末との食い違い検出：forceが無ければ、送られてきたrevと保存済みrevが一致することを確認してから上書きする
+        if(!body.force&&(body.rev??0)!==currentRev){
+          return jsonR({error:'Conflict',rev:currentRev,selections:selectData.selections||{},submitted:selectData.submitted,submittedAt:selectData.submittedAt},409)
+        }
+        const updated={...selectData,selections:body.selections??selectData.selections,rev:currentRev+1}
         if(body.submitted){
           updated.submitted=true;updated.submittedAt=new Date().toISOString()
           const log = updated.activityLog || []
@@ -589,7 +594,7 @@ export default {
           if(album){await saveAlbum(env,selectData.albumToken,{...album,selectSubmitted:true,updatedAt:new Date().toISOString()})}
         }
         await saveSelect(env,st,updated)
-        return jsonR({ok:true,submitted:updated.submitted})
+        return jsonR({ok:true,submitted:updated.submitted,rev:updated.rev})
       }
 
       // ══ 公開アルバムAPI ════════════════════════════

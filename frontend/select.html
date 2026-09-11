@@ -105,7 +105,7 @@ body{font-family:-apple-system,'Hiragino Sans',sans-serif;background:var(--bg);c
 const W = 'https://ac-photoshare.nikkomaedori.workers.dev'
 const selectToken = new URLSearchParams(location.search).get('token') || ''
 let photos = [], flagDefs = [], selections = {}, submitted = false
-let currentPhotoId = null, saveTimer = null
+let currentPhotoId = null, saveTimer = null, rev = 0
 
 async function init() {
   if (!selectToken) { showErr('URLが正しくありません'); return }
@@ -117,7 +117,7 @@ async function init() {
     if (res.status === 403) return showErr('このアルバムは現在非公開です')
     if (!res.ok) return showErr('読み込みに失敗しました')
     photos = d.photos; flagDefs = d.flagDefs; selections = d.selections || {}
-    submitted = d.submitted
+    submitted = d.submitted; rev = d.rev || 0
     document.title = `${d.name} - 写真選定`
     updateBanner()
     updateProgress()
@@ -244,9 +244,37 @@ function scheduleAutoSave() {
   saveTimer = setTimeout(autoSave, 2000)
 }
 
+function applyServerSelections(d) {
+  selections = d.selections || {}
+  rev = d.rev || 0
+  submitted = d.submitted
+  updateBanner()
+  updateProgress()
+  renderGrid()
+}
+
+// 409（他端末との食い違い）を検知したら確認を出す。「上書きする」ならtrueを返し、
+// 呼び出し側はforce付きで送り直す。断ったら保存済みの内容をこの画面に反映して終了する。
+function resolveConflict(d) {
+  const overwrite = confirm('別の端末で変更されています。この画面の内容で上書きしますか')
+  if (!overwrite) {
+    applyServerSelections(d)
+    showToast('最新の内容を読み込みました')
+  }
+  return overwrite
+}
+
 async function autoSave() {
   try {
-    await fetch(`${W}/api/select/${selectToken}`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({selections})})
+    let res = await fetch(`${W}/api/select/${selectToken}`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({selections, rev})})
+    if (res.status === 409) {
+      const conflict = await res.json()
+      if (!resolveConflict(conflict)) return
+      res = await fetch(`${W}/api/select/${selectToken}`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({selections, force:true})})
+    }
+    const d = await res.json()
+    if (!d.ok) return showToast('保存に失敗しました')
+    rev = d.rev ?? rev
     showToast('自動保存しました')
   } catch { showToast('保存に失敗しました') }
 }
@@ -255,9 +283,15 @@ async function confirmSubmit() {
   const total = Object.values(selections).filter(f=>f.length>0).length
   if(!confirm(`${total}枚の選定内容を送信しますか？\n送信後も内容を変更できます。`)) return
   try {
-    const res = await fetch(`${W}/api/select/${selectToken}`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({selections, submitted:true})})
+    let res = await fetch(`${W}/api/select/${selectToken}`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({selections, submitted:true, rev})})
+    if (res.status === 409) {
+      const conflict = await res.json()
+      if (!resolveConflict(conflict)) return
+      res = await fetch(`${W}/api/select/${selectToken}`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({selections, submitted:true, force:true})})
+    }
     const d = await res.json()
-    if(d.ok){submitted=true;updateBanner();showToast('送信しました！')}
+    if(d.ok){submitted=true;rev=d.rev ?? rev;updateBanner();showToast('送信しました！')}
+    else showToast('送信に失敗しました')
   } catch { showToast('送信に失敗しました') }
 }
 
