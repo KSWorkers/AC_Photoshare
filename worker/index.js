@@ -260,6 +260,8 @@ const saveSelect=(env,t,d)=>env.ALBUMS.put(`select:${t}`,JSON.stringify(d))
 const CORS={'Access-Control-Allow-Origin':'*','Access-Control-Allow-Methods':'GET,POST,PATCH,DELETE,OPTIONS','Access-Control-Allow-Headers':'Content-Type,Authorization'}
 const jsonR=(d,s=200)=>new Response(JSON.stringify(d),{status:s,headers:{'Content-Type':'application/json',...CORS}})
 const errR=(m,s=400)=>jsonR({error:m},s)
+// HTMLに直接埋め込む値のエスケープ（アルバム名などに &<>"' が含まれても表示が崩れないように）
+const escapeHtml=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))
 
 // ─── メインハンドラ ──────────────────────────────────
 
@@ -277,8 +279,8 @@ export default {
         const active=!!album&&isAlbumActive(album)
         // 期限切れ・非公開なら画像も名前も出さない。パスワード付きアルバムはさらに名前も出さない
         const showName=active&&!album.password
-        const albumUrl=`${env.SITE_URL}/album.html?token=${t}`,title=showName?album.name:'フォトギャラリー'
-        const imageUrl=active&&album.coverId?`${env.SITE_URL}/api/og-image/${t}`:''
+        const albumUrl=escapeHtml(`${env.SITE_URL}/album.html?token=${t}`),title=escapeHtml(showName?album.name:'フォトギャラリー')
+        const imageUrl=escapeHtml(active&&album.coverId?`${env.SITE_URL}/api/og-image/${t}`:'')
         const ogImage=imageUrl?`<meta property="og:image" content="${imageUrl}"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:image" content="${imageUrl}">`:'<meta name="twitter:card" content="summary">'
         const html=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${title} | Alcyone PhotoShare</title><meta property="og:title" content="${title}"><meta property="og:type" content="website"><meta property="og:url" content="${albumUrl}"><meta property="og:site_name" content="Alcyone PhotoShare"><meta name="twitter:title" content="${title}">${ogImage}<meta http-equiv="refresh" content="0;url=${albumUrl}"></head><body><script>location.replace("${albumUrl}")</script></body></html>`
         return new Response(html,{headers:{'Content-Type':'text/html;charset=UTF-8','Cache-Control':'no-cache',...CORS}})
