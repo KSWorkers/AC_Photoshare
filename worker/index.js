@@ -733,9 +733,18 @@ export default {
         if(album.expiresAt&&new Date(album.expiresAt)<new Date())return errR('Expired',410)
         if(album.password){const pw=url.searchParams.get('pw');if(!pw||!await verifyPassword(pw,album.password))return errR('Unauthorized',401)}
         const at=await getAccessToken(env,size!=='full')
+        // このファイルが本当にこのアルバムのフォルダに入っているかを確認する。
+        // これが無いと、有効なアルバムトークンさえあれば、fileIdを知るだけで
+        // 別のアルバム（期限切れにしたものも含む）の写真を取得できてしまう。
+        // サムネイル用のthumbnailLinkも同じ1回の問い合わせで受け取り、Drive呼び出しを増やさない。
+        // ここはKVでキャッシュしない：写真の出し入れはドライブ側で直接行われるため、
+        // キャッシュを捨てるきっかけが無く、アルバムから外した写真がキャッシュ時間分だけ
+        // 取得できてしまう状態になる
+        const meta=await driveReq(`/files/${fileId}?fields=parents,trashed${size!=='full'?',thumbnailLink':''}`,at).catch(()=>null)
+        if(!meta||meta.trashed||!Array.isArray(meta.parents)||!meta.parents.includes(album.folderId))return errR('Not in this album',403)
         let imgRes
         if(size==='full'){imgRes=await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`,{headers:{Authorization:`Bearer ${at}`}})}
-        else{const meta=await driveReq(`/files/${fileId}?fields=thumbnailLink`,at);const s=size==='medium'?'s2400':'s1200';const thumbUrl=meta.thumbnailLink?.replace('=s220',`=${s}`);if(!thumbUrl)return errR('No thumbnail',404);imgRes=await fetch(thumbUrl)}
+        else{const s=size==='medium'?'s2400':'s1200';const thumbUrl=meta.thumbnailLink?.replace('=s220',`=${s}`);if(!thumbUrl)return errR('No thumbnail',404);imgRes=await fetch(thumbUrl)}
         const blob=await imgRes.blob()
         const disp=size==='full'?`inline; filename="${fname}"`:`inline; filename="${size}_${fname}"`
         return new Response(blob,{headers:{'Content-Type':imgRes.headers.get('Content-Type')||'image/jpeg','Content-Disposition':disp,'Cache-Control':'private, max-age=3600',...CORS}})
