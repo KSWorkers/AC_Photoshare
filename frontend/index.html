@@ -10,6 +10,8 @@ if (p.startsWith('/album/')) {
 } else if (p.startsWith('/a/')) {
   const token = p.split('/')[2]
   if (token) location.replace('/album.html?token=' + token)
+} else if (p === '/admin' || p === '/admin/') {
+  location.replace('/Home.html')
 }
 </script>
 </head>
