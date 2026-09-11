@@ -1,6 +1,9 @@
 // Cloudflare Pages Function: /a/:token
 // LINEなどのSNS共有用OGPラッパー
 
+// HTMLに直接埋め込む値のエスケープ（アルバム名などに &<>"' が含まれても表示が崩れないように）
+const escapeHtml = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))
+
 export async function onRequestGet({ params }) {
   const token = params.token
   const WORKER = 'https://ac-photoshare.nikkomaedori.workers.dev'
@@ -23,8 +26,9 @@ export async function onRequestGet({ params }) {
     }
   } catch {}
 
-  const albumUrl = `${SITE}/album.html?token=${token}`
-  const imageUrl = `${WORKER}/api/og-image/${token}`
+  albumName = escapeHtml(albumName)
+  const albumUrl = escapeHtml(`${SITE}/album.html?token=${token}`)
+  const imageUrl = escapeHtml(`${WORKER}/api/og-image/${token}`)
 
   const ogImage = hasCover ? `
 <meta property="og:image" content="${imageUrl}">
