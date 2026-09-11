@@ -274,8 +274,11 @@ export default {
       const shareMatch=path.match(/^\/a\/([a-z0-9]+)$/)
       if(shareMatch&&req.method==='GET'){
         const t=shareMatch[1],album=await getAlbum(env,t)
-        const albumUrl=`${env.SITE_URL}/album.html?token=${t}`,title=album?album.name:'フォトギャラリー'
-        const imageUrl=album?.coverId?`${env.SITE_URL}/api/og-image/${t}`:''
+        const active=!!album&&isAlbumActive(album)
+        // 期限切れ・非公開なら画像も名前も出さない。パスワード付きアルバムはさらに名前も出さない
+        const showName=active&&!album.password
+        const albumUrl=`${env.SITE_URL}/album.html?token=${t}`,title=showName?album.name:'フォトギャラリー'
+        const imageUrl=active&&album.coverId?`${env.SITE_URL}/api/og-image/${t}`:''
         const ogImage=imageUrl?`<meta property="og:image" content="${imageUrl}"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:image" content="${imageUrl}">`:'<meta name="twitter:card" content="summary">'
         const html=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${title} | Alcyone PhotoShare</title><meta property="og:title" content="${title}"><meta property="og:type" content="website"><meta property="og:url" content="${albumUrl}"><meta property="og:site_name" content="Alcyone PhotoShare"><meta name="twitter:title" content="${title}">${ogImage}<meta http-equiv="refresh" content="0;url=${albumUrl}"></head><body><script>location.replace("${albumUrl}")</script></body></html>`
         return new Response(html,{headers:{'Content-Type':'text/html;charset=UTF-8','Cache-Control':'no-cache',...CORS}})
@@ -285,7 +288,8 @@ export default {
       const ogImageMatch=path.match(/^\/api\/og-image\/([a-z0-9]+)$/)
       if(ogImageMatch&&req.method==='GET'){
         const t=ogImageMatch[1],album=await getAlbum(env,t)
-        if(!album?.coverId)return errR('No image',404)
+        if(!album||!isAlbumActive(album))return errR('No image',404)
+        if(!album.coverId)return errR('No image',404)
         const at=await getAccessToken(env,true)
         const meta=await driveReq(`/files/${album.coverId}?fields=thumbnailLink`,at)
         const thumbUrl=meta.thumbnailLink?.replace('=s220','=s1200')
