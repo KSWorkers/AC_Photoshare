@@ -824,12 +824,20 @@ async function executeDelete(){
     }
     const resData=await res.json()
     if(!res.ok){throw new Error(resData.error||'Error')}
-    if(resData.driveError)console.warn('Drive削除エラー:',resData.driveError)
-    const delToks=new Set(deleteTarget.tokens)
-    const successMsg=deleteTarget.bulk?`${deleteTarget.tokens.length}件を削除しました`:'削除しました'
+    // 削除できなかったアルバムは記録が残っているので、画面側でも消さずに残す
+    const failed=deleteTarget.tokens.length===1
+      ? (resData.ok?[]:[{token:deleteTarget.tokens[0],name:resData.name,reason:resData.reason}])
+      : (resData.failed||[])
+    const failedToks=new Set(failed.map(f=>f.token))
+    const delToks=deleteTarget.tokens.filter(t=>!failedToks.has(t))
     closeDelete();cancelBulk()
-    albums=albums.filter(a=>!delToks.has(a.token));applyFilter()
-    showToast(successMsg)
+    albums=albums.filter(a=>!delToks.includes(a.token));applyFilter()
+    if(failed.length===0){
+      showToast(deleteTarget.bulk?`${deleteTarget.tokens.length}件を削除しました`:'削除しました')
+    }else{
+      const names=failed.map(f=>f.name).join('、')
+      showToast(delToks.length===0?`削除できませんでした：${names}`:`${delToks.length}件削除、失敗：${names}`)
+    }
     setTimeout(loadAlbums,2000)
   }catch(e){showToast(`削除に失敗しました: ${e.message}`)}
   finally{btn.innerHTML='削除する';btn.disabled=false}

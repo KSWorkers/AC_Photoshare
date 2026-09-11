@@ -72,7 +72,7 @@ async function createFolder(name,parentId,token){
 
 async function deleteFile(fileId,token){
   const res=await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?supportsAllDrives=true`,{method:'DELETE',headers:{Authorization:`Bearer ${token}`}})
-  if(!res.ok){const body=await res.text().catch(()=>'');throw new Error(`Delete: ${res.status} ${body}`)}
+  if(!res.ok){const body=await res.text().catch(()=>'');const e=new Error(`Delete: ${res.status} ${body}`);e.status=res.status;throw e}
 }
 
 // ─── 動画権限管理 ───────────────────────────────────
@@ -117,6 +117,8 @@ async function revokeVideoAccess(fileId,token){
 // アルバム1件ぶんの動画公開を、控え（gv:トークン:ファイルID）を頼りに取り消す。
 // Driveへの呼び出し回数は呼び出し元と共有するbudgetオブジェクトで管理し、
 // 予算が尽きたら取り消しきれなかった分の控えを残したまま打ち切る（次回の巡回で拾われる）。
+// 戻り値のallClearは「このアルバムの動画公開を確認できる範囲で全部取り消せたか」を示す
+// （アルバム削除など、取り消し切るまで先に進んではいけない処理から使う）。
 const VIDEO_MIMES=['video/mp4','video/quicktime','video/x-msvideo','video/webm','video/x-matroska']
 async function sweepAlbumVideoGrants(env,token,folderId,at,budget){
   const prefix=`gv:${token}:`
@@ -124,41 +126,45 @@ async function sweepAlbumVideoGrants(env,token,folderId,at,budget){
   try{
     const listed=await env.ALBUMS.list({prefix})
     fileIds=listed.keys.map(k=>k.name.slice(prefix.length))
-  }catch(e){console.error(`list gv markers failed for ${token}`,e);return}
+  }catch(e){console.error(`list gv markers failed for ${token}`,e);return{allClear:false}}
 
   // 控えが1件も無い場合は、控えの仕組みより前から公開されたままの動画が無いか、
   // 一度だけDriveに直接問い合わせて確認する（fields内のpermissionsを使い、動画1本ずつの個別確認は行わない）
   if(fileIds.length===0){
-    if(budget.remaining<1)return
+    if(budget.remaining<1)return{allClear:false}
     let videos
     try{
       const mimeQ=VIDEO_MIMES.map(m=>`mimeType='${m}'`).join(' or ')
       const q=encodeURIComponent(`'${folderId}' in parents and (${mimeQ}) and trashed = false`)
       videos=await driveListAllPages(q,'files(id,permissions(type))',at)
       budget.remaining--
-    }catch(e){console.error(`backfill video list failed for ${token}`,e);return}
+    }catch(e){console.error(`backfill video list failed for ${token}`,e);return{allClear:false}}
     const publicIds=videos.filter(v=>(v.permissions||[]).some(p=>p.type==='anyone')).map(v=>v.id)
-    if(publicIds.length===0)return
+    if(publicIds.length===0)return{allClear:true}
     // 控えを全部書けたときだけ先へ進む。一部しか書けなければ何もせず次回に委ねる
     let allWritten=true
     for(const id of publicIds){
       try{await env.ALBUMS.put(`gv:${token}:${id}`,JSON.stringify({grantedAt:new Date().toISOString(),backfilled:true}))}
       catch(e){console.error(`backfill marker write failed ${token}:${id}`,e);allWritten=false;break}
     }
-    if(!allWritten)return
+    if(!allWritten)return{allClear:false}
     fileIds=publicIds
   }
 
+  let allClear=true
   for(const fileId of fileIds){
-    if(budget.remaining<2)return // 1本あたり最大2回分の余裕が無ければ打ち切り。控えは残る
+    if(budget.remaining<2){allClear=false;break} // 1本あたり最大2回分の余裕が無ければ打ち切り。控えは残る
     const{ok,callsUsed}=await revokeVideoAccess(fileId,at)
     budget.remaining-=callsUsed
     if(ok){
       try{await env.ALBUMS.delete(`gv:${token}:${fileId}`)}
-      catch(e){console.error(`gv marker delete failed ${token}:${fileId}`,e)}
+      catch(e){console.error(`gv marker delete failed ${token}:${fileId}`,e);allClear=false}
+    }else{
+      allClear=false
+      // 失敗した場合は控えをそのまま残す（次回の巡回で再試行される）
     }
-    // 失敗した場合は控えをそのまま残す（次回の巡回で再試行される）
   }
+  return{allClear}
 }
 
 function isAlbumActive(album){
@@ -218,6 +224,33 @@ async function recordFailedLogin(env,ip){const key=`ratelimit:${ip}`;const d=awa
 const getAlbum=(env,t)=>env.ALBUMS.get(`album:${t}`,'json')
 const saveAlbum=(env,t,a)=>env.ALBUMS.put(`album:${t}`,JSON.stringify(a))
 async function listAlbums(env){const l=await env.ALBUMS.list({prefix:'album:'});return Promise.all(l.keys.map(async k=>{const d=await env.ALBUMS.get(k.name,'json');return{token:k.name.replace('album:',''),...d}}))}
+
+// アルバム削除の実処理（単体削除・一括削除で共通。以前は同じ処理が2か所に書かれていた）。
+// deleteDriveがtrueのときだけDrive側を触る：動画の共有取り消しが「取り消せたと確認できる」まで終わらせ、
+// 続けてDriveのフォルダ削除が成功（またはすでに無い＝404）したことを確かめてから、
+// アルバムの記録とそれに紐づく他の記録（選定など）を消す。どちらか確認できなければ記録は残し、
+// 失敗として返す（控え・記録が残っているので次回また続きから試せる）。
+// Driveへの呼び出し回数はatとbudgetを呼び出し元と共有し、単体・一括どちらでも上限を超えないようにする。
+async function deleteAlbumFully(env,token,deleteDrive,at,budget){
+  const album=await getAlbum(env,token)
+  if(!album)return{ok:true} // 既に存在しない場合は成功扱い（べき等）
+  if(deleteDrive&&album.folderId){
+    const{allClear}=await sweepAlbumVideoGrants(env,token,album.folderId,at,budget)
+    if(!allClear)return{ok:false,name:album.name,reason:'動画の共有取り消しを確認できませんでした。もう一度お試しください。'}
+    try{
+      await deleteFile(album.folderId,at)
+    }catch(e){
+      if(e.status!==404){
+        console.error(`album folder delete failed ${token}`,e)
+        return{ok:false,name:album.name,reason:'Driveのフォルダ削除に失敗しました。もう一度お試しください。'}
+      }
+      // 404 = すでにDrive側に無い。成功として扱う
+    }
+  }
+  if(album.selectToken)await env.ALBUMS.delete(`select:${album.selectToken}`)
+  await env.ALBUMS.delete(`album:${token}`)
+  return{ok:true}
+}
 
 // ─── アルバム枚数・容量の記録（Driveへ都度問い合わせずに一覧表示するためのキャッシュ） ───
 // 表紙未設定時の1枚目はlistPhotosの並び順（=一覧・管理画面での表示順）で決める
@@ -455,18 +488,26 @@ export default {
       if(albumTokenMatch&&req.method==='DELETE'){
         if(!await isAdmin(req,env))return errR('Unauthorized',401)
         const t=albumTokenMatch[1]
-        let driveError=null
-        if(url.searchParams.get('deleteDrive')==='true'){const album=await getAlbum(env,t);if(album?.folderId){const at=await getAccessToken(env,false);await deleteFile(album.folderId,at).catch(e=>{driveError=e.message})}}
-        await env.ALBUMS.delete(`album:${t}`)
-        return jsonR({ok:true,driveError})
+        const deleteDrive=url.searchParams.get('deleteDrive')==='true'
+        const at=deleteDrive?await getAccessToken(env,false):null
+        const result=await deleteAlbumFully(env,t,deleteDrive,at,{remaining:40})
+        return jsonR(result)
       }
 
       if(path==='/api/admin/albums'&&req.method==='DELETE'){
         if(!await isAdmin(req,env))return errR('Unauthorized',401)
         const{tokens,deleteDrive}=await req.json()
-        if(deleteDrive){const at=await getAccessToken(env,false);await Promise.all(tokens.map(async t=>{const album=await getAlbum(env,t);if(album?.folderId)await deleteFile(album.folderId,at).catch(()=>{})}))}
-        await Promise.all(tokens.map(t=>env.ALBUMS.delete(`album:${t}`)))
-        return jsonR({ok:true,deleted:tokens.length})
+        const at=deleteDrive?await getAccessToken(env,false):null
+        const budget={remaining:40}
+        const failed=[]
+        let deletedCount=0
+        // budgetを共有するため、1件ずつ順番に処理する（並行だと呼び出し回数の管理が競合する）
+        for(const t of tokens){
+          const result=await deleteAlbumFully(env,t,deleteDrive,at,budget)
+          if(result.ok)deletedCount++
+          else failed.push({token:t,name:result.name,reason:result.reason})
+        }
+        return jsonR({ok:failed.length===0,deleted:deletedCount,failed})
       }
 
       // ログ追記（ダウンロード記録など）
