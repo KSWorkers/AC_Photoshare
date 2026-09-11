@@ -199,7 +199,7 @@ body{font-family:-apple-system,'Hiragino Sans',sans-serif;background:var(--bg);c
     <div class="pw-icon">🔒</div>
     <div class="pw-ttl" id="pwName">アルバムを開く</div>
     <div class="pw-sub">パスワードで保護されています</div>
-    <input class="pw-in" type="password" id="pwIn" placeholder="パスワード" onkeydown="if(event.key==='Enter')submitPw()">
+    <input class="pw-in" type="password" id="pwIn" placeholder="パスワード" oninput="document.getElementById('pwErr').style.display='none'" onkeydown="if(event.key==='Enter')submitPw()">
     <button class="btn btn-p" style="width:100%;margin-top:12px;justify-content:center;" onclick="submitPw()">開く</button>
     <div class="pw-err" id="pwErr">パスワードが違います</div>
   </div></div>
@@ -368,6 +368,7 @@ const T = {
     zipGenPart: n => `${n}つ目のファイルを作成中...`,
     progressCount: (d,t) => `${d} / ${t} 枚`,
     pwProtected: 'パスワードで保護されています', pwPlaceholder: 'パスワード', pwOpen: '開く', pwErr: 'パスワードが違います',
+    pwLoadErr: '読み込めませんでした。もう一度お試しください。',
     videoSection: n => `動画（${n}件）`,
     videoNotice: 'アップロードした動画はサムネイルが表示されるまで再生できない場合があります。しばらく経ってからページを再読み込みしてください。',
     videoDl: '動画をダウンロード', videoDelBtn: '削除', videoDelConfirm: 'この動画を削除しますか？',
@@ -407,6 +408,7 @@ const T = {
     zipGenPart: n => `Creating file ${n}...`,
     progressCount: (d,t) => `${d} / ${t} photos`,
     pwProtected: 'This album is password protected', pwPlaceholder: 'Password', pwOpen: 'Open', pwErr: 'Incorrect password',
+    pwLoadErr: 'Could not load. Please try again.',
     videoSection: n => `Videos (${n})`,
     videoNotice: 'Uploaded videos may not be playable until a thumbnail appears. Please reload the page after a while.',
     videoDl: 'Download video', videoDelBtn: 'Delete', videoDelConfirm: 'Delete this video?',
@@ -586,9 +588,15 @@ async function load(password='') {
     if (res.status===403) return showErr('private')
     if (d.requirePassword) {
       document.getElementById('pwName').textContent=d.name
+      show('scPw')
       const err=document.getElementById('pwErr')
-      if(password){err.style.display='block'}else{err.style.display='none'}
-      return show('scPw')
+      if(password){
+        err.textContent=t('pwErr');err.style.display='block'
+        const pwIn=document.getElementById('pwIn');pwIn.focus();pwIn.select()
+      }else{
+        err.style.display='none'
+      }
+      return
     }
     if (!res.ok) return showErr('error')
     pw=password; photos=d.photos
@@ -664,7 +672,16 @@ async function refreshGallery(){
     document.querySelectorAll('.video-section, .guide-link-big').forEach(el=>el.remove())
     if (d.videos && d.videos.length > 0) renderVideos(d.videos)
     else addGuideLink(document.getElementById('grid').parentNode)
-  }catch{}
+  }catch(e){
+    // パスワード再入力中の通信失敗は、パスワード違いと区別して伝える（原因不明のまま同じ画面に無言で戻さない）
+    if(password){
+      console.error('password verify failed',e)
+      show('scPw')
+      const err=document.getElementById('pwErr')
+      err.textContent=t('pwLoadErr');err.style.display='block'
+      const pwIn=document.getElementById('pwIn');pwIn.focus();pwIn.select()
+    }
+  }
 }
 
 function submitPw() {
