@@ -565,6 +565,24 @@ export default {
         return jsonR({ok: true})
       }
 
+      // 選定の受付を再開（送信済みの印を外し、選ばれた内容はそのまま残す）
+      const selectReopenMatch = path.match(/^\/api\/admin\/albums\/([a-z0-9]+)\/select\/reopen$/)
+      if (selectReopenMatch && req.method === 'POST') {
+        if (!await isAdmin(req, env)) return errR('Unauthorized', 401)
+        const t = selectReopenMatch[1]
+        const album = await getAlbum(env, t)
+        if (!album?.selectToken) return errR('No select', 404)
+        // 書き込む直前にもう一度読み直し、他の変更を上書きしないようにする
+        const selectData = await getSelect(env, album.selectToken)
+        if (!selectData) return errR('Not found', 404)
+        const log = selectData.activityLog || []
+        log.push({type: 'reopened', at: new Date().toISOString()})
+        await saveSelect(env, album.selectToken, {...selectData, submitted: false, submittedAt: null, activityLog: log})
+        const freshAlbum = await getAlbum(env, t)
+        if (freshAlbum) await saveAlbum(env, t, {...freshAlbum, selectSubmitted: false, updatedAt: new Date().toISOString()})
+        return jsonR({ok: true})
+      }
+
       // ══ 選定URL管理 ══════════════════════════════
 
       const albumSelectMatch=path.match(/^\/api\/admin\/albums\/([a-z0-9]+)\/select$/)

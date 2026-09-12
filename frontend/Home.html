@@ -1010,7 +1010,9 @@ async function openSelectResults(albumToken){
     const res=await fetch(`${W}/api/admin/albums/${albumToken}/select`,{headers:{Authorization:`Bearer ${tok}`}})
     const d=await res.json()
     if(!d.hasSelect){document.getElementById('selectViewContent').innerHTML='<div style="font-size:13px;color:var(--mt);">選定データがありません。</div>';return}
-    document.getElementById('selectViewStatus').textContent=d.submitted?`✅ 送信済み（${d.submittedAt?.slice(0,10)||''}）`:'⏳ 未送信（下書き保存中）'
+    document.getElementById('selectViewStatus').innerHTML=d.submitted
+      ?`<span>✅ 送信済み（${d.submittedAt?.slice(0,10)||''}）</span> <button class="btn btn-s btn-sm" onclick="reopenSelect()">選定の受付を再開する</button>`
+      :'⏳ 未送信（下書き保存中）'
     const container=document.getElementById('selectViewContent')
     const flagDefs=d.flagDefs&&d.flagDefs.length?d.flagDefs:DEFAULT_CLIENT_FLAG_DEFS
     const selections=d.selections||{}
@@ -1038,6 +1040,7 @@ async function openSelectResults(albumToken){
         <div style="display:grid;gap:6px;">${log.slice().reverse().map(entry=>{
           const time=entry.at?entry.at.replace('T',' ').slice(0,16):'-'
           if(entry.type==='submitted')return`<div style="font-size:12px;padding:6px 10px;background:#edfbf0;border-radius:6px;color:#1a7a3c;">✅ ${time} — お客さんが選定を送信</div>`
+          if(entry.type==='reopened')return`<div style="font-size:12px;padding:6px 10px;background:var(--bg);border:1px solid var(--bd);border-radius:6px;">🔓 ${time} — 選定の受付を再開</div>`
           if(entry.type==='download')return`<div style="font-size:12px;padding:6px 10px;background:var(--bg);border:1px solid var(--bd);border-radius:6px;">📥 ${time} — ${entry.flagLabel||entry.flagKey}（${entry.count}枚）をダウンロード</div>`
           return''
         }).filter(Boolean).join('')}</div>
@@ -1061,6 +1064,17 @@ async function downloadByFlag(flagKey,flagLabel){
     fetch(`${W}/api/admin/albums/${selectAlbumToken}/select/log`,{method:'POST',headers:{Authorization:`Bearer ${tok}`,'Content-Type':'application/json'},body:JSON.stringify({type:'download',flagKey,flagLabel,count:done})}).catch(()=>{})
     showToast(errors.length?`${done}枚完了（${errors.length}枚失敗）`:`✅ ${done}枚すべてDL完了`)
   }catch{showToast('ZIPの生成に失敗しました')}
+}
+
+async function reopenSelect(){
+  if(!confirm('選定の受付を再開しますか？\nお客様がもう一度選び直せるようになります。選ばれている内容自体は消えません。'))return
+  try{
+    const r=await fetch(`${W}/api/admin/albums/${selectAlbumToken}/select/reopen`,{method:'POST',headers:{Authorization:`Bearer ${tok}`}})
+    if(!r.ok)throw new Error()
+    showToast('選定の受付を再開しました')
+    await loadAlbums()
+    await openSelectResults(selectAlbumToken)
+  }catch{showToast('再開に失敗しました')}
 }
 
 function checkNotifications(){
