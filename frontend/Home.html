@@ -270,6 +270,28 @@ body{font-family:-apple-system,'Hiragino Sans',sans-serif;background:var(--bg);c
   </div>
 </div>
 
+<!-- アップロードモーダル -->
+<div class="mo" id="moUpload" onclick="if(event.target===this)closeUpload()">
+  <div class="md" style="max-width:480px;">
+    <div class="mh">📤 写真・動画をアップロード</div>
+    <div class="mb" style="gap:14px;">
+      <div style="font-size:13px;color:var(--mt);">このアルバムのGoogleドライブに直接アップロードします。</div>
+      <div class="sw-w" style="background:var(--bg);border:1px solid var(--bdm);border-radius:8px;padding:10px 12px;">
+        <span style="font-size:13px;">JPEGを長辺3000pxにリサイズしてアップロード<span style="display:block;font-size:11px;color:var(--mt);margin-top:2px;">一眼カメラの撮って出しJPGなど、大容量ファイルの共有を高速化</span></span>
+        <button class="sw on" id="uploadResizeSw" onclick="toggleUploadResize()"></button>
+      </div>
+      <label style="display:block;border:2px dashed var(--bdm);border-radius:12px;padding:28px;text-align:center;cursor:pointer;background:var(--bg);" id="uploadDropZone">
+        <div style="font-size:28px;margin-bottom:6px;">📁</div>
+        <div style="font-size:14px;font-weight:500;margin-bottom:4px;">ここにドラッグ&amp;ドロップ<br>または<u>クリックして選択</u></div>
+        <div style="font-size:12px;color:var(--mt);">JPG・PNG・MP4・MOVなど複数選択可</div>
+        <input type="file" multiple accept="image/*,video/*" id="uploadFileInput" style="display:none;" onchange="onFilesSelected()">
+      </label>
+      <div id="uploadList" style="display:grid;gap:6px;max-height:240px;overflow-y:auto;"></div>
+    </div>
+    <div class="mf"><button class="btn btn-s" onclick="closeUpload()">閉じる</button></div>
+  </div>
+</div>
+
 <!-- 削除確認モーダル -->
 <div class="mo" id="moDelete" onclick="if(event.target===this)closeDelete()">
   <div class="md">
@@ -568,7 +590,7 @@ function renderGrid(){
         <div class="ca">
           <a class="btn btn-s btn-sm" href="${url}" target="_blank" style="width:100%;justify-content:center;">アルバムを開く</a>
           <div style="display:flex;gap:5px;width:100%;">
-            <a class="btn btn-s btn-sm" href="https://drive.google.com/drive/folders/${a.folderId}" target="_blank" rel="noopener" title="Googleドライブが開きます。ここに写真をアップロードするとアルバムに反映されます" style="flex:1;justify-content:center;">写真を追加</a>
+            <button class="btn btn-s btn-sm" onclick="openUpload('${a.token}')" style="flex:1;justify-content:center;">アップロード</button>
             <button class="btn btn-s btn-sm" onclick="openFiles('${a.token}')" style="flex:1;justify-content:center;">ファイル管理</button>
             <button class="btn btn-s btn-sm" onclick="openSettingsPopup('${a.token}',event)" style="flex:1;justify-content:center;">設定</button>
           </div>
@@ -1097,6 +1119,112 @@ async function quickHeroChange(token,sel){
   if(val==='__custom'){const input=prompt('カバーテキストを入力してください','');if(!input){await loadAlbums();return};await fetch(`${W}/api/admin/albums/${token}`,{method:'PATCH',headers:{Authorization:`Bearer ${tok}`,'Content-Type':'application/json'},body:JSON.stringify({heroText:input})})}
   else{await fetch(`${W}/api/admin/albums/${token}`,{method:'PATCH',headers:{Authorization:`Bearer ${tok}`,'Content-Type':'application/json'},body:JSON.stringify({heroText:val})})}
   showToast('カバーテキストを変更しました')
+}
+
+// ─── アップロード ─────────────────────────────────
+let uploadAlbumToken=''
+
+function openUpload(albumToken){uploadAlbumToken=albumToken;document.getElementById('uploadList').innerHTML='';document.getElementById('uploadFileInput').value='';document.getElementById('uploadResizeSw').className=`sw${uploadResizeOn?' on':''}`;document.getElementById('moUpload').classList.add('on')}
+function closeUpload(){document.getElementById('moUpload').classList.remove('on')}
+function onFilesSelected(){const files=Array.from(document.getElementById('uploadFileInput').files);if(!files.length)return;uploadFiles(files)}
+;(()=>{
+  const zone=document.getElementById('uploadDropZone')
+  if(!zone)return
+  const setActive=on=>{zone.style.background=on?'var(--sur)':'var(--bg)';zone.style.borderColor=on?'var(--tx)':'var(--bdm)'}
+  ;['dragenter','dragover'].forEach(ev=>zone.addEventListener(ev,e=>{e.preventDefault();e.stopPropagation();setActive(true)}))
+  ;['dragleave','drop'].forEach(ev=>zone.addEventListener(ev,e=>{e.preventDefault();e.stopPropagation();setActive(false)}))
+  zone.addEventListener('drop',e=>{
+    const files=Array.from(e.dataTransfer?.files||[]).filter(f=>f.type.startsWith('image/')||f.type.startsWith('video/'))
+    if(files.length)uploadFiles(files)
+  })
+})()
+
+let uploadResizeOn=localStorage.getItem('uploadResize3000')!=='false'
+function toggleUploadResize(){
+  uploadResizeOn=!uploadResizeOn
+  localStorage.setItem('uploadResize3000',uploadResizeOn?'true':'false')
+  document.getElementById('uploadResizeSw').className=`sw${uploadResizeOn?' on':''}`
+}
+async function resizeImageFile(f,maxEdge){
+  if(!/^image\/jpe?g$/i.test(f.type))return f
+  try{
+    const bitmap=await createImageBitmap(f)
+    const longEdge=Math.max(bitmap.width,bitmap.height)
+    if(longEdge<=maxEdge){bitmap.close?.();return f}
+    const scale=maxEdge/longEdge
+    const w=Math.round(bitmap.width*scale),h=Math.round(bitmap.height*scale)
+    const canvas=document.createElement('canvas')
+    canvas.width=w;canvas.height=h
+    canvas.getContext('2d').drawImage(bitmap,0,0,w,h)
+    bitmap.close?.()
+    const blob=await new Promise(res=>canvas.toBlob(res,'image/jpeg',0.92))
+    if(!blob)return f
+    return new File([blob],f.name,{type:'image/jpeg',lastModified:f.lastModified})
+  }catch{return f}
+}
+async function uploadFiles(files){
+  const list=document.getElementById('uploadList')
+  const items={}
+  // 既存ファイルとの重複（同名）チェック用に現在のアルバムのファイル名一覧を取得
+  const existingNames=new Set()
+  try{
+    const fr=await fetch(`${W}/api/admin/albums/${uploadAlbumToken}/files`,{headers:{Authorization:`Bearer ${tok}`}})
+    if(fr.ok){const fd=await fr.json();[...(fd.photos||[]),...(fd.videos||[])].forEach(f=>existingNames.add(f.name))}
+  }catch{}
+  for(let f of files){
+    if(uploadResizeOn)f=await resizeImageFile(f,3000)
+    const key=f.name+f.size
+    const item=document.createElement('div')
+    item.style.cssText='display:flex;flex-direction:column;gap:4px;padding:8px 12px;background:var(--bg);border:1px solid var(--bdm);border-radius:8px;font-size:13px;'
+    const isVideo=f.type.startsWith('video/')
+    const sizeStr=f.size>1048576?`${(f.size/1048576).toFixed(1)}MB`:`${Math.round(f.size/1024)}KB`
+    const isDupl=existingNames.has(f.name)
+    const stHtml=isDupl?`<span id="st_${key}" style="color:#c0392b;font-size:12px;">⚠️ 重複（スキップ）</span>`:`<span id="st_${key}" style="color:var(--mt);font-size:12px;">待機中</span>`
+    item.innerHTML=`<div style="display:flex;align-items:center;gap:8px;"><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${f.name}</span><span style="color:var(--mt);font-size:11px;">${isVideo?'🎬':'🖼'} ${sizeStr}</span>${stHtml}</div><div id="pb_${key}" style="display:none;height:3px;background:var(--bdm);border-radius:2px;overflow:hidden;"><div id="pbi_${key}" style="height:100%;background:var(--tx);width:0%;transition:width .3s;"></div></div>`
+    list.appendChild(item)
+    if(isDupl)continue
+    existingNames.add(f.name) // 同じバッチ内での重複選択も1件目のみアップロード
+    items[key]={f,item}
+  }
+  async function uploadOne(key,f){
+    const st=document.getElementById(`st_${key}`)
+    const pb=document.getElementById(`pb_${key}`)
+    const pbi=document.getElementById(`pbi_${key}`)
+    if(st)st.textContent='アップロード中...'
+    try{
+      if(pb)pb.style.display='block'
+      const sesRes=await fetch(`${W}/api/admin/albums/${uploadAlbumToken}/upload/session`,{method:'POST',headers:{Authorization:`Bearer ${tok}`,'Content-Type':'application/json'},body:JSON.stringify({name:f.name,mimeType:f.type||'application/octet-stream',size:f.size})})
+      if(!sesRes.ok)throw new Error(`Session failed: ${sesRes.status}`)
+      const{sessionUri}=await sesRes.json()
+      const CHUNK=8*1024*1024
+      let offset=0,uploadOk=false
+      while(offset<f.size){
+        const end=Math.min(offset+CHUNK,f.size)
+        const chunk=f.slice(offset,end)
+        const cr=`bytes ${offset}-${end-1}/${f.size}`
+        const cRes=await fetch(`${W}/api/admin/albums/${uploadAlbumToken}/upload/chunk`,{method:'POST',headers:{Authorization:`Bearer ${tok}`,'Content-Type':f.type||'application/octet-stream','X-Session-Uri':sessionUri,'X-Content-Range':cr},body:chunk})
+        if(!cRes.ok)throw new Error(`Chunk failed: ${cRes.status}`)
+        const cData=await cRes.json()
+        if(cData.status==='continue'){offset=end;if(pbi)pbi.style.width=Math.round(end/f.size*100)+'%';continue}
+        if(cData.status==='complete'){uploadOk=true;break}
+        throw new Error('Unexpected chunk response')
+      }
+      if(!uploadOk)throw new Error('Upload incomplete')
+      if(pbi)pbi.style.width='100%'
+      if(st){st.textContent='✅ 完了';st.style.color='#1a7a3c'}
+    }catch(e){if(st){st.textContent='❌ 失敗';st.style.color='#c0392b'}}
+  }
+  // 同時4件までのプールで並列アップロード（1件ずつ逐次にすると通信待ちが直列化して遅い）
+  const CONCURRENCY=4
+  const queue=Object.entries(items)
+  async function worker(){
+    while(queue.length){
+      const[key,{f}]=queue.shift()
+      await uploadOne(key,f)
+    }
+  }
+  await Promise.all(Array.from({length:Math.min(CONCURRENCY,queue.length)},worker))
+  await loadAlbums()
 }
 
 // ─── ファイル管理 ─────────────────────────────────────
