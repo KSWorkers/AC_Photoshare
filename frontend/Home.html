@@ -928,7 +928,10 @@ async function saveSettings(){
 }
 
 // ─── 選定リンク発行 ────────────────────────────────
-let selectAlbumToken='', selectUrl='', issueFlagOn=false, issueFlagDefs=[]
+let selectAlbumToken='', selectUrl='', issueFlagOn=false, issueFlagDefs=[], issueSelectionCounts={}
+
+// 内部の名前（key）がぶつからないように、時刻に加えて乱数も混ぜる
+function genFlagKey(){return`flag_${Date.now()}_${Math.random().toString(36).slice(2,8)}`}
 
 async function openSelect(albumToken){
   selectAlbumToken=albumToken
@@ -938,6 +941,19 @@ async function openSelect(albumToken){
   issueFlagDefs=album?.flagDefs?JSON.parse(JSON.stringify(album.flagDefs)):JSON.parse(JSON.stringify(DEFAULT_CLIENT_FLAG_DEFS))
   document.getElementById('issueFlagSw').className=`sw${issueFlagOn?' on':''}`
   document.getElementById('issueFlagFd').style.display=issueFlagOn?'block':'none'
+  issueSelectionCounts={}
+  if(album?.selectToken){
+    // 削除・上限変更の前に「すでに何枚選ばれているか」を確認できるよう、現在の選定内容を読んでおく
+    try{
+      const r=await fetch(`${W}/api/admin/albums/${albumToken}/select`,{headers:{Authorization:`Bearer ${tok}`}})
+      if(r.ok){
+        const d=await r.json()
+        for(const flags of Object.values(d.selections||{})){
+          for(const f of(Array.isArray(flags)?flags:[]))issueSelectionCounts[f]=(issueSelectionCounts[f]||0)+1
+        }
+      }
+    }catch{}
+  }
   if(issueFlagOn)renderIssueFlagDefsEditor()
   if(album?.selectToken){
     selectUrl=`${location.origin}/select.html?token=${album.selectToken}`
@@ -950,6 +966,7 @@ async function openSelect(albumToken){
     document.getElementById('issueNoUrlPanel').style.display='block'
     document.getElementById('issueUrlBtn').textContent='選定URLを発行する'
   }
+  updateIssueUrlBtnState()
   document.getElementById('moSelectIssue').classList.add('on')
 }
 
@@ -959,6 +976,16 @@ function toggleIssueFlag(){
   document.getElementById('issueFlagFd').style.display=issueFlagOn?'block':'none'
   if(issueFlagOn&&!issueFlagDefs.length)issueFlagDefs=JSON.parse(JSON.stringify(DEFAULT_CLIENT_FLAG_DEFS))
   if(issueFlagOn)renderIssueFlagDefsEditor()
+  updateIssueUrlBtnState()
+}
+
+// 商品・項目が0件（フラグONなのに1つも無い）のときは発行ボタンを押せないようにする
+function updateIssueUrlBtnState(){
+  const btn=document.getElementById('issueUrlBtn')
+  if(!btn)return
+  const empty=issueFlagOn&&issueFlagDefs.length===0
+  btn.disabled=empty
+  btn.title=empty?'商品・項目を1つ以上追加してください':''
 }
 
 function renderIssueFlagDefsEditor(){
@@ -971,11 +998,30 @@ function renderIssueFlagDefsEditor(){
         style="width:70px;border:1px solid var(--bdm);border-radius:6px;padding:4px 6px;font-size:12px;" onchange="updateIssueFlagDef(this)">
       <button onclick="removeIssueFlagDef(${i})" style="border:none;background:none;color:var(--dg);cursor:pointer;font-size:16px;">×</button>
     </div>`).join('')
+  updateIssueUrlBtnState()
 }
 
-function updateIssueFlagDef(el){const i=parseInt(el.dataset.idx),field=el.dataset.field;if(field==='max')issueFlagDefs[i].max=parseInt(el.value)||0;else issueFlagDefs[i][field]=el.value}
-function addIssueFlagDef(){issueFlagDefs.push({key:`flag_${Date.now()}`,label:'',max:0});renderIssueFlagDefsEditor()}
-function removeIssueFlagDef(i){issueFlagDefs.splice(i,1);renderIssueFlagDefsEditor()}
+function updateIssueFlagDef(el){
+  const i=parseInt(el.dataset.idx),field=el.dataset.field,fd=issueFlagDefs[i]
+  if(field==='max'){
+    const newVal=parseInt(el.value)||0
+    const cnt=issueSelectionCounts[fd.key]||0
+    if(cnt>newVal){
+      if(!confirm(`${fd.label||'(名称未設定)'}：${cnt}枚が選ばれています。上限を${newVal}に減らしますか？`)){
+        el.value=fd.max
+        return
+      }
+    }
+    fd.max=newVal
+  }else fd[field]=el.value
+}
+function addIssueFlagDef(){issueFlagDefs.push({key:genFlagKey(),label:'',max:0});renderIssueFlagDefsEditor()}
+function removeIssueFlagDef(i){
+  const fd=issueFlagDefs[i],cnt=issueSelectionCounts[fd.key]||0
+  if(cnt>0&&!confirm(`${fd.label||'(名称未設定)'}：${cnt}枚が選ばれています。削除しますか？`))return
+  issueFlagDefs.splice(i,1)
+  renderIssueFlagDefsEditor()
+}
 
 async function generateSelectUrl(){
   const btn=document.getElementById('issueUrlBtn')
@@ -984,14 +1030,15 @@ async function generateSelectUrl(){
   try{
     const res=await fetch(`${W}/api/admin/albums/${selectAlbumToken}/select`,{method:'POST',headers:{Authorization:`Bearer ${tok}`}})
     const d=await res.json()
+    if(!res.ok)throw new Error(d.error||'Error')
     selectUrl=`${location.origin}/select.html?token=${d.selectToken}`
     document.getElementById('selectUrlText').textContent=selectUrl
     document.getElementById('issueUrlPanel').style.display='block'
     document.getElementById('issueNoUrlPanel').style.display='none'
     await loadAlbums()
     showToast('選定URLを発行しました')
-  }catch{showToast('発行に失敗しました')}
-  finally{btn.innerHTML='再発行する';btn.disabled=false}
+  }catch(e){showToast(`発行に失敗しました: ${e.message||e}`)}
+  finally{btn.innerHTML='再発行する';btn.disabled=false;updateIssueUrlBtnState()}
 }
 
 function copySelectUrl(){navigator.clipboard?.writeText(selectUrl).catch(()=>{});showToast('選定URLをコピーしました')}
@@ -1364,7 +1411,7 @@ function renderAlbumFlagDefsEditor(){
 }
 
 function updateAlbumFlagDef(el){const i=parseInt(el.dataset.idx),field=el.dataset.field;if(field==='max')albumFlagDefs[i].max=parseInt(el.value)||0;else albumFlagDefs[i][field]=el.value}
-function addAlbumFlagDef(){albumFlagDefs.push({key:`flag_${Date.now()}`,label:'',max:0});renderAlbumFlagDefsEditor()}
+function addAlbumFlagDef(){albumFlagDefs.push({key:genFlagKey(),label:'',max:0});renderAlbumFlagDefsEditor()}
 function removeAlbumFlagDef(i){albumFlagDefs.splice(i,1);renderAlbumFlagDefsEditor()}
 
 // ─── QRコード ─────────────────────────────────────────
