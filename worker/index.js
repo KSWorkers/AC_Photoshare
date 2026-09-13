@@ -613,6 +613,8 @@ export default {
         if(!album)return errR('Not found',404)
         // 既存のselect URLを返す or 新規生成
         if(album.selectToken){return jsonR({selectToken:album.selectToken,url:`${env.SITE_URL}/select.html?token=${album.selectToken}`})}
+        // 商品・項目が0件（空配列を明示的に指定）だと、お客様が何も選べない選定URLになってしまう
+        if(Array.isArray(album.flagDefs)&&album.flagDefs.length===0)return errR('商品・項目を1つ以上設定してください',400)
         const selectToken=genSelectToken()
         const flagDefs=await getEffectiveFlagDefs(env,album)
         await saveSelect(env,selectToken,{albumToken:t,createdAt:new Date().toISOString(),submitted:false,submittedAt:null,flagDefs,selections:{},rev:0})
