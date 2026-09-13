@@ -344,7 +344,7 @@ const saveSelect=(env,t,d)=>env.ALBUMS.put(`select:${t}`,JSON.stringify(d))
 
 // ─── レスポンス ─────────────────────────────────────
 
-const CORS={'Access-Control-Allow-Origin':'*','Access-Control-Allow-Methods':'GET,POST,PATCH,DELETE,OPTIONS','Access-Control-Allow-Headers':'Content-Type,Authorization'}
+const CORS={'Access-Control-Allow-Origin':'*','Access-Control-Allow-Methods':'GET,POST,PATCH,DELETE,OPTIONS','Access-Control-Allow-Headers':'Content-Type,Authorization,X-Session-Uri,X-Content-Range'}
 const jsonR=(d,s=200)=>new Response(JSON.stringify(d),{status:s,headers:{'Content-Type':'application/json',...CORS}})
 const errR=(m,s=400)=>jsonR({error:m},s)
 // HTMLに直接埋め込む値のエスケープ（アルバム名などに &<>"' が含まれても表示が崩れないように）
