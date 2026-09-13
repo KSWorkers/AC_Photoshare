@@ -258,6 +258,27 @@ const getAlbum=(env,t)=>env.ALBUMS.get(`album:${t}`,'json')
 const saveAlbum=(env,t,a)=>env.ALBUMS.put(`album:${t}`,JSON.stringify(a))
 async function listAlbums(env){const l=await env.ALBUMS.list({prefix:'album:'});return Promise.all(l.keys.map(async k=>{const d=await env.ALBUMS.get(k.name,'json');return{token:k.name.replace('album:',''),...d}}))}
 
+// 保存の直前に読み直して、こちらが持っている項目だけを重ねる。
+// 数え直しの最中に別のタブで名前などを編集されると、古い内容で上書きして編集が消えてしまうため。
+async function mergeAlbum(env,t,fields){
+  const latest=await getAlbum(env,t)
+  if(!latest)return null
+  const merged={...latest,...fields}
+  await saveAlbum(env,t,merged)
+  return merged
+}
+
+// 閲覧数・ダウンロード数。アルバムの記録の中に持つ（stats:{views,downloads}）。
+// 記録に失敗しても本体の動作を止めないよう、呼び出し側はctx.waitUntilで待たずに走らせる。
+async function bumpStat(env,t,field){
+  try{
+    const a=await getAlbum(env,t)
+    if(!a)return
+    const s=a.stats||{views:a.viewCount||0,downloads:0}
+    await mergeAlbum(env,t,{stats:{...s,[field]:(s[field]||0)+1,lastAt:new Date().toISOString()}})
+  }catch(e){console.error('統計の記録に失敗',t,field,e)}
+}
+
 // アルバム削除の実処理（単体削除・一括削除で共通。以前は同じ処理が2か所に書かれていた）。
 // deleteDriveがtrueのときだけDrive側を触る：動画の共有取り消しが「取り消せたと確認できる」まで終わらせ、
 // 続けてDriveのフォルダ削除が成功（またはすでに無い＝404）したことを確かめてから、
@@ -716,7 +737,7 @@ export default {
           return errR('Expired',410)
         }
         if(album.password){const pw=url.searchParams.get('pw');if(!pw||!await verifyPassword(pw,album.password))return jsonR({requirePassword:true,name:album.name})}
-        ctx.waitUntil(saveAlbum(env,t,{...album,viewCount:(album.viewCount||0)+1}).catch(()=>{}))
+        ctx.waitUntil(bumpStat(env,t,'views'))
         const at=await getAccessToken(env,true)
         const files=await listPhotos(album.folderId,at)
         const totalSize=files.reduce((s,f)=>s+parseInt(f.size||0),0)
@@ -805,6 +826,22 @@ export default {
         const blob=await imgRes.blob()
         const disp=size==='full'?`inline; filename="${fname}"`:`inline; filename="${size}_${fname}"`
         return new Response(blob,{headers:{'Content-Type':imgRes.headers.get('Content-Type')||'image/jpeg','Content-Disposition':disp,'Cache-Control':'private, max-age=3600',...CORS}})
+      }
+
+      // ダウンロードを1回として記録する（認証付き）。
+      // 写真1枚ごとに数えると、ZIPでまとめてダウンロードしたときに同じ記録への
+      // 書き込みが連発し、数え損ねる・書き込み回数を無駄に消費するため、
+      // 1回のダウンロード操作につき1回だけ呼んでもらう想定
+      if(path==='/api/download-log'&&req.method==='POST'){
+        const albumToken=url.searchParams.get('token')
+        if(!albumToken)return errR('Album token required',401)
+        const album=await getAlbum(env,albumToken)
+        if(!album)return errR('Invalid album token',403)
+        if(album.published===false)return errR('Not published',403)
+        if(album.expiresAt&&new Date(album.expiresAt)<new Date())return errR('Expired',410)
+        if(album.password){const pw=url.searchParams.get('pw');if(!pw||!await verifyPassword(pw,album.password))return errR('Unauthorized',401)}
+        ctx.waitUntil(bumpStat(env,albumToken,'downloads'))
+        return jsonR({ok:true})
       }
 
       // ══ お客さんアップロード チャンク転送（大容量動画用）══

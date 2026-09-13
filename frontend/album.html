@@ -744,6 +744,7 @@ function toggleSel(){selMode=!selMode;document.getElementById('grid').classList.
 function cancelSel(){selMode=false;selIds.clear();lastSel=-1;document.querySelectorAll('.gi').forEach(el=>el.classList.remove('sel'));document.getElementById('grid').classList.remove('sel-mode');document.getElementById('selBar').classList.remove('on');document.getElementById('selBtn').textContent=t('selBtn')}
 
 function photoUrl(p,size){const params=new URLSearchParams({size,name:p.name,token});if(pw)params.set('pw',pw);return`${W}/api/photo/${p.id}?${params}`}
+function logDownload(){const params=new URLSearchParams({token});if(pw)params.set('pw',pw);fetch(`${W}/api/download-log?${params}`,{method:'POST'}).catch(()=>{})}
 
 function showProgress(title){document.getElementById('progressTtl').textContent=title;document.getElementById('progressModal').classList.add('on')}
 function hideProgress(){document.getElementById('progressModal').classList.remove('on')}
@@ -829,12 +830,13 @@ async function downloadZip(list,size){
     }
     const totalParts=downloadedParts||1
     showToast(totalParts>1?t('toastDlDoneMulti',totalParts):t('toastDlDone'))
+    logDownload()
   }catch{showToast(t('toastErr'))}
   finally{setTimeout(hideProgress,800)}
 }
 function downloadAll(size){closeAllMenus();downloadZip(photos,size)}
 function downloadSel(size){closeAllMenus();downloadZip([...selIds].map(i=>photos[i]),size);cancelSel()}
-function dlCurrent(size){closeAllMenus();const p=photos[cur];window.open(photoUrl(p,size),'_blank');}
+function dlCurrent(size){closeAllMenus();const p=photos[cur];window.open(photoUrl(p,size),'_blank');logDownload()}
 
 function toggleDlMenu(e){e.stopPropagation();document.getElementById('allDlMenu').classList.toggle('on')}
 function toggleSelDl(e){e.stopPropagation();document.getElementById('selDlMenu').classList.toggle('on')}
