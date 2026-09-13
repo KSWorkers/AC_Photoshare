@@ -147,6 +147,14 @@ body{font-family:-apple-system,'Hiragino Sans',sans-serif;background:var(--bg);c
 
 #toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--text);color:#fff;padding:10px 18px;border-radius:100px;font-size:13px;font-weight:500;z-index:9999;transition:transform .3s,opacity .3s;opacity:0;pointer-events:none;white-space:nowrap;}
 
+.guide-prompt{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(120px);background:#fff;color:var(--text);border:1px solid var(--border);box-shadow:0 4px 16px rgba(44,36,24,.15);padding:12px 16px;border-radius:14px;z-index:9998;display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:center;transition:transform .3s,opacity .3s;opacity:0;pointer-events:none;max-width:92vw;}
+.guide-prompt.on{transform:translateX(-50%) translateY(0);opacity:1;pointer-events:auto;}
+.guide-prompt span{font-size:13px;}
+.guide-prompt-btns{display:flex;gap:8px;flex-shrink:0;}
+.guide-prompt-btns button{border:none;border-radius:8px;padding:6px 12px;font-size:12px;cursor:pointer;font-weight:500;}
+.guide-prompt-btns button:first-child{background:var(--text);color:#fff;}
+.guide-prompt-btns button:last-child{background:var(--bg-alt,#f0efe8);color:var(--muted);}
+
 /* 動画セクション */
 .video-section{padding:20px 0 0;}
 .video-hd{padding:0 0 12px;font-size:15px;font-weight:600;display:flex;align-items:center;gap:6px;border-bottom:1px solid var(--border);margin-bottom:12px;}
@@ -338,6 +346,15 @@ body{font-family:-apple-system,'Hiragino Sans',sans-serif;background:var(--bg);c
 
 <div id="toast"></div>
 
+<!-- 保存後のガイド案内（1回だけ出す） -->
+<div id="guidePrompt" class="guide-prompt">
+  <span id="guidePromptText"></span>
+  <div class="guide-prompt-btns">
+    <button id="guidePromptOpenBtn" onclick="openGuidePrompt()"></button>
+    <button id="guidePromptCloseBtn" onclick="dismissGuidePrompt()"></button>
+  </div>
+</div>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script>
 const W = 'https://ac-photoshare.nikkomaedori.workers.dev'
@@ -381,6 +398,8 @@ const T = {
     uploadWait: '待機中', uploadUploading: 'アップロード中', uploadOk: '✓', uploadFailed: '✗',
     custDelConfirm: 'このファイルを削除しますか？',
     guideLink: '📖 写真・動画の保存方法ガイドを見る →',
+    guidePromptText: '保存方法ガイドを見ますか？',
+    guidePromptOpen: 'ガイドを見る', guidePromptClose: '閉じる',
     photoCount: n => `${n}枚`,
     expiry: d => `期限：${d}`,
     errNotfound: 'アルバムが見つかりません', errNotfoundSub: 'URLをご確認ください。',
@@ -421,6 +440,8 @@ const T = {
     uploadWait: 'Waiting', uploadUploading: 'Uploading', uploadOk: '✓', uploadFailed: '✗',
     custDelConfirm: 'Delete this file?',
     guideLink: '📖 How to save photos & videos →',
+    guidePromptText: 'Would you like to see the saving guide?',
+    guidePromptOpen: 'View guide', guidePromptClose: 'Close',
     photoCount: n => `${n} photos`,
     expiry: d => `Expires: ${d}`,
     errNotfound: 'Album not found', errNotfoundSub: 'Please check the URL.',
@@ -746,6 +767,18 @@ function cancelSel(){selMode=false;selIds.clear();lastSel=-1;document.querySelec
 function photoUrl(p,size){const params=new URLSearchParams({size,name:p.name,token});if(pw)params.set('pw',pw);return`${W}/api/photo/${p.id}?${params}`}
 function logDownload(){const params=new URLSearchParams({token});if(pw)params.set('pw',pw);fetch(`${W}/api/download-log?${params}`,{method:'POST'}).catch(()=>{})}
 
+// ── 保存後のガイド案内（1回だけ）────────────────────────────
+const GUIDE_PROMPT_DISMISSED_KEY='dlGuidePromptDismissed'
+function maybeShowGuidePrompt(){
+  if(localStorage.getItem(GUIDE_PROMPT_DISMISSED_KEY))return
+  document.getElementById('guidePromptText').textContent=t('guidePromptText')
+  document.getElementById('guidePromptOpenBtn').textContent=t('guidePromptOpen')
+  document.getElementById('guidePromptCloseBtn').textContent=t('guidePromptClose')
+  document.getElementById('guidePrompt').classList.add('on')
+}
+function openGuidePrompt(){window.open('/download_guide.html','_blank');dismissGuidePrompt()}
+function dismissGuidePrompt(){localStorage.setItem(GUIDE_PROMPT_DISMISSED_KEY,'1');document.getElementById('guidePrompt').classList.remove('on')}
+
 function showProgress(title){document.getElementById('progressTtl').textContent=title;document.getElementById('progressModal').classList.add('on')}
 function hideProgress(){document.getElementById('progressModal').classList.remove('on')}
 function updateProgress(done,total){document.getElementById('progressBar').style.width=Math.round(done/total*100)+'%';document.getElementById('progressTxt').textContent=t('progressCount',done,total)}
@@ -831,12 +864,13 @@ async function downloadZip(list,size){
     const totalParts=downloadedParts||1
     showToast(totalParts>1?t('toastDlDoneMulti',totalParts):t('toastDlDone'))
     logDownload()
+    maybeShowGuidePrompt()
   }catch{showToast(t('toastErr'))}
   finally{setTimeout(hideProgress,800)}
 }
 function downloadAll(size){closeAllMenus();downloadZip(photos,size)}
 function downloadSel(size){closeAllMenus();downloadZip([...selIds].map(i=>photos[i]),size);cancelSel()}
-function dlCurrent(size){closeAllMenus();const p=photos[cur];window.open(photoUrl(p,size),'_blank');logDownload()}
+function dlCurrent(size){closeAllMenus();const p=photos[cur];window.open(photoUrl(p,size),'_blank');logDownload();maybeShowGuidePrompt()}
 
 function toggleDlMenu(e){e.stopPropagation();document.getElementById('allDlMenu').classList.toggle('on')}
 function toggleSelDl(e){e.stopPropagation();document.getElementById('selDlMenu').classList.toggle('on')}
