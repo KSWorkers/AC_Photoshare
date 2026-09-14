@@ -573,9 +573,13 @@ export default {
 
       if(albumTokenMatch&&req.method==='PATCH'){
         if(!await isAdmin(req,env))return errR('Unauthorized',401)
-        const t=albumTokenMatch[1],album=await getAlbum(env,t)
-        if(!album)return errR('Not found',404)
+        const t=albumTokenMatch[1]
+        if(!await getAlbum(env,t))return errR('Not found',404)
         const body=await req.json()
+        // 重ねる直前にもう一度読み込む。読んでいる間（req.jsonの待ち時間ぶん）に
+        // 他の端末が別の項目を先に保存していても、その内容を巻き戻さないようにするため
+        const album=await getAlbum(env,t)
+        if(!album)return errR('Not found',404)
         const updated={
           ...album,
           name:body.name??album.name,
