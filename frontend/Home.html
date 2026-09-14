@@ -25,6 +25,9 @@ body{font-family:-apple-system,'Hiragino Sans',sans-serif;background:var(--bg);c
 .fd{display:flex;flex-direction:column;gap:6px;}
 .fd label{font-size:13px;font-weight:500;color:var(--mt);}
 .fd input{width:100%;min-width:0;padding:9px 12px;border:1px solid var(--bdm);border-radius:8px;font-size:14px;color:var(--tx);background:var(--sur);outline:none;transition:border-color .15s;}
+/* iOS Safariのinput[type=date]は幅指定を無視して内部の固定幅で表示されることがある。
+   width:1px + min-width:100% にすると、外側の幅いっぱいに縮めて表示できる */
+.fd input[type="date"]{width:1px;min-width:100%;}
 .fd input:focus{border-color:var(--tx);}
 .le{font-size:13px;color:var(--dg);margin-top:10px;display:none;}
 .main{max-width:960px;margin:0 auto;padding:24px 20px;display:none;}
