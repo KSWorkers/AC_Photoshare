@@ -1369,7 +1369,24 @@ async function openSelectResults(albumToken){
         </div>`
       }).filter(Boolean).join('')
       const productDlBtn=isMultiProduct?`<button class="btn btn-p btn-sm" onclick="downloadByProduct()" style="margin-bottom:16px;">📦 商品ごとにフォルダ分けしてZIPでDL</button>`:''
-      container.innerHTML=productDlBtn+(productsHtml||'<div style="font-size:13px;color:var(--mt);">選定された写真がありません。</div>')
+      // 商品構成を変えたあとも、それ以前に届いていた選定（今の構成には無い項目）は
+      // 見出し付きでここにまとめて残す。データそのものは消していない
+      const retiredDefs=d.retiredFlagDefs||[]
+      const retiredHtml=retiredDefs.map(fd=>{
+        const photos=byFlag[fd.key]||[]
+        if(!photos.length)return''
+        return `<div style="margin-bottom:16px;">
+          <div style="font-size:13px;font-weight:600;margin-bottom:8px;">${fd.label}（${photos.length}枚）</div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;">${photos.map(p2=>{const src=p2.thumb?`${W}/api/admin/thumb/${p2.id}?session=${tok}`:'';return`<img src="${src}" style="width:72px;height:54px;object-fit:cover;border-radius:6px;background:#eee;" title="${p2.name||''}" onerror="this.style.background='#eee'">`}).join('')}</div>
+          <button class="btn btn-s btn-sm" onclick="downloadByFlag('${fd.key}','${fd.label}')">📥 ${fd.label}をZIPでDL</button>
+        </div>`
+      }).filter(Boolean).join('')
+      const retiredSection=retiredHtml?`<div style="margin-top:20px;">
+        <div style="font-size:14px;font-weight:700;margin-bottom:10px;padding-bottom:6px;border-bottom:2px solid var(--bdm);color:var(--mt);">以前の選定</div>
+        <div style="font-size:12px;color:var(--mt);margin-bottom:10px;">商品構成を変更する前に届いていた選定です。今の商品構成には含まれていません。</div>
+        ${retiredHtml}
+      </div>`:''
+      container.innerHTML=productDlBtn+(productsHtml||'<div style="font-size:13px;color:var(--mt);">選定された写真がありません。</div>')+retiredSection
     }
     const log=d.activityLog||[]
     if(log.length>0||d.submitted){
