@@ -481,7 +481,7 @@ let tok = sessionStorage.getItem('adminToken') || localStorage.getItem('adminTok
 
 let albums=[], filtered=[]
 let filter='all', bulk=false, selToks=new Set(), lastBulkSel=-1
-let editTok='', nExpOn=true, nPwOn=false, ePubOn=true, eExpOn=false, ePwOn=false, eUploadOn=false, eVideoUploadOn=false, eManualPub=false
+let editTok='', nExpOn=true, nPwOn=false, ePubOn=true, eExpOn=false, ePwOn=false, eUploadOn=false, eVideoUploadOn=false, eManualPub=false, editOriginal={}
 let deleteTarget=null
 
 if (tok) initMain()
@@ -550,12 +550,27 @@ function togglePin(token,e){
   localStorage.setItem('pinnedAlbums',JSON.stringify([...pinnedTokens]))
   applyFilter()
 }
+// 保存した直後にKVへの反映が間に合わず、一覧を読み直すと古い値が返ってくることがある。
+// 保存した内容を少しの間だけ覚えておき、一覧を読み込むたびに重ねて表示することで、
+// 「保存したのに一覧では戻っている」ように見えるのを防ぐ
+const RECENT_SAVE_MS=30000
+let recentSaves={}
+function applyRecentSaves(){
+  const now=Date.now()
+  for(const token of Object.keys(recentSaves)){
+    const rs=recentSaves[token]
+    if(now-rs.at>RECENT_SAVE_MS){delete recentSaves[token];continue}
+    const a=albums.find(x=>x.token===token)
+    if(a)Object.assign(a,rs.fields)
+  }
+}
+
 async function loadAlbums() {
   try {
     const r=await fetch(`${W}/api/admin/albums`,{headers:{Authorization:`Bearer ${tok}`}})
     if(!r.ok){document.getElementById('grid').innerHTML=`<div style="color:#c0392b;font-size:13px;">読み込みに失敗しました（HTTP ${r.status}）<br><button class="btn btn-s btn-sm" style="margin-top:8px;" onclick="loadAlbums()">再読み込み</button></div>`;return}
     const d=await r.json()
-    albums=d.albums||[]; applyFilter(); checkNotifications()
+    albums=d.albums||[]; applyRecentSaves(); applyFilter(); checkNotifications()
   } catch(e) { document.getElementById('grid').innerHTML=`<div style="color:#c0392b;font-size:13px;">読み込みに失敗しました：${e.message||e}<br><button class="btn btn-s btn-sm" style="margin-top:8px;" onclick="loadAlbums()">再読み込み</button></div>` }
 }
 
@@ -751,6 +766,22 @@ function openEdit(token){
   document.getElementById('albumFlagSw').className=`sw${albumFlagOn?' on':''}`
   document.getElementById('albumFlagFd').style.display=albumFlagOn?'block':'none'
   if(albumFlagOn)renderAlbumFlagDefsEditor()
+  // 開いた時点の内容を覚えておく。保存時にここと比べて、実際に変えた項目だけを送るため
+  // （画面が持っている値を丸ごと送ると、他の端末が先に変えた項目を巻き戻してしまう）
+  editOriginal={
+    name:a.name||'',
+    published:ePubOn,
+    allowCustomerUpload:eUploadOn,
+    allowVideoUpload:eVideoUploadOn,
+    expOn:eExpOn,
+    expRaw:document.getElementById('eExp').value,
+    heroText,
+    heroFont:a.heroFont||'josefin',
+    lang:a.lang||'ja',
+    siteTitle:a.siteTitle||null,
+    flagDefsOn:albumFlagOn,
+    flagDefsJson:albumFlagOn?JSON.stringify(albumFlagDefs):null,
+  }
   document.getElementById('moEdit').classList.add('on')
 }
 function closeEdit(){document.getElementById('moEdit').classList.remove('on')}
@@ -776,15 +807,38 @@ async function saveEdit(){
       ePubOn=true
       document.getElementById('ePubSw').className='sw on'
     }
-    const body={name:document.getElementById('eName').value.trim(),published:ePubOn,allowCustomerUpload:eUploadOn,allowVideoUpload:eVideoUploadOn,expiresAt:newExp,heroText:getHeroText('eHeroTextSel','eHeroCustom'),heroFont:document.getElementById('eHeroFont').value,flagDefs:albumFlagOn?albumFlagDefs:null,lang:document.getElementById('eAlbumLang').value,siteTitle:document.getElementById('eSiteTitle').value.trim()||null}
+    // 実際に変えた項目だけを送る。開いたときと同じ項目は含めない
+    // （画面の値を丸ごと送ると、他の端末が先に変えた項目を巻き戻してしまうため）
+    const body={}
+    const name=document.getElementById('eName').value.trim()
+    if(name!==editOriginal.name)body.name=name
+    if(ePubOn!==editOriginal.published)body.published=ePubOn
+    if(eUploadOn!==editOriginal.allowCustomerUpload)body.allowCustomerUpload=eUploadOn
+    if(eVideoUploadOn!==editOriginal.allowVideoUpload)body.allowVideoUpload=eVideoUploadOn
+    const expChanged=eExpOn!==editOriginal.expOn||(eExpOn&&document.getElementById('eExp').value!==editOriginal.expRaw)
+    if(expChanged)body.expiresAt=newExp
+    const heroText=getHeroText('eHeroTextSel','eHeroCustom')
+    if(heroText!==editOriginal.heroText)body.heroText=heroText
+    const heroFont=document.getElementById('eHeroFont').value
+    if(heroFont!==editOriginal.heroFont)body.heroFont=heroFont
+    const flagDefsChanged=albumFlagOn!==editOriginal.flagDefsOn||(albumFlagOn&&JSON.stringify(albumFlagDefs)!==editOriginal.flagDefsJson)
+    if(flagDefsChanged)body.flagDefs=albumFlagOn?albumFlagDefs:null
+    const lang=document.getElementById('eAlbumLang').value
+    if(lang!==editOriginal.lang)body.lang=lang
+    const siteTitle=document.getElementById('eSiteTitle').value.trim()||null
+    if(siteTitle!==editOriginal.siteTitle)body.siteTitle=siteTitle
     const pwInput=document.getElementById('ePw')
     if(ePwOn){
       if(pwInput.dataset.clear==='true'){body.password=null;delete pwInput.dataset.clear}
       else if(pwInput.value.trim())body.password=pwInput.value.trim()
     }
+    if(Object.keys(body).length===0){closeEdit();return}
     const r=await fetch(`${W}/api/admin/albums/${editTok}`,{method:'PATCH',headers:{Authorization:`Bearer ${tok}`,'Content-Type':'application/json'},body:JSON.stringify(body)})
     if(!r.ok){const d=await r.json();throw new Error(d.error||'Error')}
-    if(a){Object.assign(a,body);if(!('updatedAt'in body))a.updatedAt=new Date().toISOString()}
+    // 保存した内容をこの画面上ですぐ反映する。一覧を読み直したときにも、
+    // KVの反映待ちで古い値が返ってきてこの内容を巻き戻さないよう、しばらく上書きし続ける
+    if(a){Object.assign(a,body);a.updatedAt=new Date().toISOString()}
+    recentSaves[editTok]={fields:{...body},at:Date.now()}
     closeEdit();applyFilter();showToast('設定を保存しました')
   }catch(e){showToast(`保存に失敗しました: ${e.message}`)}
   finally{btn.innerHTML='保存';btn.disabled=false}
@@ -1242,6 +1296,7 @@ async function quickTogglePublish(token,publish){
   const msg=publish?'🟢 このアルバムを公開しますか？\nお客さんがURLにアクセスできるようになります。':'⚫ このアルバムを非公開にしますか？\nお客さんがアクセスできなくなります。'
   if(!confirm(msg))return
   await fetch(`${W}/api/admin/albums/${token}`,{method:'PATCH',headers:{Authorization:`Bearer ${tok}`,'Content-Type':'application/json'},body:JSON.stringify({published:publish})})
+  recentSaves[token]={fields:{published:publish},at:Date.now()}
   await loadAlbums()
   showToast(publish?'公開しました':'非公開にしました')
 }
@@ -1282,8 +1337,10 @@ function closeSettingsPopup(){document.getElementById('settingsPopup').style.dis
 
 async function quickHeroChange(token,sel){
   const val=sel.value
-  if(val==='__custom'){const input=prompt('カバーテキストを入力してください','');if(!input){await loadAlbums();return};await fetch(`${W}/api/admin/albums/${token}`,{method:'PATCH',headers:{Authorization:`Bearer ${tok}`,'Content-Type':'application/json'},body:JSON.stringify({heroText:input})})}
+  let heroText=val
+  if(val==='__custom'){const input=prompt('カバーテキストを入力してください','');if(!input){await loadAlbums();return};heroText=input;await fetch(`${W}/api/admin/albums/${token}`,{method:'PATCH',headers:{Authorization:`Bearer ${tok}`,'Content-Type':'application/json'},body:JSON.stringify({heroText:input})})}
   else{await fetch(`${W}/api/admin/albums/${token}`,{method:'PATCH',headers:{Authorization:`Bearer ${tok}`,'Content-Type':'application/json'},body:JSON.stringify({heroText:val})})}
+  recentSaves[token]={fields:{heroText},at:Date.now()}
   showToast('カバーテキストを変更しました')
 }
 
