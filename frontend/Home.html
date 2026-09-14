@@ -106,12 +106,12 @@ body{font-family:-apple-system,'Hiragino Sans',sans-serif;background:var(--bg);c
   </div>
 </div>
 
-<div id="notifBanner" style="display:none;background:#fff8ee;border-bottom:2px solid #f0c060;padding:12px 20px;align-items:center;justify-content:space-between;gap:12px;">
-  <span style="font-size:13px;font-weight:500;color:#9a5a1a;" id="notifText">📬 未確認の選定があります</span>
-  <div style="display:flex;gap:8px;flex-shrink:0;">
-    <button onclick="openFirstUnread()" style="background:#9a5a1a;color:#fff;border:none;border-radius:6px;padding:5px 12px;font-size:12px;cursor:pointer;font-weight:500;">確認する</button>
-    <button onclick="dismissNotif()" style="background:transparent;border:1px solid #c8a060;border-radius:6px;padding:5px 10px;font-size:12px;cursor:pointer;color:#9a5a1a;">×</button>
+<div id="notifBanner" style="display:none;background:#fff8ee;border-bottom:2px solid #f0c060;padding:12px 20px;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+  <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;flex:1;min-width:0;">
+    <span style="font-size:13px;font-weight:500;color:#9a5a1a;flex-shrink:0;">📬 選定が届いています：</span>
+    <div id="notifNames" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;"></div>
   </div>
+  <button onclick="dismissNotif()" style="background:transparent;border:1px solid #c8a060;border-radius:6px;padding:5px 10px;font-size:12px;cursor:pointer;color:#9a5a1a;flex-shrink:0;">×</button>
 </div>
 <div id="main" class="main">
   <div class="ph">
@@ -1057,6 +1057,9 @@ async function openSelectResults(albumToken){
   try{
     const res=await fetch(`${W}/api/admin/albums/${albumToken}/select`,{headers:{Authorization:`Bearer ${tok}`}})
     const d=await res.json()
+    // 読み込んでいる間に別のアルバムを開き直していたら、この結果は表示せず捨てる
+    // （前の方の選定写真が後から出てきて混ざるのを防ぐ）
+    if(selectAlbumToken!==albumToken)return
     if(!d.hasSelect){document.getElementById('selectViewContent').innerHTML='<div style="font-size:13px;color:var(--mt);">選定データがありません。</div>';return}
     document.getElementById('selectViewStatus').innerHTML=d.submitted
       ?`<span>✅ 送信済み（${d.submittedAt?.slice(0,10)||''}）</span> <button class="btn btn-s btn-sm" onclick="reopenSelect()">選定の受付を再開する</button>`
@@ -1095,7 +1098,7 @@ async function openSelectResults(albumToken){
       </div>`
       container.innerHTML+=logHtml
     }
-  }catch(e){document.getElementById('selectViewContent').innerHTML=`<div style="color:#c0392b;font-size:13px;">読み込みに失敗しました: ${e.message}</div>`}
+  }catch(e){if(selectAlbumToken===albumToken)document.getElementById('selectViewContent').innerHTML=`<div style="color:#c0392b;font-size:13px;">読み込みに失敗しました: ${e.message}</div>`}
 }
 
 async function downloadByFlag(flagKey,flagLabel){
@@ -1125,14 +1128,21 @@ async function reopenSelect(){
   }catch{showToast('再開に失敗しました')}
 }
 
+const NOTIF_CHIP_MAX=8
+function getUnreadSelectAlbums(){return albums.filter(a=>a.selectSubmitted&&!localStorage.getItem(`sel_read_${a.token}`))}
 function checkNotifications(){
-  const unread=albums.filter(a=>a.selectSubmitted&&!localStorage.getItem(`sel_read_${a.token}`))
+  const unread=getUnreadSelectAlbums()
   const banner=document.getElementById('notifBanner')
-  if(unread.length>0){document.getElementById('notifText').textContent=`📬 選定が届いています（${unread.length}件未確認）`;banner.style.display='flex'}
-  else{banner.style.display='none'}
+  if(unread.length>0){
+    const shown=unread.slice(0,NOTIF_CHIP_MAX)
+    const restCount=unread.length-shown.length
+    document.getElementById('notifNames').innerHTML=shown.map(a=>
+      `<button onclick="openSelectResults('${a.token}')" style="background:#fff;border:1px solid #e0b060;border-radius:20px;padding:4px 12px;font-size:12px;cursor:pointer;color:#9a5a1a;font-weight:500;white-space:nowrap;">${a.name}</button>`
+    ).join('')+(restCount>0?`<span style="font-size:12px;color:#9a5a1a;">ほか${restCount}件</span>`:'')
+    banner.style.display='flex'
+  }else{banner.style.display='none'}
 }
 function dismissNotif(){document.getElementById('notifBanner').style.display='none'}
-function openFirstUnread(){const unread=albums.filter(a=>a.selectSubmitted&&!localStorage.getItem(`sel_read_${a.token}`));if(unread.length>0)openSelectResults(unread[0].token)}
 
 async function quickTogglePublish(token,publish){
   const msg=publish?'🟢 このアルバムを公開しますか？\nお客さんがURLにアクセスできるようになります。':'⚫ このアルバムを非公開にしますか？\nお客さんがアクセスできなくなります。'
