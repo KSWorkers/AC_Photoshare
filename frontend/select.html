@@ -104,7 +104,7 @@ body{font-family:-apple-system,'Hiragino Sans',sans-serif;background:var(--bg);c
 <script>
 const W = 'https://ac-photoshare.nikkomaedori.workers.dev'
 const selectToken = new URLSearchParams(location.search).get('token') || ''
-let photos = [], flagDefs = [], selections = {}, submitted = false
+let photos = [], flagDefs = [], selections = {}, submitted = false, locked = false
 let currentPhotoId = null, saveTimer = null, rev = 0
 
 async function init() {
@@ -117,7 +117,7 @@ async function init() {
     if (res.status === 403) return showErr('このアルバムは現在非公開です')
     if (!res.ok) return showErr('読み込みに失敗しました')
     photos = d.photos; flagDefs = d.flagDefs; selections = d.selections || {}
-    submitted = d.submitted; rev = d.rev || 0
+    submitted = d.submitted; rev = d.rev || 0; locked = !!d.locked
     document.title = `${d.name} - 写真選定`
     updateBanner()
     updateProgress()
@@ -135,14 +135,21 @@ function showErr(msg) {
 
 function updateBanner() {
   const b = document.getElementById('banner')
-  if (submitted) {
+  const submitBtn = document.getElementById('submitBtn')
+  if (locked) {
+    b.className = 'banner banner-ok'
+    b.innerHTML = '<span>🔒</span><span>送信済みです。この選定は変更できません。内容の変更をご希望の場合は写真館・スタジオへご連絡ください。</span>'
+    submitBtn.style.display = 'none'
+  } else if (submitted) {
     b.className = 'banner banner-ok'
     b.innerHTML = '<span>✅</span><span>送信済みです！内容を変更した場合は再度送信してください。</span>'
-    document.getElementById('submitBtn').textContent = '再送信する →'
+    submitBtn.style.display = ''
+    submitBtn.textContent = '再送信する →'
   } else {
     b.className = 'banner banner-warn'
     b.innerHTML = '<span>⚠️</span><span>まだ送信されていません。選定が終わったら下の「送信する」ボタンを押してください。</span>'
-    document.getElementById('submitBtn').textContent = '送信する →'
+    submitBtn.style.display = ''
+    submitBtn.textContent = '送信する →'
   }
 }
 
@@ -212,7 +219,7 @@ function renderPopupFlags() {
   document.getElementById('popupFlags').innerHTML = flagDefs.map(fd => {
     const isActive = curFlags.includes(fd.key)
     const count = counts[fd.key] || 0
-    const maxReached = fd.max > 0 && count >= fd.max && !isActive
+    const maxReached = (fd.max > 0 && count >= fd.max && !isActive) || locked
     return `<button class="flag-btn${isActive?' active':''}${maxReached?' disabled':''}" onclick="toggleFlag('${fd.key}',${maxReached})" ${maxReached?'disabled':''}>
       <span class="flag-btn-left"><span>${fd.label}</span></span>
       <span class="flag-btn-badge">${fd.max>0?`${count}/${fd.max}`:count+'枚'}</span>
@@ -221,7 +228,7 @@ function renderPopupFlags() {
 }
 
 function toggleFlag(flagKey, maxReached) {
-  if(maxReached) return
+  if(maxReached || locked) return
   if(!selections[currentPhotoId]) selections[currentPhotoId] = []
   const idx = selections[currentPhotoId].indexOf(flagKey)
   if(idx>=0) selections[currentPhotoId].splice(idx,1)
@@ -265,6 +272,7 @@ function resolveConflict(d) {
 }
 
 async function autoSave() {
+  if (locked) return
   try {
     let res = await fetch(`${W}/api/select/${selectToken}`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({selections, rev})})
     if (res.status === 409) {
@@ -280,6 +288,7 @@ async function autoSave() {
 }
 
 async function confirmSubmit() {
+  if (locked) return
   const total = Object.values(selections).filter(f=>f.length>0).length
   if(!confirm(`${total}枚の選定内容を送信しますか？\n送信後も内容を変更できます。`)) return
   try {

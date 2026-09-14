@@ -330,6 +330,7 @@ body{font-family:-apple-system,'Hiragino Sans',sans-serif;background:var(--bg);c
         <div style="font-size:13px;color:var(--mt);margin-bottom:8px;">選定機能のフラグ種類・枚数制限を設定します。アルバムごとに上書きも可能です。</div>
         <div id="flagDefsEditor" style="display:grid;gap:8px;"></div>
         <button class="btn btn-s btn-sm" onclick="addFlagDef()" style="align-self:flex-start;margin-top:8px;">＋ フラグを追加</button>
+        <div class="fd" style="margin-top:12px;"><div class="sw-w"><span style="font-size:13px;">送信は1回だけにする<span style="display:block;font-size:11px;color:var(--mt);margin-top:2px;">ONにすると、お客様が送信した選定はそれ以降変更できなくなります。「選定の受付を再開する」を押すとまた選べるようになります。</span></span><button class="sw" id="masterSelectSubmitOnceSw" onclick="toggleMasterSelectSubmitOnce()"></button></div></div>
       </div>
     </div>
     <div class="mf"><button class="btn btn-s" onclick="closeSettings()">キャンセル</button><button class="btn btn-p" id="saveSettingsBtn" onclick="saveSettings()">保存</button></div>
@@ -890,7 +891,12 @@ async function openSettings(){
   document.getElementById('masterAccentColorHex').value=sysSettings.accentColor||'#8b7a38'
   document.getElementById('masterWifiSsid').value=sysSettings.wifiSsid||''
   document.getElementById('masterWifiPassword').value=sysSettings.wifiPassword||''
+  document.getElementById('masterSelectSubmitOnceSw').className=`sw${sysSettings.selectSubmitOnce?' on':''}`
   document.getElementById('moSettings').classList.add('on')
+}
+function toggleMasterSelectSubmitOnce(){
+  sysSettings.selectSubmitOnce=!sysSettings.selectSubmitOnce
+  document.getElementById('masterSelectSubmitOnceSw').className=`sw${sysSettings.selectSubmitOnce?' on':''}`
 }
 function closeSettings(){document.getElementById('moSettings').classList.remove('on')}
 function syncAccentColorFromHex(){

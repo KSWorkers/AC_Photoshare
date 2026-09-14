@@ -181,7 +181,7 @@ const DEFAULT_FLAG_DEFS=[
   {key:'page',label:'📄 中ページ',max:10}
 ]
 
-const DEFAULT_SYSTEM_SETTINGS={flagDefs:DEFAULT_FLAG_DEFS,venueName:'ALCYONE COURT. SANO',accentColor:'#8b7a38',wifiSsid:'',wifiPassword:''}
+const DEFAULT_SYSTEM_SETTINGS={flagDefs:DEFAULT_FLAG_DEFS,venueName:'ALCYONE COURT. SANO',accentColor:'#8b7a38',wifiSsid:'',wifiPassword:'',selectSubmitOnce:false}
 async function getSystemSettings(env){
   const s=await env.ALBUMS.get('system:settings','json')
   return{...DEFAULT_SYSTEM_SETTINGS,...s}
@@ -690,7 +690,8 @@ export default {
         const at=await getAccessToken(env,true)
         const files=await listPhotos(album.folderId,at)
         const photos=files.map(f=>({id:f.id,name:f.name,thumb:f.thumbnailLink?.replace('=s220','=s800')||null,width:f.imageMediaMetadata?.width||1200,height:f.imageMediaMetadata?.height||800}))
-        return jsonR({name:album.name,expiresAt:album.expiresAt,flagDefs:selectData.flagDefs,submitted:selectData.submitted,submittedAt:selectData.submittedAt,selections:selectData.selections||{},rev:selectData.rev||0,photos})
+        const{selectSubmitOnce}=await getSystemSettings(env)
+        return jsonR({name:album.name,expiresAt:album.expiresAt,flagDefs:selectData.flagDefs,submitted:selectData.submitted,submittedAt:selectData.submittedAt,selections:selectData.selections||{},rev:selectData.rev||0,photos,locked:!!(selectSubmitOnce&&selectData.submitted)})
       }
 
       if(selectMatch&&req.method==='POST'){
@@ -700,6 +701,12 @@ export default {
         const album=await getAlbum(env,selectData.albumToken)
         if(!album||album.published===false)return errR('Unauthorized',403)
         if(album.expiresAt&&new Date(album.expiresAt)<new Date())return errR('Expired',410)
+        // 「送信は1回だけ」がONのときは、すでに送信済みの選定を変更・再送信させない。
+        // 「選定の受付を再開する」（submitted=falseに戻す）を通してだけ、また送れるようにする
+        if(selectData.submitted){
+          const{selectSubmitOnce}=await getSystemSettings(env)
+          if(selectSubmitOnce)return errR('この選定はすでに送信済みです。変更するには写真館・スタジオへご連絡ください。',403)
+        }
         const body=await req.json()
         const currentRev=selectData.rev||0
         // 別端末との食い違い検出：forceが無ければ、送られてきたrevと保存済みrevが一致することを確認してから上書きする
