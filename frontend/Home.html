@@ -349,6 +349,12 @@ body{font-family:-apple-system,'Hiragino Sans',sans-serif;background:var(--bg);c
         <div class="fd" style="margin-top:12px;"><div class="sw-w"><span style="font-size:13px;">送信は1回だけにする<span style="display:block;font-size:11px;color:var(--mt);margin-top:2px;">ONにすると、お客様が送信した選定はそれ以降変更できなくなります。「選定の受付を再開する」を押すとまた選べるようになります。</span></span><button class="sw" id="masterSelectSubmitOnceSw" onclick="toggleMasterSelectSubmitOnce()"></button></div></div>
       </div>
       <div style="border-top:1px solid var(--bd);padding-top:14px;">
+        <div style="font-size:13px;font-weight:600;color:var(--mt);margin-bottom:8px;">商品プリセット</div>
+        <div style="font-size:12px;color:var(--mt);margin-bottom:8px;">「フォトブック」「額装プリント」のように、商品ごとに選んでもらう項目をまとめて登録しておけます。選定リンク発行時にここから選んで追加できます。</div>
+        <div id="selectionPresetsEditor" style="display:grid;gap:10px;"></div>
+        <button class="btn btn-s btn-sm" onclick="addSelectionPreset()" style="align-self:flex-start;margin-top:8px;">＋ 商品プリセットを追加</button>
+      </div>
+      <div style="border-top:1px solid var(--bd);padding-top:14px;">
         <div style="font-size:13px;font-weight:600;color:var(--mt);margin-bottom:8px;">管理者パスワード</div>
         <div style="font-size:12px;color:var(--mt);margin-bottom:8px;">ここでの変更・再発行は「保存」ボタンとは関係なく、押した時点ですぐに反映されます。</div>
         <div class="fd" style="gap:4px;"><label style="font-size:12px;">現在のパスワード</label><input type="password" id="pwChangeCurrent"></div>
@@ -372,12 +378,16 @@ body{font-family:-apple-system,'Hiragino Sans',sans-serif;background:var(--bg);c
     <div class="mh" id="selectIssueMhTitle">選定リンク発行</div>
     <div class="mb" style="gap:14px;">
       <div>
-        <div style="font-size:13px;font-weight:600;color:var(--mt);margin-bottom:8px;">フラグ設定</div>
-        <div class="fd"><div class="sw-w"><span style="font-size:14px;">アルバム固有のフラグを使う</span><button class="sw" id="issueFlagSw" onclick="toggleIssueFlag()"></button></div></div>
+        <div style="font-size:13px;font-weight:600;color:var(--mt);margin-bottom:8px;">商品・フラグ設定</div>
+        <div class="fd"><div class="sw-w"><span style="font-size:14px;">アルバム固有の商品・フラグを使う</span><button class="sw" id="issueFlagSw" onclick="toggleIssueFlag()"></button></div></div>
         <div id="issueFlagFd" style="display:none;margin-top:8px;">
           <div style="font-size:12px;color:var(--mt);margin-bottom:6px;">OFF の場合はシステムデフォルトを使用</div>
           <div id="issueFlagDefsEditor" style="display:grid;gap:6px;"></div>
-          <button class="btn btn-s btn-sm" onclick="addIssueFlagDef()" style="margin-top:6px;">＋ フラグを追加</button>
+          <div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap;">
+            <button class="btn btn-s btn-sm" onclick="addIssueProduct()">＋ 新しい商品を追加</button>
+            <select id="presetLibrarySelect" style="border:1px solid var(--bdm);border-radius:6px;padding:4px 8px;font-size:12px;"></select>
+            <button class="btn btn-s btn-sm" onclick="addPresetFromLibrary()">追加</button>
+          </div>
         </div>
       </div>
       <div id="issueUrlPanel" style="display:none;">
@@ -1002,6 +1012,8 @@ async function openSettings(){
   document.getElementById('masterWifiSsid').value=sysSettings.wifiSsid||''
   document.getElementById('masterWifiPassword').value=sysSettings.wifiPassword||''
   document.getElementById('masterSelectSubmitOnceSw').className=`sw${sysSettings.selectSubmitOnce?' on':''}`
+  if(!Array.isArray(sysSettings.selectionPresets))sysSettings.selectionPresets=[]
+  renderSelectionPresetsEditor()
   document.getElementById('pwChangeCurrent').value=''
   document.getElementById('pwChangeNew').value=''
   document.getElementById('pwChangeErr').style.display='none'
@@ -1062,6 +1074,42 @@ function updateFlagDef(el){const i=parseInt(el.dataset.idx),field=el.dataset.fie
 function addFlagDef(){sysSettings.flagDefs.push({key:`flag_${Date.now()}`,label:'',max:0});renderFlagDefsEditor(sysSettings.flagDefs)}
 function removeFlagDef(i){sysSettings.flagDefs.splice(i,1);renderFlagDefsEditor(sysSettings.flagDefs)}
 
+// ─── 商品プリセット（システム全体のライブラリ）───────────────
+function renderSelectionPresetsEditor(){
+  const ed=document.getElementById('selectionPresetsEditor')
+  const list=sysSettings.selectionPresets||[]
+  if(!list.length){ed.innerHTML='<div style="font-size:12px;color:var(--mt);">まだ商品プリセットがありません。</div>';return}
+  ed.innerHTML=list.map((p,pi)=>`
+    <div style="background:var(--bg);border:1px solid var(--bdm);border-radius:8px;padding:10px 12px;display:grid;gap:6px;">
+      <div style="display:flex;gap:6px;align-items:center;">
+        <input value="${p.name||''}" placeholder="商品名（例：フォトブック）" data-pi="${pi}"
+          style="flex:1;border:none;background:transparent;font-size:13px;font-weight:600;outline:none;" onchange="updatePresetName(this)">
+        <button onclick="removeSelectionPreset(${pi})" style="border:none;background:none;color:var(--dg);cursor:pointer;font-size:16px;">×</button>
+      </div>
+      <div style="display:grid;gap:4px;">
+        ${(p.flags||[]).map((f,fi)=>`
+          <div style="display:flex;gap:6px;align-items:center;">
+            <input value="${f.label||''}" placeholder="項目名（例：表紙）" data-pi="${pi}" data-fi="${fi}" data-field="label"
+              style="flex:1;border:1px solid var(--bdm);border-radius:6px;padding:4px 8px;font-size:12px;" onchange="updatePresetFlag(this)">
+            <input type="number" value="${f.max||0}" min="0" placeholder="上限（0=無制限）" data-pi="${pi}" data-fi="${fi}" data-field="max"
+              style="width:80px;border:1px solid var(--bdm);border-radius:6px;padding:4px 8px;font-size:12px;" onchange="updatePresetFlag(this)">
+            <button onclick="removePresetFlag(${pi},${fi})" style="border:none;background:none;color:var(--dg);cursor:pointer;font-size:14px;">×</button>
+          </div>`).join('')}
+      </div>
+      <button class="btn btn-s btn-sm" onclick="addPresetFlag(${pi})" style="align-self:flex-start;">＋ 項目を追加</button>
+    </div>`).join('')
+}
+function updatePresetName(el){sysSettings.selectionPresets[parseInt(el.dataset.pi)].name=el.value}
+function addSelectionPreset(){sysSettings.selectionPresets.push({name:'',flags:[]});renderSelectionPresetsEditor()}
+function removeSelectionPreset(pi){if(!confirm('この商品プリセットを削除しますか？'))return;sysSettings.selectionPresets.splice(pi,1);renderSelectionPresetsEditor()}
+function addPresetFlag(pi){sysSettings.selectionPresets[pi].flags.push({key:genFlagKey(),label:'',max:0});renderSelectionPresetsEditor()}
+function updatePresetFlag(el){
+  const pi=parseInt(el.dataset.pi),fi=parseInt(el.dataset.fi),field=el.dataset.field
+  const f=sysSettings.selectionPresets[pi].flags[fi]
+  if(field==='max')f.max=parseInt(el.value)||0;else f[field]=el.value
+}
+function removePresetFlag(pi,fi){sysSettings.selectionPresets[pi].flags.splice(fi,1);renderSelectionPresetsEditor()}
+
 async function saveSettings(){
   const btn=document.getElementById('saveSettingsBtn');btn.innerHTML='<div class="sp-sm"></div>';btn.disabled=true
   sysSettings.venueName=document.getElementById('masterVenueName').value.trim()
@@ -1076,32 +1124,54 @@ async function saveSettings(){
 }
 
 // ─── 選定リンク発行 ────────────────────────────────
-let selectAlbumToken='', selectUrl='', issueFlagOn=false, issueFlagDefs=[], issueSelectionCounts={}
+let selectAlbumToken='', selectUrl='', issueFlagOn=false, issueSelectionConfig=[], issueSelectionCounts={}, issuePresetLibrary=[]
 
 // 内部の名前（key）がぶつからないように、時刻に加えて乱数も混ぜる
 function genFlagKey(){return`flag_${Date.now()}_${Math.random().toString(36).slice(2,8)}`}
+
+function defaultSelectionConfig(){return[{name:'選定',count:1,flags:JSON.parse(JSON.stringify(DEFAULT_CLIENT_FLAG_DEFS))}]}
+
+// 商品を複数個ぶん指定すると、実際のキーは「元のkey__0」「元のkey__1」…に分かれる。
+// 「すでに何枚選ばれているか」の確認は、商品の個数に関わらず元のkeyでまとめて数える
+function aggregateSelectionCounts(selections){
+  const out={}
+  for(const flags of Object.values(selections||{})){
+    for(const f of(Array.isArray(flags)?flags:[])){
+      const m=/^(.*)__\d+$/.exec(f)
+      const key=m?m[1]:f
+      out[key]=(out[key]||0)+1
+    }
+  }
+  return out
+}
+function productSelectionCount(p){return(p.flags||[]).reduce((s,f)=>s+(issueSelectionCounts[f.key]||0),0)}
 
 async function openSelect(albumToken){
   selectAlbumToken=albumToken
   const album=albums.find(a=>a.token===albumToken)
   document.getElementById('selectIssueMhTitle').textContent=`選定リンク発行 — ${album?.name||''}`
-  issueFlagOn=!!album?.flagDefs
-  issueFlagDefs=album?.flagDefs?JSON.parse(JSON.stringify(album.flagDefs)):JSON.parse(JSON.stringify(DEFAULT_CLIENT_FLAG_DEFS))
+  issueFlagOn=!!(album?.selectionConfig||album?.flagDefs)
+  if(album?.selectionConfig)issueSelectionConfig=JSON.parse(JSON.stringify(album.selectionConfig))
+  else if(album?.flagDefs)issueSelectionConfig=[{name:'選定',count:1,flags:JSON.parse(JSON.stringify(album.flagDefs))}]
+  else issueSelectionConfig=defaultSelectionConfig()
   document.getElementById('issueFlagSw').className=`sw${issueFlagOn?' on':''}`
   document.getElementById('issueFlagFd').style.display=issueFlagOn?'block':'none'
   issueSelectionCounts={}
+  try{
+    const pr=await fetch(`${W}/api/admin/settings`,{headers:{Authorization:`Bearer ${tok}`}})
+    if(pr.ok)issuePresetLibrary=(await pr.json()).selectionPresets||[]
+  }catch{issuePresetLibrary=[]}
   if(album?.selectToken){
     // 削除・上限変更の前に「すでに何枚選ばれているか」を確認できるよう、現在の選定内容を読んでおく
     try{
       const r=await fetch(`${W}/api/admin/albums/${albumToken}/select`,{headers:{Authorization:`Bearer ${tok}`}})
       if(r.ok){
         const d=await r.json()
-        for(const flags of Object.values(d.selections||{})){
-          for(const f of(Array.isArray(flags)?flags:[]))issueSelectionCounts[f]=(issueSelectionCounts[f]||0)+1
-        }
+        issueSelectionCounts=aggregateSelectionCounts(d.selections)
       }
     }catch{}
   }
+  renderPresetLibrarySelect()
   if(issueFlagOn)renderIssueFlagDefsEditor()
   if(album?.selectToken){
     selectUrl=`${location.origin}/select.html?token=${album.selectToken}`
@@ -1122,35 +1192,94 @@ function toggleIssueFlag(){
   issueFlagOn=!issueFlagOn
   document.getElementById('issueFlagSw').className=`sw${issueFlagOn?' on':''}`
   document.getElementById('issueFlagFd').style.display=issueFlagOn?'block':'none'
-  if(issueFlagOn&&!issueFlagDefs.length)issueFlagDefs=JSON.parse(JSON.stringify(DEFAULT_CLIENT_FLAG_DEFS))
+  if(issueFlagOn&&!issueSelectionConfig.length)issueSelectionConfig=defaultSelectionConfig()
   if(issueFlagOn)renderIssueFlagDefsEditor()
   updateIssueUrlBtnState()
 }
 
-// 商品・項目が0件（フラグONなのに1つも無い）のときは発行ボタンを押せないようにする
+// 商品が0件（フラグONなのに1つも無い）、または商品はあっても項目が1つも無いときは発行ボタンを押せないようにする
 function updateIssueUrlBtnState(){
   const btn=document.getElementById('issueUrlBtn')
   if(!btn)return
-  const empty=issueFlagOn&&issueFlagDefs.length===0
+  const totalFlags=issueSelectionConfig.reduce((s,p)=>s+(p.flags?.length||0),0)
+  const empty=issueFlagOn&&(issueSelectionConfig.length===0||totalFlags===0)
   btn.disabled=empty
-  btn.title=empty?'商品・項目を1つ以上追加してください':''
+  btn.title=empty?'商品を1つ以上追加し、それぞれに項目を追加してください':''
+}
+
+function renderPresetLibrarySelect(){
+  const sel=document.getElementById('presetLibrarySelect')
+  if(!sel)return
+  sel.innerHTML='<option value="">商品プリセットから追加…</option>'+issuePresetLibrary.map((p,i)=>`<option value="${i}">${p.name||'(名称未設定)'}</option>`).join('')
+}
+function addPresetFromLibrary(){
+  const sel=document.getElementById('presetLibrarySelect')
+  const i=sel.value
+  if(i==='')return
+  const p=issuePresetLibrary[parseInt(i)]
+  if(!p)return
+  issueSelectionConfig.push({name:p.name||'',count:1,flags:JSON.parse(JSON.stringify(p.flags||[]))})
+  sel.value=''
+  renderIssueFlagDefsEditor()
 }
 
 function renderIssueFlagDefsEditor(){
   const ed=document.getElementById('issueFlagDefsEditor')
-  ed.innerHTML=issueFlagDefs.map((fd,i)=>`
-    <div style="display:flex;gap:6px;align-items:center;background:var(--bg);border:1px solid var(--bdm);border-radius:8px;padding:8px 10px;">
-      <input value="${fd.label}" placeholder="ラベル" data-idx="${i}" data-field="label"
-        style="flex:1;border:none;background:transparent;font-size:13px;outline:none;" onchange="updateIssueFlagDef(this)">
-      <input type="number" value="${fd.max}" min="0" data-idx="${i}" data-field="max"
-        style="width:70px;border:1px solid var(--bdm);border-radius:6px;padding:4px 6px;font-size:12px;" onchange="updateIssueFlagDef(this)">
-      <button onclick="removeIssueFlagDef(${i})" style="border:none;background:none;color:var(--dg);cursor:pointer;font-size:16px;">×</button>
+  if(!issueSelectionConfig.length){ed.innerHTML='<div style="font-size:12px;color:var(--mt);">まだ商品がありません。「＋ 新しい商品を追加」から作成してください。</div>';updateIssueUrlBtnState();return}
+  ed.innerHTML=issueSelectionConfig.map((p,pi)=>`
+    <div style="background:var(--bg);border:1px solid var(--bdm);border-radius:8px;padding:10px 12px;display:grid;gap:6px;margin-bottom:8px;">
+      <div style="display:flex;gap:6px;align-items:center;">
+        <input value="${p.name||''}" placeholder="商品名（例：フォトブック）" data-pi="${pi}" data-field="name"
+          style="flex:1;border:none;background:transparent;font-size:13px;font-weight:600;outline:none;" onchange="updateIssueProduct(this)">
+        <label style="font-size:11px;color:var(--mt);white-space:nowrap;">個数
+          <input type="number" value="${p.count||1}" min="1" data-pi="${pi}" data-field="count"
+            style="width:50px;border:1px solid var(--bdm);border-radius:6px;padding:4px 6px;font-size:12px;margin-left:4px;" onchange="updateIssueProduct(this)">
+        </label>
+        <button onclick="removeIssueProduct(${pi})" style="border:none;background:none;color:var(--dg);cursor:pointer;font-size:16px;">×</button>
+      </div>
+      ${p.count>1?`<div style="font-size:11px;color:var(--mt);">2以上にすると「${p.name||'商品'} A」「${p.name||'商品'} B」…に分かれます</div>`:''}
+      <div style="display:grid;gap:4px;">
+        ${(p.flags||[]).map((fd,fi)=>`
+          <div style="display:flex;gap:6px;align-items:center;">
+            <input value="${fd.label}" placeholder="項目名（例：表紙）" data-pi="${pi}" data-fi="${fi}" data-field="label"
+              style="flex:1;border:1px solid var(--bdm);border-radius:6px;padding:4px 8px;font-size:12px;" onchange="updateIssueFlagDef(this)">
+            <input type="number" value="${fd.max}" min="0" placeholder="上限（0=無制限）" data-pi="${pi}" data-fi="${fi}" data-field="max"
+              style="width:80px;border:1px solid var(--bdm);border-radius:6px;padding:4px 6px;font-size:12px;" onchange="updateIssueFlagDef(this)">
+            <button onclick="removeIssueFlagDef(${pi},${fi})" style="border:none;background:none;color:var(--dg);cursor:pointer;font-size:14px;">×</button>
+          </div>`).join('')}
+      </div>
+      <button class="btn btn-s btn-sm" onclick="addIssueFlagDef(${pi})" style="align-self:flex-start;">＋ 項目を追加</button>
     </div>`).join('')
   updateIssueUrlBtnState()
 }
 
+function addIssueProduct(){issueSelectionConfig.push({name:'',count:1,flags:[]});renderIssueFlagDefsEditor()}
+function removeIssueProduct(pi){
+  const p=issueSelectionConfig[pi],cnt=productSelectionCount(p)
+  if(cnt>0&&!confirm(`「${p.name||'(名称未設定)'}」：${cnt}枚が選ばれています。削除しますか？`))return
+  issueSelectionConfig.splice(pi,1)
+  renderIssueFlagDefsEditor()
+}
+function updateIssueProduct(el){
+  const pi=parseInt(el.dataset.pi),field=el.dataset.field,p=issueSelectionConfig[pi]
+  if(field==='count'){
+    const newVal=Math.max(1,parseInt(el.value)||1)
+    const cnt=productSelectionCount(p)
+    if(cnt>0&&newVal<(p.count||1)){
+      if(!confirm(`「${p.name||'(名称未設定)'}」：${cnt}枚が選ばれています。個数を${newVal}に減らしますか？`)){
+        el.value=p.count||1
+        return
+      }
+    }
+    p.count=newVal
+    renderIssueFlagDefsEditor()
+  }else{
+    p[field]=el.value
+  }
+}
+
 function updateIssueFlagDef(el){
-  const i=parseInt(el.dataset.idx),field=el.dataset.field,fd=issueFlagDefs[i]
+  const pi=parseInt(el.dataset.pi),fi=parseInt(el.dataset.fi),field=el.dataset.field,fd=issueSelectionConfig[pi].flags[fi]
   if(field==='max'){
     const newVal=parseInt(el.value)||0
     const cnt=issueSelectionCounts[fd.key]||0
@@ -1163,18 +1292,18 @@ function updateIssueFlagDef(el){
     fd.max=newVal
   }else fd[field]=el.value
 }
-function addIssueFlagDef(){issueFlagDefs.push({key:genFlagKey(),label:'',max:0});renderIssueFlagDefsEditor()}
-function removeIssueFlagDef(i){
-  const fd=issueFlagDefs[i],cnt=issueSelectionCounts[fd.key]||0
+function addIssueFlagDef(pi){issueSelectionConfig[pi].flags.push({key:genFlagKey(),label:'',max:0});renderIssueFlagDefsEditor()}
+function removeIssueFlagDef(pi,fi){
+  const fd=issueSelectionConfig[pi].flags[fi],cnt=issueSelectionCounts[fd.key]||0
   if(cnt>0&&!confirm(`${fd.label||'(名称未設定)'}：${cnt}枚が選ばれています。削除しますか？`))return
-  issueFlagDefs.splice(i,1)
+  issueSelectionConfig[pi].flags.splice(fi,1)
   renderIssueFlagDefsEditor()
 }
 
 async function generateSelectUrl(){
   const btn=document.getElementById('issueUrlBtn')
   btn.innerHTML='<div class="sp-sm"></div> 発行中...';btn.disabled=true
-  await fetch(`${W}/api/admin/albums/${selectAlbumToken}`,{method:'PATCH',headers:{Authorization:`Bearer ${tok}`,'Content-Type':'application/json'},body:JSON.stringify({flagDefs:issueFlagOn?issueFlagDefs:null})})
+  await fetch(`${W}/api/admin/albums/${selectAlbumToken}`,{method:'PATCH',headers:{Authorization:`Bearer ${tok}`,'Content-Type':'application/json'},body:JSON.stringify({selectionConfig:issueFlagOn?issueSelectionConfig:null,flagDefs:null})})
   try{
     const res=await fetch(`${W}/api/admin/albums/${selectAlbumToken}/select`,{method:'POST',headers:{Authorization:`Bearer ${tok}`}})
     const d=await res.json()
@@ -1213,24 +1342,34 @@ async function openSelectResults(albumToken){
       ?`<span>✅ 送信済み（${d.submittedAt?.slice(0,10)||''}）</span> <button class="btn btn-s btn-sm" onclick="reopenSelect()">選定の受付を再開する</button>`
       :'⏳ 未送信（下書き保存中）'
     const container=document.getElementById('selectViewContent')
-    const flagDefs=d.flagDefs&&d.flagDefs.length?d.flagDefs:DEFAULT_CLIENT_FLAG_DEFS
+    const presets=d.presets&&d.presets.length?d.presets:[{name:'選定',flags:d.flagDefs&&d.flagDefs.length?d.flagDefs:DEFAULT_CLIENT_FLAG_DEFS}]
     const selections=d.selections||{}
     const byFlag={}
-    for(const fd of flagDefs)byFlag[fd.key]=[]
+    for(const p of presets)for(const fd of p.flags)byFlag[fd.key]=[]
     for(const[photoId,flags]of Object.entries(selections)){for(const flag of(Array.isArray(flags)?flags:[])){if(!byFlag[flag])byFlag[flag]=[];const photo=d.photoMap?.[photoId]||{id:photoId,name:photoId,thumb:null};byFlag[flag].push(photo)}}
     const totalSelected=Object.values(byFlag).reduce((s,arr)=>s+arr.length,0)
+    lastSelectPresets=presets
     if(totalSelected===0&&Object.keys(selections).length===0){container.innerHTML='<div style="font-size:13px;color:var(--mt);">まだ選定された写真がありません。</div>'}
     else{
-      const photosHtml=flagDefs.map(fd=>{
-        const photos=byFlag[fd.key]||[]
-        if(!photos.length)return''
-        return `<div style="margin-bottom:16px;">
-          <div style="font-size:13px;font-weight:600;margin-bottom:8px;">${fd.label}（${photos.length}枚）</div>
-          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;">${photos.map(p=>{const src=p.thumb?`${W}/api/admin/thumb/${p.id}?session=${tok}`:'';return`<img src="${src}" style="width:72px;height:54px;object-fit:cover;border-radius:6px;background:#eee;" title="${p.name||''}" onerror="this.style.background='#eee'">`}).join('')}</div>
-          <button class="btn btn-s btn-sm" onclick="downloadByFlag('${fd.key}','${fd.label}')">📥 ${fd.label}をZIPでDL</button>
+      const isMultiProduct=presets.length>1
+      const productsHtml=presets.map(p=>{
+        const flagsHtml=p.flags.map(fd=>{
+          const photos=byFlag[fd.key]||[]
+          if(!photos.length)return''
+          return `<div style="margin-bottom:16px;">
+            <div style="font-size:13px;font-weight:600;margin-bottom:8px;">${fd.label}（${photos.length}枚）</div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;">${photos.map(p2=>{const src=p2.thumb?`${W}/api/admin/thumb/${p2.id}?session=${tok}`:'';return`<img src="${src}" style="width:72px;height:54px;object-fit:cover;border-radius:6px;background:#eee;" title="${p2.name||''}" onerror="this.style.background='#eee'">`}).join('')}</div>
+            <button class="btn btn-s btn-sm" onclick="downloadByFlag('${fd.key}','${fd.label}')">📥 ${fd.label}をZIPでDL</button>
+          </div>`
+        }).filter(Boolean).join('')
+        if(!flagsHtml)return''
+        return `<div style="margin-bottom:20px;">
+          ${isMultiProduct?`<div style="font-size:14px;font-weight:700;margin-bottom:10px;padding-bottom:6px;border-bottom:2px solid var(--tx);">${p.name}</div>`:''}
+          ${flagsHtml}
         </div>`
-      }).filter(Boolean).join('<hr style="border:none;border-top:1px solid var(--bd);margin:8px 0;">')
-      container.innerHTML=photosHtml||'<div style="font-size:13px;color:var(--mt);">選定された写真がありません。</div>'
+      }).filter(Boolean).join('')
+      const productDlBtn=isMultiProduct?`<button class="btn btn-p btn-sm" onclick="downloadByProduct()" style="margin-bottom:16px;">📦 商品ごとにフォルダ分けしてZIPでDL</button>`:''
+      container.innerHTML=productDlBtn+(productsHtml||'<div style="font-size:13px;color:var(--mt);">選定された写真がありません。</div>')
     }
     const log=d.activityLog||[]
     if(log.length>0||d.submitted){
@@ -1247,6 +1386,37 @@ async function openSelectResults(albumToken){
       container.innerHTML+=logHtml
     }
   }catch(e){if(selectAlbumToken===albumToken)document.getElementById('selectViewContent').innerHTML=`<div style="color:#c0392b;font-size:13px;">読み込みに失敗しました: ${e.message}</div>`}
+}
+
+let lastSelectPresets=[]
+async function downloadByProduct(){
+  const res=await fetch(`${W}/api/admin/albums/${selectAlbumToken}/select`,{headers:{Authorization:`Bearer ${tok}`}})
+  const d=await res.json()
+  const presets=(d.presets&&d.presets.length?d.presets:lastSelectPresets)||[]
+  const byFlag=d.byFlag||{}
+  let total=0
+  for(const p of presets)for(const fd of p.flags)total+=(byFlag[fd.key]||[]).length
+  if(total===0){showToast('選定された写真がありません');return}
+  showToast(`${total}枚のZIPを生成中...`)
+  try{
+    const zip=new JSZip();let done=0
+    await Promise.all(presets.flatMap(p=>{
+      const folder=zip.folder(p.name||'選定')
+      return(p.flags||[]).flatMap(fd=>(byFlag[fd.key]||[]).map(async photo=>{
+        try{
+          const params=new URLSearchParams({size:'full',name:photo.name||photo.id+'.jpg',token:selectAlbumToken})
+          const r=await fetch(`${W}/api/photo/${photo.id}?${params}`)
+          if(!r.ok)throw new Error()
+          folder.file(photo.name||`${photo.id}.jpg`,await r.blob())
+          done++
+        }catch{}
+      }))
+    }))
+    const blob=await zip.generateAsync({type:'blob'})
+    const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`商品ごとの選定_${done}枚.zip`;a.click()
+    fetch(`${W}/api/admin/albums/${selectAlbumToken}/select/log`,{method:'POST',headers:{Authorization:`Bearer ${tok}`,'Content-Type':'application/json'},body:JSON.stringify({type:'download',flagKey:'__all_products__',flagLabel:'商品ごと一括',count:done})}).catch(()=>{})
+    showToast(`✅ ${done}枚をダウンロードしました`)
+  }catch{showToast('ZIPの生成に失敗しました')}
 }
 
 async function downloadByFlag(flagKey,flagLabel){

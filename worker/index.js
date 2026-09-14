@@ -181,7 +181,7 @@ const DEFAULT_FLAG_DEFS=[
   {key:'page',label:'📄 中ページ',max:10}
 ]
 
-const DEFAULT_SYSTEM_SETTINGS={flagDefs:DEFAULT_FLAG_DEFS,venueName:'ALCYONE COURT. SANO',accentColor:'#8b7a38',wifiSsid:'',wifiPassword:'',selectSubmitOnce:false}
+const DEFAULT_SYSTEM_SETTINGS={flagDefs:DEFAULT_FLAG_DEFS,venueName:'ALCYONE COURT. SANO',accentColor:'#8b7a38',wifiSsid:'',wifiPassword:'',selectSubmitOnce:false,selectionPresets:[]}
 async function getSystemSettings(env){
   const s=await env.ALBUMS.get('system:settings','json')
   return{...DEFAULT_SYSTEM_SETTINGS,...s}
@@ -191,6 +191,30 @@ async function getEffectiveFlagDefs(env,album){
   if(album?.flagDefs)return album.flagDefs
   const sys=await getSystemSettings(env)
   return sys.flagDefs||DEFAULT_FLAG_DEFS
+}
+
+// ─── 商品別の選定プリセット ───────────────────────────
+// 商品を複数個ぶん指定すると「商品名 A」「商品名 B」…に分け、各コピーの
+// 項目キー（key）を一意にする（同じ写真を複数の商品で選べるようにするため）
+function letterOf(i){return i<26?String.fromCharCode(65+i):`${i+1}`}
+function cleanSelectionFlags(flags){return(Array.isArray(flags)?flags:[]).map(f=>({key:f.key,label:f.label,max:f.max||0}))}
+function buildProductGroups(name,flags,count){
+  const n=Math.max(1,parseInt(count)||1)
+  const cf=cleanSelectionFlags(flags)
+  if(n<=1)return[{name:name||'選定',flags:cf}]
+  return Array.from({length:n},(_,i)=>({name:`${name||'選定'} ${letterOf(i)}`,flags:cf.map(f=>({...f,key:`${f.key}__${i}`}))}))
+}
+// アルバムの選定内容を組み立てる。
+// 新形式（album.selectionConfig：商品ごとの構成）があればそれを使い、
+// 無ければ従来どおりのフラグ一覧を「選定」という1つの商品として扱う
+// （すでに発行済みの、商品の区別が無い選定リンクを壊さないため）
+async function resolveSelection(env,album){
+  if(Array.isArray(album?.selectionConfig)&&album.selectionConfig.length){
+    const groups=album.selectionConfig.flatMap(p=>buildProductGroups(p.name,p.flags,p.count))
+    return{presets:groups,flagDefs:groups.flatMap(g=>g.flags)}
+  }
+  const flagDefs=cleanSelectionFlags(await getEffectiveFlagDefs(env,album))
+  return{presets:[{name:'選定',flags:flagDefs}],flagDefs}
 }
 
 // ─── ユーティリティ ─────────────────────────────────
@@ -591,6 +615,7 @@ export default {
           heroText:'heroText'in body?body.heroText:(album.heroText??'Photography'),
           heroFont:'heroFont'in body?body.heroFont:(album.heroFont??'josefin'),
           flagDefs:'flagDefs'in body?body.flagDefs:album.flagDefs,
+          selectionConfig:'selectionConfig'in body?body.selectionConfig:album.selectionConfig,
           allowCustomerUpload:'allowCustomerUpload'in body?body.allowCustomerUpload:album.allowCustomerUpload,
           allowVideoUpload:'allowVideoUpload'in body?body.allowVideoUpload:album.allowVideoUpload,
           siteTitle:'siteTitle'in body?body.siteTitle:(album.siteTitle||null),
@@ -684,13 +709,32 @@ export default {
         if(!await isAdmin(req,env))return errR('Unauthorized',401)
         const t=albumSelectMatch[1],album=await getAlbum(env,t)
         if(!album)return errR('Not found',404)
-        // 既存のselect URLを返す or 新規生成
-        if(album.selectToken){return jsonR({selectToken:album.selectToken,url:`${env.SITE_URL}/select.html?token=${album.selectToken}`})}
-        // 商品・項目が0件（空配列を明示的に指定）だと、お客様が何も選べない選定URLになってしまう
-        if(Array.isArray(album.flagDefs)&&album.flagDefs.length===0)return errR('商品・項目を1つ以上設定してください',400)
+        // 商品・項目が0件だと、お客様が何も選べない選定URLになってしまう
+        const hasSelectionConfig=Array.isArray(album.selectionConfig)&&album.selectionConfig.length
+        if(Array.isArray(album.flagDefs)&&album.flagDefs.length===0&&!hasSelectionConfig)
+          return errR('商品・項目を1つ以上設定してください',400)
+        if(hasSelectionConfig&&!album.selectionConfig.some(p=>Array.isArray(p.flags)&&p.flags.length))
+          return errR('商品・項目を1つ以上設定してください',400)
+        const{presets,flagDefs}=await resolveSelection(env,album)
+        if(album.selectToken){
+          // 既に発行済みなら、商品構成だけ最新に更新する（選定内容・送信状態は保持）。
+          // 商品構成を変えると、お客様がすでに選んだ項目のキーが新しい構成から外れることがある。
+          // 選んだ内容そのもの（selections）は消さないが、見出しは新しい構成にしか無いので、
+          // そのままだと確認画面から見えなくなる＝届いていた選定が消えたように見える。
+          // 使われなくなった項目のうち、実際に選ばれているものだけをretiredFlagDefsに残しておく
+          const sd=await getSelect(env,album.selectToken)||{}
+          const oldDefs=Array.isArray(sd.flagDefs)?sd.flagDefs:[]
+          const newKeys=new Set(flagDefs.map(f=>f.key))
+          const usedKeys=new Set()
+          for(const flags of Object.values(sd.selections||{}))for(const f of(Array.isArray(flags)?flags:[]))usedKeys.add(f)
+          const retiredFlagDefs=[...(Array.isArray(sd.retiredFlagDefs)?sd.retiredFlagDefs:[]),...oldDefs]
+            .filter(f=>f&&f.key&&!newKeys.has(f.key)&&usedKeys.has(f.key))
+            .filter((f,i,arr)=>arr.findIndex(x=>x.key===f.key)===i)
+          await saveSelect(env,album.selectToken,{...sd,albumToken:t,createdAt:sd.createdAt||new Date().toISOString(),presets,flagDefs,retiredFlagDefs,selections:sd.selections||{},rev:sd.rev||0})
+          return jsonR({selectToken:album.selectToken,url:`${env.SITE_URL}/select.html?token=${album.selectToken}`})
+        }
         const selectToken=genSelectToken()
-        const flagDefs=await getEffectiveFlagDefs(env,album)
-        await saveSelect(env,selectToken,{albumToken:t,createdAt:new Date().toISOString(),submitted:false,submittedAt:null,flagDefs,selections:{},rev:0})
+        await saveSelect(env,selectToken,{albumToken:t,createdAt:new Date().toISOString(),submitted:false,submittedAt:null,presets,flagDefs,retiredFlagDefs:[],selections:{},rev:0})
         await saveAlbum(env,t,{...album,selectToken,updatedAt:new Date().toISOString()})
         return jsonR({selectToken,url:`${env.SITE_URL}/select.html?token=${selectToken}`})
       }
@@ -711,7 +755,8 @@ export default {
         for(const[photoId,flags]of Object.entries(selections)){
           for(const flag of flags){if(!byFlag[flag])byFlag[flag]=[];byFlag[flag].push({...photoMap[photoId]||{id:photoId}})}
         }
-        return jsonR({hasSelect:true,submitted:selectData.submitted,submittedAt:selectData.submittedAt,flagDefs:selectData.flagDefs,selections,byFlag,activityLog:selectData.activityLog||[],photoMap:Object.fromEntries(Object.entries(photoMap).map(([k,v])=>([k,{id:v.id,name:v.name,thumb:v.thumbnailLink?.replace('=s220','=s400')||null}])))})
+        const presets=Array.isArray(selectData.presets)&&selectData.presets.length?selectData.presets:[{name:'選定',flags:selectData.flagDefs||[]}]
+        return jsonR({hasSelect:true,submitted:selectData.submitted,submittedAt:selectData.submittedAt,flagDefs:selectData.flagDefs,presets,retiredFlagDefs:selectData.retiredFlagDefs||[],selections,byFlag,activityLog:selectData.activityLog||[],photoMap:Object.fromEntries(Object.entries(photoMap).map(([k,v])=>([k,{id:v.id,name:v.name,thumb:v.thumbnailLink?.replace('=s220','=s400')||null}])))})
       }
 
       // 写真一覧（サムネイル選択用）
@@ -764,7 +809,8 @@ export default {
         const files=await listPhotos(album.folderId,at)
         const photos=files.map(f=>({id:f.id,name:f.name,thumb:f.thumbnailLink?.replace('=s220','=s800')||null,width:f.imageMediaMetadata?.width||1200,height:f.imageMediaMetadata?.height||800}))
         const{selectSubmitOnce}=await getSystemSettings(env)
-        return jsonR({name:album.name,expiresAt:album.expiresAt,flagDefs:selectData.flagDefs,submitted:selectData.submitted,submittedAt:selectData.submittedAt,selections:selectData.selections||{},rev:selectData.rev||0,photos,locked:!!(selectSubmitOnce&&selectData.submitted)})
+        const presets=Array.isArray(selectData.presets)&&selectData.presets.length?selectData.presets:[{name:'選定',flags:selectData.flagDefs||[]}]
+        return jsonR({name:album.name,expiresAt:album.expiresAt,flagDefs:selectData.flagDefs,presets,retiredFlagDefs:selectData.retiredFlagDefs||[],submitted:selectData.submitted,submittedAt:selectData.submittedAt,selections:selectData.selections||{},rev:selectData.rev||0,photos,locked:!!(selectSubmitOnce&&selectData.submitted)})
       }
 
       if(selectMatch&&req.method==='POST'){
