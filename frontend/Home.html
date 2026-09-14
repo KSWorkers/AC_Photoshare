@@ -103,6 +103,22 @@ body{font-family:-apple-system,'Hiragino Sans',sans-serif;background:var(--bg);c
     <div style="display:flex;align-items:center;gap:8px;margin-top:4px;"><input type="checkbox" id="rememberMe" style="width:16px;height:16px;cursor:pointer;"><label for="rememberMe" style="font-size:13px;color:var(--mt);cursor:pointer;">ログイン状態を保持する</label></div>
     <button class="btn btn-p" style="width:100%;margin-top:16px;justify-content:center;" id="loginBtn" onclick="login()">ログイン</button>
     <div class="le" id="loginErr">パスワードが正しくありません</div>
+    <div style="text-align:center;margin-top:12px;"><a href="#" onclick="openRecovery();return false;" style="font-size:12px;color:var(--mt);">パスワードをお忘れですか？</a></div>
+  </div>
+</div>
+
+<!-- 復旧コードによるパスワード再設定モーダル -->
+<div class="mo" id="moRecovery" onclick="if(event.target===this)closeRecovery()">
+  <div class="md" style="max-width:420px;">
+    <div class="mh">パスワードの再設定</div>
+    <div class="mb" style="gap:12px;">
+      <div style="font-size:13px;color:var(--mt);">発行済みの復旧コードと、新しいパスワードを入力してください。</div>
+      <div class="fd" style="gap:4px;"><label style="font-size:12px;">復旧コード</label><input type="text" id="recoveryCodeIn" placeholder="XXXX-XXXX-XXXX-XXXX" style="letter-spacing:1px;"></div>
+      <div class="fd" style="gap:4px;"><label style="font-size:12px;">新しいパスワード（8文字以上）</label><input type="password" id="recoveryNewPw"></div>
+      <div class="le" id="recoveryErr"></div>
+      <div id="recoveryResult" style="display:none;background:#edfbf0;border:1px solid #1a7a3c;border-radius:8px;padding:12px;font-size:13px;color:#1a7a3c;"></div>
+    </div>
+    <div class="mf"><button class="btn btn-s" onclick="closeRecovery()">閉じる</button><button class="btn btn-p" id="recoverySubmitBtn" onclick="submitRecovery()">再設定する</button></div>
   </div>
 </div>
 
@@ -332,6 +348,19 @@ body{font-family:-apple-system,'Hiragino Sans',sans-serif;background:var(--bg);c
         <button class="btn btn-s btn-sm" onclick="addFlagDef()" style="align-self:flex-start;margin-top:8px;">＋ フラグを追加</button>
         <div class="fd" style="margin-top:12px;"><div class="sw-w"><span style="font-size:13px;">送信は1回だけにする<span style="display:block;font-size:11px;color:var(--mt);margin-top:2px;">ONにすると、お客様が送信した選定はそれ以降変更できなくなります。「選定の受付を再開する」を押すとまた選べるようになります。</span></span><button class="sw" id="masterSelectSubmitOnceSw" onclick="toggleMasterSelectSubmitOnce()"></button></div></div>
       </div>
+      <div style="border-top:1px solid var(--bd);padding-top:14px;">
+        <div style="font-size:13px;font-weight:600;color:var(--mt);margin-bottom:8px;">管理者パスワード</div>
+        <div style="font-size:12px;color:var(--mt);margin-bottom:8px;">ここでの変更・再発行は「保存」ボタンとは関係なく、押した時点ですぐに反映されます。</div>
+        <div class="fd" style="gap:4px;"><label style="font-size:12px;">現在のパスワード</label><input type="password" id="pwChangeCurrent"></div>
+        <div class="fd" style="gap:4px;margin-top:8px;"><label style="font-size:12px;">新しいパスワード（8文字以上）</label><input type="password" id="pwChangeNew"></div>
+        <button class="btn btn-s btn-sm" id="pwChangeBtn" onclick="changeAdminPassword()" style="align-self:flex-start;margin-top:8px;">パスワードを変更する</button>
+        <div class="le" id="pwChangeErr"></div>
+        <div style="border-top:1px solid var(--bd);margin-top:14px;padding-top:14px;">
+          <div style="font-size:12px;color:var(--mt);margin-bottom:8px;">パスワードを忘れたときのための復旧コードです。発行・再発行すると、それ以前のコードは使えなくなります。</div>
+          <button class="btn btn-s btn-sm" onclick="issueRecoveryCode()" style="align-self:flex-start;">復旧コードを発行する</button>
+          <div id="recoveryIssueResult" style="display:none;background:#edfbf0;border:1px solid #1a7a3c;border-radius:8px;padding:12px;font-size:13px;color:#1a7a3c;margin-top:10px;"></div>
+        </div>
+      </div>
     </div>
     <div class="mf"><button class="btn btn-s" onclick="closeSettings()">キャンセル</button><button class="btn btn-p" id="saveSettingsBtn" onclick="saveSettings()">保存</button></div>
   </div>
@@ -468,6 +497,33 @@ async function login() {
     tok=d.session; sessionStorage.setItem('adminToken',tok); if(document.getElementById('rememberMe').checked)localStorage.setItem('adminToken',tok); initMain()
   } catch { document.getElementById('loginErr').style.display='block' }
   finally { btn.innerHTML='ログイン'; btn.disabled=false }
+}
+
+function openRecovery(){
+  document.getElementById('recoveryCodeIn').value=''
+  document.getElementById('recoveryNewPw').value=''
+  document.getElementById('recoveryErr').style.display='none'
+  document.getElementById('recoveryResult').style.display='none'
+  document.getElementById('recoverySubmitBtn').style.display=''
+  document.getElementById('moRecovery').classList.add('on')
+}
+function closeRecovery(){document.getElementById('moRecovery').classList.remove('on')}
+async function submitRecovery(){
+  const code=document.getElementById('recoveryCodeIn').value.trim()
+  const newPassword=document.getElementById('recoveryNewPw').value
+  const errEl=document.getElementById('recoveryErr')
+  errEl.style.display='none'
+  if(!code||!newPassword)return
+  const btn=document.getElementById('recoverySubmitBtn');btn.innerHTML='<div class="sp-sm"></div>';btn.disabled=true
+  try{
+    const r=await fetch(`${W}/api/admin/recovery/reset`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code,newPassword})})
+    const d=await r.json()
+    if(!r.ok){errEl.textContent=r.status===429?'試行回数が多すぎます。15分後にお試しください。':(d.error||'再設定に失敗しました');errEl.style.display='block';return}
+    document.getElementById('recoveryResult').style.display='block'
+    document.getElementById('recoveryResult').innerHTML=`✅ パスワードを再設定しました。新しい復旧コードです。<strong style="display:block;margin-top:6px;font-size:15px;letter-spacing:1px;">${d.recoveryCode}</strong><span style="display:block;margin-top:6px;font-size:12px;">この画面を閉じると二度と表示されません。必ず控えてください。</span>`
+    btn.style.display='none'
+  }catch{errEl.textContent='再設定に失敗しました';errEl.style.display='block'}
+  finally{btn.innerHTML='再設定する';btn.disabled=false}
 }
 
 function logout(){
@@ -892,7 +948,39 @@ async function openSettings(){
   document.getElementById('masterWifiSsid').value=sysSettings.wifiSsid||''
   document.getElementById('masterWifiPassword').value=sysSettings.wifiPassword||''
   document.getElementById('masterSelectSubmitOnceSw').className=`sw${sysSettings.selectSubmitOnce?' on':''}`
+  document.getElementById('pwChangeCurrent').value=''
+  document.getElementById('pwChangeNew').value=''
+  document.getElementById('pwChangeErr').style.display='none'
+  document.getElementById('recoveryIssueResult').style.display='none'
   document.getElementById('moSettings').classList.add('on')
+}
+async function changeAdminPassword(){
+  const currentPassword=document.getElementById('pwChangeCurrent').value
+  const newPassword=document.getElementById('pwChangeNew').value
+  const errEl=document.getElementById('pwChangeErr')
+  errEl.style.display='none'
+  if(!currentPassword||!newPassword)return
+  const btn=document.getElementById('pwChangeBtn');btn.innerHTML='<div class="sp-sm"></div>';btn.disabled=true
+  try{
+    const r=await fetch(`${W}/api/admin/password`,{method:'POST',headers:{Authorization:`Bearer ${tok}`,'Content-Type':'application/json'},body:JSON.stringify({currentPassword,newPassword})})
+    const d=await r.json()
+    if(!r.ok){errEl.textContent=d.error||'変更に失敗しました';errEl.style.display='block';return}
+    document.getElementById('pwChangeCurrent').value=''
+    document.getElementById('pwChangeNew').value=''
+    showToast('パスワードを変更しました（他の端末はログアウトされます）')
+  }catch{errEl.textContent='変更に失敗しました';errEl.style.display='block'}
+  finally{btn.innerHTML='パスワードを変更する';btn.disabled=false}
+}
+async function issueRecoveryCode(){
+  if(!confirm('復旧コードを発行しますか？\n発行すると、それ以前のコードは使えなくなります。'))return
+  try{
+    const r=await fetch(`${W}/api/admin/recovery`,{method:'POST',headers:{Authorization:`Bearer ${tok}`}})
+    const d=await r.json()
+    if(!r.ok)throw new Error(d.error||'Error')
+    const el=document.getElementById('recoveryIssueResult')
+    el.style.display='block'
+    el.innerHTML=`<strong style="display:block;font-size:15px;letter-spacing:1px;">${d.recoveryCode}</strong><span style="display:block;margin-top:6px;font-size:12px;">この画面を閉じると二度と表示されません。必ず控えてください。</span>`
+  }catch(e){showToast(`発行に失敗しました: ${e.message||e}`)}
 }
 function toggleMasterSelectSubmitOnce(){
   sysSettings.selectSubmitOnce=!sysSettings.selectSubmitOnce

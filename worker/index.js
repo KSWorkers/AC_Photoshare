@@ -198,6 +198,14 @@ async function getEffectiveFlagDefs(env,album){
 function genToken(n=8){const c='abcdefghijkmnpqrstuvwxyz23456789';return Array.from(crypto.getRandomValues(new Uint8Array(n))).map(b=>c[b%c.length]).join('')}
 function genSessionToken(){return Array.from(crypto.getRandomValues(new Uint8Array(32))).map(b=>b.toString(16).padStart(2,'0')).join('')}
 function genSelectToken(){return'sel_'+Array.from(crypto.getRandomValues(new Uint8Array(12))).map(b=>'abcdefghijkmnpqrstuvwxyz23456789'[b%32]).join('')}
+// 復旧コード。0/O・1/I/Lなど見間違えやすい文字は除く。ハイフンは見やすさのためだけに付ける
+// （検証時は取り除いて比較するので、入力時に付けても付けなくても、大文字小文字が違っても通る）
+function normalizeRecoveryCode(s){return(s||'').replace(/[^a-z0-9]/gi,'').toUpperCase()}
+function genRecoveryCode(){
+  const c='ABCDEFGHJKMNPQRSTUVWXYZ23456789'
+  const raw=Array.from(crypto.getRandomValues(new Uint8Array(16))).map(b=>c[b%c.length]).join('')
+  return{raw,display:raw.match(/.{1,4}/g).join('-')}
+}
 function fmtSize(b){if(!b)return'0 B';if(b>=1e9)return`${(b/1e9).toFixed(1)} GB`;if(b>=1e6)return`${(b/1e6).toFixed(1)} MB`;return`${(b/1e3).toFixed(0)} KB`}
 function buildFolderName(name){return name}
 function normalizeExpiresAt(dateStr){if(!dateStr)return null;if(dateStr.includes('T'))return dateStr;return`${dateStr}T23:59:59+09:00`}
@@ -246,11 +254,23 @@ async function validateSession(env,token){if(!token)return false;const d=await e
 function getSessionToken(req){const auth=req.headers.get('Authorization')||'';if(auth.startsWith('Bearer '))return auth.slice(7);return new URL(req.url).searchParams.get('session')||null}
 const isAdmin=async(req,env)=>validateSession(env,getSessionToken(req))
 
+// パスワード変更・復旧コード再設定の直後に、他の端末のログインを切るために使う
+async function invalidateSessions(env,keepToken){
+  const keep=keepToken?`session:${keepToken}`:null
+  let cursor
+  do{
+    const page=await env.ALBUMS.list({prefix:'session:',cursor})
+    await Promise.all(page.keys.filter(k=>k.name!==keep).map(k=>env.ALBUMS.delete(k.name)))
+    cursor=page.list_complete?null:page.cursor
+  }while(cursor)
+}
+
 // ─── レート制限 ─────────────────────────────────────
 
 const RATE_MAX=5,RATE_WINDOW=15*60*1000,RATE_TTL=15*60
-async function checkRateLimit(env,ip){const d=await env.ALBUMS.get(`ratelimit:${ip}`,'json');if(!d||Date.now()-d.firstAt>RATE_WINDOW)return{limited:false};return{limited:d.count>=RATE_MAX}}
-async function recordFailedLogin(env,ip){const key=`ratelimit:${ip}`;const d=await env.ALBUMS.get(key,'json');if(!d||Date.now()-d.firstAt>RATE_WINDOW){await env.ALBUMS.put(key,JSON.stringify({count:1,firstAt:Date.now()}),{expirationTtl:RATE_TTL})}else{await env.ALBUMS.put(key,JSON.stringify({count:d.count+1,firstAt:d.firstAt}),{expirationTtl:RATE_TTL})}}
+// scopeを付けると別枠でカウントできる（例：復旧コードの試行をログインとは別に数える）
+async function checkRateLimit(env,ip,scope=''){const d=await env.ALBUMS.get(`ratelimit:${scope}${ip}`,'json');if(!d||Date.now()-d.firstAt>RATE_WINDOW)return{limited:false};return{limited:d.count>=RATE_MAX}}
+async function recordFailedLogin(env,ip,scope=''){const key=`ratelimit:${scope}${ip}`;const d=await env.ALBUMS.get(key,'json');if(!d||Date.now()-d.firstAt>RATE_WINDOW){await env.ALBUMS.put(key,JSON.stringify({count:1,firstAt:Date.now()}),{expirationTtl:RATE_TTL})}else{await env.ALBUMS.put(key,JSON.stringify({count:d.count+1,firstAt:d.firstAt}),{expirationTtl:RATE_TTL})}}
 
 // ─── KV ヘルパー ─────────────────────────────────────
 
@@ -398,10 +418,59 @@ export default {
         const{limited}=await checkRateLimit(env,clientIP)
         if(limited)return errR('Too many attempts. Wait 15 minutes.',429)
         const{token:inputToken}=await req.json()
-        if(inputToken===env.ADMIN_SECRET){await env.ALBUMS.delete(`ratelimit:${clientIP}`);return jsonR({ok:true,session:await createSession(env)})}
+        // パスワードを変更していれば、KVに保存された値を優先する。
+        // 未変更（初回ログイン）のときは、これまでどおりWorkerのシークレットで判定する
+        const storedPassword=await env.ALBUMS.get('admin:password')
+        const ok=storedPassword?await verifySecret(inputToken,storedPassword):inputToken===env.ADMIN_SECRET
+        if(ok){
+          await env.ALBUMS.delete(`ratelimit:${clientIP}`)
+          if(storedPassword)await upgradeSecretIfNeeded(env,'admin:password',storedPassword,inputToken)
+          return jsonR({ok:true,session:await createSession(env)})
+        }
         await recordFailedLogin(env,clientIP);return errR('Invalid token',401)
       }
       if(path==='/api/admin/logout'&&req.method==='POST'){const t=getSessionToken(req);if(t)await env.ALBUMS.delete(`session:${t}`);return jsonR({ok:true})}
+
+      // 管理パスワードの変更（ログイン中のみ）。変更したら今のセッション以外を全部ログアウトさせる
+      if(path==='/api/admin/password'&&req.method==='POST'){
+        if(!await isAdmin(req,env))return errR('Unauthorized',401)
+        const{currentPassword,newPassword}=await req.json()
+        if(!newPassword||newPassword.length<8)return errR('新しいパスワードは8文字以上にしてください',400)
+        const storedPassword=await env.ALBUMS.get('admin:password')
+        const currentOk=storedPassword?await verifySecret(currentPassword,storedPassword):currentPassword===env.ADMIN_SECRET
+        if(!currentOk)return errR('現在のパスワードが違います',401)
+        await env.ALBUMS.put('admin:password',await hashSecret(newPassword))
+        await invalidateSessions(env,getSessionToken(req))
+        return jsonR({ok:true})
+      }
+
+      // 復旧コードの発行・再発行（ログイン中のみ）。平文はこの応答でだけ返す
+      if(path==='/api/admin/recovery'&&req.method==='POST'){
+        if(!await isAdmin(req,env))return errR('Unauthorized',401)
+        const{raw,display}=genRecoveryCode()
+        await env.ALBUMS.put('admin:recovery',await hashSecret(raw))
+        return jsonR({ok:true,recoveryCode:display})
+      }
+
+      // 復旧コードによるパスワード再設定（未ログインでも使える）
+      if(path==='/api/admin/recovery/reset'&&req.method==='POST'){
+        const{limited}=await checkRateLimit(env,clientIP,'recovery:')
+        if(limited)return errR('Too many attempts. Wait 15 minutes.',429)
+        const{code,newPassword}=await req.json()
+        if(!newPassword||newPassword.length<8)return errR('新しいパスワードは8文字以上にしてください',400)
+        const storedRecovery=await env.ALBUMS.get('admin:recovery')
+        if(!storedRecovery){await recordFailedLogin(env,clientIP,'recovery:');return errR('復旧コードが発行されていません',400)}
+        const normalized=normalizeRecoveryCode(code)
+        if(!normalized||!await verifySecret(normalized,storedRecovery)){
+          await recordFailedLogin(env,clientIP,'recovery:');return errR('復旧コードが正しくありません',401)
+        }
+        await env.ALBUMS.delete(`ratelimit:recovery:${clientIP}`)
+        await env.ALBUMS.put('admin:password',await hashSecret(newPassword))
+        await invalidateSessions(env,null)
+        const{raw,display}=genRecoveryCode()
+        await env.ALBUMS.put('admin:recovery',await hashSecret(raw))
+        return jsonR({ok:true,recoveryCode:display})
+      }
 
       // ══ システム設定 ══════════════════════════════
 
