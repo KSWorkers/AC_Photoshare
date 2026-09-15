@@ -233,6 +233,11 @@ function genRecoveryCode(){
 function fmtSize(b){if(!b)return'0 B';if(b>=1e9)return`${(b/1e9).toFixed(1)} GB`;if(b>=1e6)return`${(b/1e6).toFixed(1)} MB`;return`${(b/1e3).toFixed(0)} KB`}
 function buildFolderName(name){return name}
 function normalizeExpiresAt(dateStr){if(!dateStr)return null;if(dateStr.includes('T'))return dateStr;return`${dateStr}T23:59:59+09:00`}
+// Google DriveのimageMediaMetadata.timeは、EXIFそのままの「2023:08:01 12:34:56」という
+// コロン区切りの日付で返ってくることがある。この形式は new Date() で解釈できず
+// Invalid Date（NaN）になり、撮影時間での並び替えが効かなくなるため、日付部分だけ
+// ハイフン区切りに直す
+function normalizeCaptureTime(s){if(!s)return null;return s.replace(/^(\d{4}):(\d{2}):(\d{2})/,'$1-$2-$3')}
 async function sha256hex(str){const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(str));return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('')}
 async function hashPassword(password){const salt=Array.from(crypto.getRandomValues(new Uint8Array(16))).map(b=>b.toString(16).padStart(2,'0')).join('');const hash=await sha256hex(salt+password);return`${salt}:${hash}`}
 async function verifyPassword(input,stored){if(!stored)return false;if(stored.includes(':')){const[salt,hash]=stored.split(':');return await sha256hex(salt+input)===hash};if(stored.length===64&&/^[0-9a-f]+$/.test(stored))return await sha256hex(input)===stored;return input===stored}
@@ -869,7 +874,7 @@ export default {
         const at=await getAccessToken(env,true)
         const files=await listPhotos(album.folderId,at)
         const totalSize=files.reduce((s,f)=>s+parseInt(f.size||0),0)
-        const photos=files.map(f=>({id:f.id,name:f.name,thumb:f.thumbnailLink?.replace('=s220','=s800')||null,width:f.imageMediaMetadata?.width||1200,height:f.imageMediaMetadata?.height||800,size:parseInt(f.size||0),createdTime:f.createdTime||null,captureTime:f.imageMediaMetadata?.time||null}))
+        const photos=files.map(f=>({id:f.id,name:f.name,thumb:f.thumbnailLink?.replace('=s220','=s800')||null,width:f.imageMediaMetadata?.width||1200,height:f.imageMediaMetadata?.height||800,size:parseInt(f.size||0),createdTime:f.createdTime||null,captureTime:normalizeCaptureTime(f.imageMediaMetadata?.time)}))
         // 動画一覧はサムネイル・名前・サイズの表示のみ。公開設定は写真と同様に不要（再生時に/api/video-openで個別に公開する）
         const videoFiles=await listVideos(album.folderId,at)
         const videos=videoFiles.map(v=>({id:v.id,name:v.name,thumb:v.thumbnailLink?.replace('=s220','=s400')||null,viewLink:v.webViewLink,size:parseInt(v.size||0)}))
