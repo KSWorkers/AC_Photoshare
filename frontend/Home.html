@@ -67,7 +67,7 @@ body{font-family:-apple-system,'Hiragino Sans',sans-serif;background:var(--bg);c
 .md{background:var(--sur);border-radius:var(--rl);width:100%;max-width:480px;box-shadow:0 20px 60px rgba(44,36,24,.18);max-height:90vh;overflow-y:auto;}
 .mh{padding:20px 24px 0;font-size:17px;font-weight:600;}
 .mb{padding:20px 24px;display:flex;flex-direction:column;gap:16px;}
-.mf{padding:0 24px 20px;display:flex;gap:8px;justify-content:flex-end;}
+.mf{position:sticky;bottom:0;background:var(--sur);padding:14px 24px;display:flex;gap:8px;justify-content:flex-end;box-shadow:0 -6px 12px -6px rgba(44,36,24,.15);}
 .sw-w{display:flex;align-items:center;justify-content:space-between;}
 .sw{width:42px;height:24px;border-radius:12px;background:#ddd;position:relative;cursor:pointer;transition:background .2s;border:none;flex-shrink:0;}
 .sw.on{background:var(--tx);}
@@ -95,7 +95,7 @@ body{font-family:-apple-system,'Hiragino Sans',sans-serif;background:var(--bg);c
   <div style="display:flex;gap:8px;align-items:center;">
     <button class="btn btn-s btn-sm" onclick="openSettings()" style="display:none;" id="settingsBtn">⚙️ 設定</button>
     <button class="btn btn-s btn-sm" id="bulkBtn" onclick="toggleBulk()" style="display:none;">まとめて選択</button>
-    <button class="btn btn-s btn-sm" onclick="logout()">ログアウト</button>
+    <button class="btn btn-s btn-sm" onclick="logout()" style="display:none;" id="logoutBtn">ログアウト</button>
   </div>
 </header>
 
@@ -545,6 +545,7 @@ function logout(){
   document.getElementById('loginWrap').style.display='flex'
   document.getElementById('main').classList.remove('on')
   document.getElementById('bulkBtn').style.display='none'
+  document.getElementById('logoutBtn').style.display='none'
 }
 
 function initMain(){
@@ -552,6 +553,7 @@ function initMain(){
   document.getElementById('main').classList.add('on')
   document.getElementById('bulkBtn').style.display='inline-flex'
   document.getElementById('settingsBtn').style.display='inline-flex'
+  document.getElementById('logoutBtn').style.display='inline-flex'
   loadAlbums()
   fetch(`${W}/api/admin/settings`,{headers:{Authorization:`Bearer ${tok}`}}).then(r=>r.json()).then(s=>sysSettings=s).catch(()=>{})
 }
