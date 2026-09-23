@@ -386,6 +386,8 @@ const T = {
     dlFull: 'フルサイズ', dlFullSub: '元データそのまま',
     dlMed: '中サイズ（A4印刷対応）', dlMedSub: '約2400px',
     dlSm: '小サイズ（L判印刷対応）', dlSmSub: '約1200px',
+    dlCameraRoll: '📱 カメラロールに保存', dlCameraRollSub: 'まとめて保存（対応端末のみ）',
+    toastCamRollPrep: n => `${n}枚を準備中...`, toastCamRollUnsupported: 'この端末では利用できません', toastCamRollFail: '保存に失敗しました',
     dlGuide: '📖 保存方法ガイド',
     lbSave: '保存 ▾', lbDel: '削除',
     lbHint: '保存 ▾ からサイズを選択 → 画像が開いたら長押し →「イメージを保存」',
@@ -429,6 +431,8 @@ const T = {
     dlFull: 'Full size', dlFullSub: 'Original quality',
     dlMed: 'Medium (A4 print)', dlMedSub: 'approx. 2400px',
     dlSm: 'Small (L-size print)', dlSmSub: 'approx. 1200px',
+    dlCameraRoll: '📱 Save to Camera Roll', dlCameraRollSub: 'Save all at once (supported devices only)',
+    toastCamRollPrep: n => `Preparing ${n} photos...`, toastCamRollUnsupported: 'Not supported on this device', toastCamRollFail: 'Failed to save',
     dlGuide: '📖 Download guide',
     lbSave: 'Save ▾', lbDel: 'Delete',
     lbHint: 'Tap Save ▾ → Choose size → Long-press the image → "Save Image"',
@@ -547,7 +551,10 @@ function applyLang(){
 }
 function dlMenuItems(isSel=false){
   const prefix = isSel ? 'downloadSel' : 'downloadAll'
-  return `<button class="dl-item" onclick="${prefix}('full')">${t('dlFull')}<small>${t('dlFullSub')}</small></button>
+  // カメラロールへの一括保存（Web Share API）は、選択保存メニューにだけ出す。
+  // PCやWeb Share API非対応の端末では今までどおりZIPダウンロードのみにする
+  const camRoll = (isSel && canShareFiles()) ? `<button class="dl-item" onclick="saveSelToCameraRoll()">${t('dlCameraRoll')}<small>${t('dlCameraRollSub')}</small></button>` : ''
+  return `${camRoll}<button class="dl-item" onclick="${prefix}('full')">${t('dlFull')}<small>${t('dlFullSub')}</small></button>
     <button class="dl-item" onclick="${prefix}('medium')">${t('dlMed')}<small>${t('dlMedSub')}</small></button>
     <button class="dl-item" onclick="${prefix}('small')">${t('dlSm')}<small>${t('dlSmSub')}</small></button>
     <a class="dl-item" href="/download_guide.html" target="_blank" style="border-top:1px solid var(--border);color:var(--muted);">${t('dlGuide')}</a>`
@@ -892,6 +899,48 @@ async function downloadZip(list,size){
 function downloadAll(size){closeAllMenus();downloadZip(photos,size)}
 function downloadSel(size){closeAllMenus();downloadZip([...selIds].map(i=>photos[i]),size);cancelSel()}
 function dlCurrent(size){closeAllMenus();const p=photos[cur];window.open(photoUrl(p,size),'_blank');logDownload();maybeShowGuidePrompt()}
+
+// Web Share APIで複数ファイルを渡せるかどうか（PCやSafari以外の一部ブラウザは非対応）。
+// 実際に渡すファイルが無いと判定できない端末があるため、ダミーの1枚で判定する
+function canShareFiles(){
+  if(!isMobile||typeof navigator.share!=='function'||typeof navigator.canShare!=='function')return false
+  try{
+    const dummy=new File([new Blob(['x'],{type:'image/jpeg'})],'x.jpg',{type:'image/jpeg'})
+    return navigator.canShare({files:[dummy,dummy]})
+  }catch{return false}
+}
+
+// 選択した写真をまとめてWeb Share API経由でカメラロールに保存する。
+// フルサイズ画像を全部メモリに読み込んでから渡す必要があるため、枚数・サイズが
+// 多いと時間がかかる／失敗することがある。失敗時は今までどおりのZIPに案内する
+async function saveSelToCameraRoll(){
+  closeAllMenus()
+  const list=[...selIds].map(i=>photos[i])
+  if(!list.length)return
+  if(!canShareFiles()){showToast(t('toastCamRollUnsupported'));return}
+  showProgress(t('toastCamRollPrep',list.length));updateProgress(0,list.length)
+  try{
+    const files=[]
+    let done=0
+    await Promise.all(list.map(async p=>{
+      try{
+        const r=await fetch(photoUrl(p,'full'))
+        if(!r.ok)throw new Error()
+        const blob=await r.blob()
+        files.push(new File([blob],p.name||`${p.id}.jpg`,{type:blob.type||'image/jpeg'}))
+      }catch(e){console.error('camera roll fetch failed',p.id,e)}
+      finally{done++;updateProgress(done,list.length)}
+    }))
+    hideProgress()
+    if(!files.length||!navigator.canShare({files})){showToast(t('toastCamRollUnsupported'));return}
+    await navigator.share({files})
+    logDownload()
+    cancelSel()
+  }catch(e){
+    hideProgress()
+    if(e.name!=='AbortError')showToast(t('toastCamRollFail'))
+  }
+}
 
 function toggleDlMenu(e){e.stopPropagation();document.getElementById('allDlMenu').classList.toggle('on')}
 function toggleSelDl(e){e.stopPropagation();document.getElementById('selDlMenu').classList.toggle('on')}
@@ -1258,6 +1307,9 @@ async function deleteCustFile(fileId,btn){
     if(km[fileId]){sessionStorage.setItem(`upload_keys_${token}`,JSON.stringify(ks.filter(k=>k!==km[fileId])));delete km[fileId];sessionStorage.setItem(`upload_keymap_${token}`,JSON.stringify(km))}
   }else{btn.disabled=false;btn.textContent='削除';showToast('削除に失敗しました')}
 }
+
+// 対応端末なら「カメラロールに保存」を選択保存メニューに出す（初期表示はapplyLangを通らないため個別に反映する）
+;(()=>{ const m=document.getElementById('selDlMenu'); if(m) m.innerHTML = dlMenuItems(true) })()
 
 if(!token||token==='album')showErr('notfound')
 else load()
