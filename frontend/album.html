@@ -899,7 +899,30 @@ async function downloadZip(list,size){
 }
 function downloadAll(size){closeAllMenus();downloadZip(photos,size)}
 function downloadSel(size){closeAllMenus();downloadZip([...selIds].map(i=>photos[i]),size);cancelSel()}
-function dlCurrent(size){closeAllMenus();const p=photos[cur];window.open(photoUrl(p,size),'_blank');logDownload();maybeShowGuidePrompt()}
+// 対応端末では選んだサイズのままWeb Share APIで直接「画像を保存」できるようにし、
+// 非対応端末や失敗時は今までどおり新しいタブで開く（長押しで保存）方式にする。
+// 1枚だけの共有は複数枚まとめてより対応端末が広いため、判定を分けている
+async function dlCurrent(size){
+  closeAllMenus()
+  const p=photos[cur]
+  if(canShareSingleFile()){
+    try{
+      const r=await fetch(photoUrl(p,size))
+      if(!r.ok)throw new Error()
+      const blob=await r.blob()
+      const file=new File([blob],p.name||`${p.id}.jpg`,{type:blob.type||'image/jpeg'})
+      if(navigator.canShare({files:[file]})){
+        await navigator.share({files:[file]})
+        logDownload();maybeShowGuidePrompt()
+        return
+      }
+    }catch(e){
+      if(e.name==='AbortError')return // 共有シートを自分で閉じた場合はそのまま終了（開き直さない）
+      console.error('single share failed, falling back to open',e)
+    }
+  }
+  window.open(photoUrl(p,size),'_blank');logDownload();maybeShowGuidePrompt()
+}
 
 // Web Share APIで複数ファイルを渡せるかどうか（PCやSafari以外の一部ブラウザは非対応）。
 // 実際に渡すファイルが無いと判定できない端末があるため、ダミーの1枚で判定する
@@ -908,6 +931,14 @@ function canShareFiles(){
   try{
     const dummy=new File([new Blob(['x'],{type:'image/jpeg'})],'x.jpg',{type:'image/jpeg'})
     return navigator.canShare({files:[dummy,dummy]})
+  }catch{return false}
+}
+// 1枚だけの共有可否の判定（複数枚より対応端末が広いため別判定にしている）
+function canShareSingleFile(){
+  if(!isMobile||typeof navigator.share!=='function'||typeof navigator.canShare!=='function')return false
+  try{
+    const dummy=new File([new Blob(['x'],{type:'image/jpeg'})],'x.jpg',{type:'image/jpeg'})
+    return navigator.canShare({files:[dummy]})
   }catch{return false}
 }
 
