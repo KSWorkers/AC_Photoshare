@@ -262,10 +262,10 @@ body{font-family:-apple-system,'Hiragino Sans',sans-serif;background:var(--bg);c
         まとめてDL
       </button>
       <div class="dl-menu" id="allDlMenu">
+        <a class="dl-item" href="/download_guide.html" target="_blank" style="border-bottom:1px solid var(--border);color:var(--muted);">📖 保存方法ガイド</a>
         <button class="dl-item" onclick="downloadAll('full')">フルサイズ<small>元データそのまま</small></button>
         <button class="dl-item" onclick="downloadAll('medium')">中サイズ（A4印刷対応）<small>約2400px</small></button>
         <button class="dl-item" onclick="downloadAll('small')">小サイズ（L判印刷対応）<small>約1200px</small></button>
-        <a class="dl-item" href="/download_guide.html" target="_blank" style="border-top:1px solid var(--border);color:var(--muted);">📖 保存方法ガイド</a>
       </div>
     </div>
   </div>
@@ -279,10 +279,10 @@ body{font-family:-apple-system,'Hiragino Sans',sans-serif;background:var(--bg);c
       <div class="dl-wrap dl-up">
         <button class="btn btn-sm btn-w" onclick="toggleSelDl(event)">選択DL ▾</button>
         <div class="dl-menu" id="selDlMenu">
+          <a class="dl-item" href="/download_guide.html" target="_blank" style="border-bottom:1px solid var(--border);color:var(--muted);">📖 保存方法ガイド</a>
           <button class="dl-item" onclick="downloadSel('full')">フルサイズ<small>元データそのまま</small></button>
           <button class="dl-item" onclick="downloadSel('medium')">中サイズ（A4印刷対応）<small>約2400px</small></button>
           <button class="dl-item" onclick="downloadSel('small')">小サイズ（L判印刷対応）<small>約1200px</small></button>
-          <a class="dl-item" href="/download_guide.html" target="_blank" style="border-top:1px solid var(--border);color:var(--muted);">📖 保存方法ガイド</a>
         </div>
       </div>
       <button class="btn btn-sm btn-w" onclick="cancelSel()">キャンセル</button>
@@ -300,10 +300,10 @@ body{font-family:-apple-system,'Hiragino Sans',sans-serif;background:var(--bg);c
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>保存 ▾
         </button>
         <div class="dl-menu" id="lbDlMenu">
+          <a class="dl-item" href="/download_guide.html" target="_blank" style="border-bottom:1px solid var(--border);color:var(--muted);">📖 保存方法ガイド</a>
           <button class="dl-item" onclick="dlCurrent('full')">フルサイズ<small>元データそのまま</small></button>
           <button class="dl-item" onclick="dlCurrent('medium')">中サイズ（A4印刷対応）<small>約2400px</small></button>
           <button class="dl-item" onclick="dlCurrent('small')">小サイズ（L判印刷対応）<small>約1200px</small></button>
-          <a class="dl-item" href="/download_guide.html" target="_blank" style="border-top:1px solid var(--border);color:var(--muted);">📖 保存方法ガイド</a>
         </div>
       </div>
       <button class="lb-btn" id="lbSsToggle" onclick="toggleSsPause()" style="display:none;">
@@ -554,13 +554,14 @@ function dlMenuItems(isSel=false){
   // カメラロールへの一括保存（Web Share API）は、選択保存メニューにだけ出す。
   // PCやWeb Share API非対応の端末では今までどおりZIPダウンロードのみにする
   const camRoll = (isSel && canShareFiles()) ? `<button class="dl-item" onclick="saveSelToCameraRoll()">${t('dlCameraRoll')}<small>${t('dlCameraRollSub')}</small></button>` : ''
-  return `${camRoll}<button class="dl-item" onclick="${prefix}('full')">${t('dlFull')}<small>${t('dlFullSub')}</small></button>
+  return `<a class="dl-item" href="/download_guide.html" target="_blank" style="border-bottom:1px solid var(--border);color:var(--muted);">${t('dlGuide')}</a>
+    ${camRoll}<button class="dl-item" onclick="${prefix}('full')">${t('dlFull')}<small>${t('dlFullSub')}</small></button>
     <button class="dl-item" onclick="${prefix}('medium')">${t('dlMed')}<small>${t('dlMedSub')}</small></button>
-    <button class="dl-item" onclick="${prefix}('small')">${t('dlSm')}<small>${t('dlSmSub')}</small></button>
-    <a class="dl-item" href="/download_guide.html" target="_blank" style="border-top:1px solid var(--border);color:var(--muted);">${t('dlGuide')}</a>`
+    <button class="dl-item" onclick="${prefix}('small')">${t('dlSm')}<small>${t('dlSmSub')}</small></button>`
 }
 function lbDlMenuItems(){
-  return `<button class="dl-item" onclick="dlCurrent('full')">${t('dlFull')}<small>${t('dlFullSub')}</small></button>
+  return `<a class="dl-item" href="/download_guide.html" target="_blank" style="border-bottom:1px solid var(--border);color:var(--muted);">${t('dlGuide')}</a>
+    <button class="dl-item" onclick="dlCurrent('full')">${t('dlFull')}<small>${t('dlFullSub')}</small></button>
     <button class="dl-item" onclick="dlCurrent('medium')">${t('dlMed')}<small>${t('dlMedSub')}</small></button>
     <button class="dl-item" onclick="dlCurrent('small')">${t('dlSm')}<small>${t('dlSmSub')}</small></button>`
 }
