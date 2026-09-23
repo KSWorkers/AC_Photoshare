@@ -80,7 +80,7 @@ body{font-family:-apple-system,'Hiragino Sans',sans-serif;background:var(--bg);c
 
 /* ── ツールバー ── */
 .tb{position:sticky;top:52px;z-index:100;background:rgba(250,250,248,.94);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);padding:8px 12px;display:flex;align-items:center;justify-content:flex-end;gap:6px;flex-wrap:wrap;}
-@media(max-width:400px){.btn-sm{padding:5px 8px;font-size:11px;}}
+@media(max-width:400px){.btn-sm{padding:5px 8px;font-size:11px;}#slideshowBtnTxt{display:none;}}
 .dl-wrap{position:relative;}
 .dl-menu{position:absolute;top:calc(100%+6px);right:0;background:#fff;border-radius:10px;box-shadow:0 8px 32px rgba(44,36,24,.15);overflow:hidden;white-space:nowrap;z-index:20;display:none;min-width:200px;}
 .dl-menu.on{display:block;}
@@ -179,6 +179,17 @@ body{font-family:-apple-system,'Hiragino Sans',sans-serif;background:var(--bg);c
   <div class="logo" id="siteLogo">Alcyone PhotoShare <span>Photo</span></div>
   <div class="hd-right">
     <button class="btn btn-gw btn-sm" id="langBtn" onclick="toggleLang()" style="min-width:36px;text-align:center;">EN</button>
+    <div class="dl-wrap">
+      <button class="btn btn-gw btn-sm" id="slideshowBtn" onclick="toggleSsMenu(event)">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="6 3 20 12 6 21 6 3"/></svg>
+        <span id="slideshowBtnTxt">スライドショー</span>
+      </button>
+      <div class="dl-menu" id="ssMenu">
+        <button class="dl-item" onclick="startSlideshow('new')" id="ssItemNew">新しい順</button>
+        <button class="dl-item" onclick="startSlideshow('old')" id="ssItemOld">古い順</button>
+        <button class="dl-item" onclick="startSlideshow('random')" id="ssItemRandom">ランダム</button>
+      </div>
+    </div>
     <button class="btn btn-gw btn-sm" id="shareBtn" onclick="shareAlbum()">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.59 13.51l6.83 3.98M15.41 6.51l-6.82 3.98"/></svg>
       <span id="shareBtnTxt">共有</span>
@@ -295,6 +306,9 @@ body{font-family:-apple-system,'Hiragino Sans',sans-serif;background:var(--bg);c
           <a class="dl-item" href="/download_guide.html" target="_blank" style="border-top:1px solid var(--border);color:var(--muted);">📖 保存方法ガイド</a>
         </div>
       </div>
+      <button class="lb-btn" id="lbSsToggle" onclick="toggleSsPause()" style="display:none;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" id="lbSsIcon"><rect x="6" y="5" width="4" height="14"/><rect x="14" y="5" width="4" height="14"/></svg>
+      </button>
       <button class="lb-btn" id="lbDelBtn" onclick="deleteCurrent()" style="color:#ff6b6b;display:none;">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>削除
       </button>
@@ -367,6 +381,7 @@ let _albumLangSet = false  // アルバム設定の言語を一度だけ適用�
 const T = {
   ja: {
     share: '共有', selBtn: '選択', selCancel: '選択解除',
+    slideshow: 'スライドショー', ssNew: '新しい順', ssOld: '古い順', ssRandom: 'ランダム',
     dlAll: 'まとめてDL', dlSel: '選択DL ▾', cancelSel: 'キャンセル',
     dlFull: 'フルサイズ', dlFullSub: '元データそのまま',
     dlMed: '中サイズ（A4印刷対応）', dlMedSub: '約2400px',
@@ -409,6 +424,7 @@ const T = {
   },
   en: {
     share: 'Share', selBtn: 'Select', selCancel: 'Deselect',
+    slideshow: 'Slideshow', ssNew: 'Newest first', ssOld: 'Oldest first', ssRandom: 'Random',
     dlAll: 'Download All', dlSel: 'Download ▾', cancelSel: 'Cancel',
     dlFull: 'Full size', dlFullSub: 'Original quality',
     dlMed: 'Medium (A4 print)', dlMedSub: 'approx. 2400px',
@@ -464,6 +480,11 @@ function applyLang(){
   const btn = document.getElementById('langBtn')
   btn.textContent = lang==='ja'?'EN':'日本語'
   document.getElementById('shareBtnTxt').textContent = t('share')
+  const ssBtnTxt = document.getElementById('slideshowBtnTxt')
+  if(ssBtnTxt) ssBtnTxt.textContent = t('slideshow')
+  const ssNew = document.getElementById('ssItemNew');if(ssNew)ssNew.textContent=t('ssNew')
+  const ssOld = document.getElementById('ssItemOld');if(ssOld)ssOld.textContent=t('ssOld')
+  const ssRandom = document.getElementById('ssItemRandom');if(ssRandom)ssRandom.textContent=t('ssRandom')
   // Toolbar
   const selBtn = document.getElementById('selBtn')
   if(selBtn) selBtn.textContent = selMode ? t('selCancel') : t('selBtn')
@@ -885,8 +906,59 @@ async function shareAlbum(){
   showToast(t('toastUrl'))
 }
 
+function toggleSsMenu(e){e.stopPropagation();document.getElementById('ssMenu').classList.toggle('on')}
+
+// ── スライドショー ──────────────────────────────────────────
+const SS_INTERVAL=4000
+let ssActive=false, ssOrder=[], ssPos=0, ssTimer=null, ssPaused=false
+
+function buildSsOrder(mode){
+  const idx=photos.map((_,i)=>i)
+  if(mode==='random'){
+    for(let i=idx.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[idx[i],idx[j]]=[idx[j],idx[i]]}
+    return idx
+  }
+  const key=p=>new Date(p.captureTime||p.createdTime||0).getTime()
+  const dir=mode==='old'?1:-1
+  return idx.slice().sort((a,b)=>(key(photos[a])-key(photos[b]))*dir)
+}
+
+function startSlideshow(mode){
+  closeAllMenus()
+  if(!photos.length)return
+  ssOrder=buildSsOrder(mode)
+  ssActive=true;ssPaused=false;ssPos=0
+  document.getElementById('lbSsToggle').style.display=''
+  setSsIcon()
+  openLb(ssOrder[0])
+  clearInterval(ssTimer)
+  ssTimer=setInterval(ssAdvance,SS_INTERVAL)
+}
+function stopSlideshow(){
+  ssActive=false;ssPaused=false
+  clearInterval(ssTimer);ssTimer=null
+  const t=document.getElementById('lbSsToggle');if(t)t.style.display='none'
+}
+function ssAdvance(){
+  if(!ssActive||ssPaused)return
+  ssPos=(ssPos+1)%ssOrder.length
+  cur=ssOrder[ssPos]
+  updLb()
+}
+function setSsIcon(){
+  const el=document.getElementById('lbSsIcon')
+  if(!el)return
+  el.innerHTML=ssPaused
+    ?'<polygon points="6 3 20 12 6 21 6 3"/>'
+    :'<rect x="6" y="5" width="4" height="14"/><rect x="14" y="5" width="4" height="14"/>'
+}
+function toggleSsPause(){
+  ssPaused=!ssPaused
+  setSsIcon()
+}
+
 function openLb(i){cur=i;updLb();document.getElementById('lb').classList.add('on');document.body.style.overflow='hidden'}
-function closeLb(){document.getElementById('lb').classList.remove('on');document.body.style.overflow=''}
+function closeLb(){document.getElementById('lb').classList.remove('on');document.body.style.overflow='';stopSlideshow()}
 function updLb(){
   const p=photos[cur]
   const wrap=document.getElementById('lbWrap')
@@ -903,20 +975,26 @@ function updLb(){
   }
   delete img.dataset.fallback
   img.src=displaySrc
-  document.getElementById('lbCnt').textContent=`${cur+1} / ${photos.length}`
-  document.getElementById('lbPrev').disabled=cur===0
-  document.getElementById('lbNext').disabled=cur===photos.length-1
+  document.getElementById('lbCnt').textContent=ssActive?`${ssPos+1} / ${ssOrder.length}`:`${cur+1} / ${photos.length}`
+  document.getElementById('lbPrev').disabled=!ssActive&&cur===0
+  document.getElementById('lbNext').disabled=!ssActive&&cur===photos.length-1
   document.getElementById('lbHint').innerHTML=isMobile?t('lbHint'):''
   const uploaded=JSON.parse(sessionStorage.getItem(`uploads_${token}`)||'[]')
   const delBtn=document.getElementById('lbDelBtn')
   delBtn.style.display=uploaded.includes(p.id)?'':'none'
 }
 function lbMv(dir){
-  const n=cur+dir;if(n<0||n>=photos.length)return;cur=n
+  if(ssActive){
+    ssPos=(ssPos+dir+ssOrder.length)%ssOrder.length
+    cur=ssOrder[ssPos]
+  }else{
+    const n=cur+dir;if(n<0||n>=photos.length)return;cur=n
+  }
   const wrap=document.getElementById('lbWrap')
   wrap.style.opacity='0'
   // 即座にsrc更新（onloadで表示）
   setTimeout(()=>updLb(),80)
+  if(ssActive&&ssTimer){clearInterval(ssTimer);ssTimer=setInterval(ssAdvance,SS_INTERVAL)}
 }
 document.addEventListener('keydown',e=>{if(!document.getElementById('lb').classList.contains('on'))return;if(e.key==='ArrowLeft')lbMv(-1);if(e.key==='ArrowRight')lbMv(1);if(e.key==='Escape')closeLb()})
 let tx=0;document.getElementById('lb').addEventListener('touchstart',e=>{tx=e.touches[0].clientX},{passive:true});document.getElementById('lb').addEventListener('touchend',e=>{const dx=e.changedTouches[0].clientX-tx;if(Math.abs(dx)>50)lbMv(dx<0?1:-1)})
@@ -1148,6 +1226,7 @@ async function deleteCurrent(){
   btn.disabled=true;btn.textContent='削除中...'
   const res=await fetch(`${W}/api/album/${token}/files/${p.id}`,{method:'DELETE'})
   if(res.ok){
+    if(ssActive)stopSlideshow()
     photos.splice(cur,1)
     const s=JSON.parse(sessionStorage.getItem(`uploads_${token}`)||'[]')
     sessionStorage.setItem(`uploads_${token}`,JSON.stringify(s.filter(id=>id!==p.id)))
