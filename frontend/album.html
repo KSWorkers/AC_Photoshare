@@ -270,6 +270,8 @@ body{font-family:-apple-system,'Hiragino Sans',sans-serif;background:var(--bg);c
     </div>
   </div>
 
+  <div id="guideLinkTop"></div>
+
   <div class="gallery" id="grid"></div>
 
 
@@ -692,12 +694,8 @@ async function load(password='') {
       document.getElementById('grid').style.display = 'none'
     }
     // 動画セクション
-    const wrap = document.getElementById('scGal')
-    if (d.videos && d.videos.length > 0) {
-      renderVideos(d.videos)
-    } else {
-      addGuideLink(document.getElementById('grid').parentNode)
-    }
+    if (d.videos && d.videos.length > 0) renderVideos(d.videos)
+    addGuideLink()
     show('scGal')
     applyLang()
   } catch(e) { showErr('error') }
@@ -721,9 +719,9 @@ async function refreshGallery(){
     ).join('')
     document.getElementById('grid').style.display = photos.length ? '' : 'none'
     if (photos.length > 0) renderGrid()
-    document.querySelectorAll('.video-section, .guide-link-big').forEach(el=>el.remove())
+    document.querySelectorAll('.video-section').forEach(el=>el.remove())
     if (d.videos && d.videos.length > 0) renderVideos(d.videos)
-    else addGuideLink(document.getElementById('grid').parentNode)
+    addGuideLink()
   }catch(e){
     // パスワード再入力中の通信失敗は、パスワード違いと区別して伝える（原因不明のまま同じ画面に無言で戻さない）
     if(password){
@@ -1109,7 +1107,6 @@ function renderVideos(videos) {
     }).join('')}
     </div>`
   wrap.appendChild(section)
-  addGuideLink(wrap)
 }
 
 async function deleteVideo(videoId){
@@ -1161,9 +1158,12 @@ async function openVideoPlayer(viewLink, fileId) {
   document.body.appendChild(overlay)
 }
 
-function addGuideLink(container) {
+function addGuideLink() {
+  const container = document.getElementById('guideLinkTop')
+  if (!container || container.querySelector('.guide-link-big')) return
   const guide = document.createElement('a')
   guide.href = '/download_guide.html'
+  guide.target = '_blank'
   guide.className = 'guide-link-big'
   guide.innerHTML = t('guideLink')
   container.appendChild(guide)
