@@ -390,7 +390,8 @@ const T = {
     toastCamRollPrep: n => `${n}枚を準備中...`, toastCamRollUnsupported: 'この端末では利用できません', toastCamRollFail: '保存に失敗しました',
     dlGuide: '📖 保存方法ガイド',
     lbSave: '保存 ▾', lbDel: '削除',
-    lbHint: '保存 ▾ からサイズを選択 → 画像が開いたら長押し →「イメージを保存」',
+    lbHintShare: '保存 ▾ からサイズを選択 →「画像を保存」をタップ',
+    lbHintOpen: '保存 ▾ からサイズを選択 → 画像が開いたら長押し →「イメージを保存」',
     selCount: n => `${n}枚選択中`,
     lbCount: (c,t) => `${c} / ${t}`,
     loading: '読み込み中...',
@@ -435,7 +436,8 @@ const T = {
     toastCamRollPrep: n => `Preparing ${n} photos...`, toastCamRollUnsupported: 'Not supported on this device', toastCamRollFail: 'Failed to save',
     dlGuide: '📖 Download guide',
     lbSave: 'Save ▾', lbDel: 'Delete',
-    lbHint: 'Tap Save ▾ → Choose size → Long-press the image → "Save Image"',
+    lbHintShare: 'Tap Save ▾ → Choose size → Tap "Save Image"',
+    lbHintOpen: 'Tap Save ▾ → Choose size → Long-press the image → "Save Image"',
     selCount: n => `${n} selected`,
     lbCount: (c,t) => `${c} / ${t}`,
     loading: 'Loading...',
@@ -547,7 +549,7 @@ function applyLang(){
   }
   // LB hint
   const lbHint = document.getElementById('lbHint')
-  if(lbHint && lbHint.textContent) lbHint.textContent = isMobile ? t('lbHint') : ''
+  if(lbHint && lbHint.textContent) lbHint.textContent = isMobile ? lbHintText() : ''
 }
 function dlMenuItems(isSel=false){
   const prefix = isSel ? 'downloadSel' : 'downloadAll'
@@ -941,6 +943,9 @@ function canShareSingleFile(){
     return navigator.canShare({files:[dummy]})
   }catch{return false}
 }
+// ライトボックス下部の案内文。対応端末では共有シート経由の手順、
+// 非対応端末では従来どおり長押しで保存する手順を出す
+function lbHintText(){return canShareSingleFile()?t('lbHintShare'):t('lbHintOpen')}
 
 // 選択した写真をまとめてWeb Share API経由でカメラロールに保存する。
 // フルサイズ画像を全部メモリに読み込んでから渡す必要があるため、枚数・サイズが
@@ -1059,7 +1064,7 @@ function updLb(){
   document.getElementById('lbCnt').textContent=ssActive?`${ssPos+1} / ${ssOrder.length}`:`${cur+1} / ${photos.length}`
   document.getElementById('lbPrev').disabled=!ssActive&&cur===0
   document.getElementById('lbNext').disabled=!ssActive&&cur===photos.length-1
-  document.getElementById('lbHint').innerHTML=isMobile?t('lbHint'):''
+  document.getElementById('lbHint').innerHTML=isMobile?lbHintText():''
   const uploaded=JSON.parse(sessionStorage.getItem(`uploads_${token}`)||'[]')
   const delBtn=document.getElementById('lbDelBtn')
   delBtn.style.display=uploaded.includes(p.id)?'':'none'
