@@ -12,3 +12,7 @@ bucket_name = "ac-photoshare-hero"
 
 [vars]
 SITE_URL = "https://ac-photoshare.pages.dev"
+
+# 毎日 03:00 JST（UTC 18:00）に期限切れアルバムのDriveフォルダを整理する
+[triggers]
+crons = ["0 18 * * *"]
