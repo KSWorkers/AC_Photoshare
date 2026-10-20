@@ -75,6 +75,12 @@ async function deleteFile(fileId,token){
   if(!res.ok){const body=await res.text().catch(()=>'');const e=new Error(`Delete: ${res.status} ${body}`);e.status=res.status;throw e}
 }
 
+async function patchDriveFile(fileId,body,token){
+  const res=await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?supportsAllDrives=true`,{method:'PATCH',headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'},body:JSON.stringify(body)})
+  if(!res.ok)throw new Error(`PatchFile: ${res.status} ${await res.text()}`)
+  return res.json()
+}
+
 // ─── 動画権限管理 ───────────────────────────────────
 
 async function grantAnyoneRead(fileId,token){
@@ -171,6 +177,67 @@ function isAlbumActive(album){
   if(album.published===false)return false
   if(album.expiresAt&&new Date(album.expiresAt)<new Date())return false
   return true
+}
+
+// ─── 期限切れアルバムのDriveフォルダ整理 ──────────────
+// 期限切れになったアルバムのDriveフォルダ名の先頭に目印を付けて、Drive側を直接見ても
+// 公開終了と分かるようにする。猶予期間が過ぎたらゴミ箱へ移動（完全削除はしない）。
+// 猶予期間中に期限が延長・再公開された場合はリネーム/ゴミ箱入りを両方とも自動で元に戻す
+const EXPIRED_FOLDER_PREFIX='【公開終了】'
+const EXPIRE_TRASH_GRACE_MS=30*24*60*60*1000
+const expiredFolderName=name=>`${EXPIRED_FOLDER_PREFIX}${name}`
+
+async function sweepAlbumFolderLifecycle(env,token,at,budget){
+  if(budget.remaining<1)return
+  const album=await getAlbum(env,token)
+  if(!album||!album.folderId)return
+  if(isAlbumActive(album)){
+    if(!album.folderRenamed)return
+    try{
+      budget.remaining--
+      await patchDriveFile(album.folderId,{name:album.name,trashed:false},at)
+      await saveAlbum(env,token,{...album,folderRenamed:false,folderTrashedAt:null})
+    }catch(e){console.error(`folder restore failed ${token}`,e)}
+    return
+  }
+  if(!album.folderRenamed){
+    try{
+      budget.remaining--
+      await patchDriveFile(album.folderId,{name:expiredFolderName(album.name)},at)
+      await saveAlbum(env,token,{...album,folderRenamed:true})
+    }catch(e){console.error(`folder expire-rename failed ${token}`,e)}
+    return
+  }
+  if(!album.folderTrashedAt&&album.expiresAt&&Date.now()-new Date(album.expiresAt).getTime()>EXPIRE_TRASH_GRACE_MS){
+    try{
+      budget.remaining--
+      await patchDriveFile(album.folderId,{trashed:true},at)
+      await saveAlbum(env,token,{...album,folderTrashedAt:new Date().toISOString()})
+    }catch(e){console.error(`folder trash failed ${token}`,e)}
+  }
+}
+
+// Cronトリガー（毎日1回）から呼ばれる本体。管理画面を誰も開かなくても進む
+async function runExpirySweep(env){
+  const albums=await listAlbums(env)
+  const reactivated=albums.filter(a=>a.folderId&&a.folderRenamed&&isAlbumActive(a))
+  const inactive=albums.filter(a=>a.folderId&&!isAlbumActive(a))
+  if(!reactivated.length&&!inactive.length)return
+  let at
+  try{at=await getAccessToken(env,false)}catch(e){console.error('expiry sweep: getAccessToken failed',e);return}
+  const budget={remaining:40}
+  for(const a of reactivated){
+    if(budget.remaining<1)break
+    await sweepAlbumFolderLifecycle(env,a.token,at,budget)
+  }
+  // 期限切れからの経過が長い順ではなく短い順に処理すると、予算切れ時に古い未処理が
+  // 溜まり続けるため、期限が古い（＝対応が遅れている）ものから優先して処理する
+  inactive.sort((a,b)=>new Date(a.expiresAt||0)-new Date(b.expiresAt||0))
+  for(const a of inactive){
+    if(budget.remaining<1)break
+    await sweepAlbumFolderLifecycle(env,a.token,at,budget)
+    if(budget.remaining>=1)await sweepAlbumVideoGrants(env,a.token,a.folderId,at,budget)
+  }
 }
 
 // ─── システム設定・フラグ定義 ────────────────────────
@@ -644,9 +711,10 @@ export default {
           lang:'lang'in body?body.lang:(album.lang||'ja'),
           updatedAt:new Date().toISOString(),
         }
-        // Driveフォルダ名をリネーム
+        // Driveフォルダ名をリネーム（期限切れで【公開終了】が付いている間は、その目印を保ったままリネームする）
         if(body.name&&body.name!==album.name&&album.folderId){
-          const _r=getAccessToken(env,false).then(at=>fetch(`https://www.googleapis.com/drive/v3/files/${album.folderId}?supportsAllDrives=true`,{method:'PATCH',headers:{Authorization:`Bearer ${at}`,'Content-Type':'application/json'},body:JSON.stringify({name:body.name})})).catch(()=>{})
+          const newDriveName=album.folderRenamed?expiredFolderName(body.name):body.name
+          const _r=getAccessToken(env,false).then(at=>patchDriveFile(album.folderId,{name:newDriveName},at)).catch(()=>{})
           ctx.waitUntil(_r)
         }
         // 動画権限: 非公開・期限切れへ変わったときだけ、控え(gv:)を元に個別の公開を取り消す。
@@ -1254,5 +1322,9 @@ export default {
 
       return errR('Not found',404)
     }catch(e){console.error(e);return errR(`Error: ${e.message}`,500)}
+  },
+
+  async scheduled(event,env,ctx){
+    ctx.waitUntil(runExpirySweep(env).catch(e=>console.error('expiry sweep failed',e)))
   }
 }
