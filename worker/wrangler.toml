@@ -6,5 +6,9 @@ compatibility_date = "2024-01-01"
 binding = "ALBUMS"
 id = "f89da5bbc2094c9cb389eee063df15b5"
 
+[[r2_buckets]]
+binding = "HERO_IMAGES"
+bucket_name = "ac-photoshare-hero"
+
 [vars]
 SITE_URL = "https://ac-photoshare.pages.dev"

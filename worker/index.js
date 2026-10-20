@@ -350,6 +350,7 @@ async function deleteAlbumFully(env,token,deleteDrive,at,budget){
       // 404 = すでにDrive側に無い。成功として扱う
     }
   }
+  if(album.heroImageKey)await env.HERO_IMAGES.delete(album.heroImageKey).catch(()=>{})
   if(album.selectToken)await env.ALBUMS.delete(`select:${album.selectToken}`)
   await env.ALBUMS.delete(`album:${token}`)
   return{ok:true}
@@ -422,7 +423,7 @@ export default {
         // 期限切れ・非公開なら画像も名前も出さない。パスワード付きアルバムはさらに名前も出さない
         const showName=active&&!album.password
         const albumUrl=escapeHtml(`${env.SITE_URL}/album.html?token=${t}`),title=escapeHtml(showName?album.name:'フォトギャラリー')
-        const imageUrl=escapeHtml(active&&album.coverId?`${env.SITE_URL}/api/og-image/${t}`:'')
+        const imageUrl=escapeHtml(active&&(album.heroImageKey||album.coverId)?`${env.SITE_URL}/api/og-image/${t}`:'')
         const ogImage=imageUrl?`<meta property="og:image" content="${imageUrl}"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:image" content="${imageUrl}">`:'<meta name="twitter:card" content="summary">'
         const html=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${title} | Alcyone PhotoShare</title><meta property="og:title" content="${title}"><meta property="og:type" content="website"><meta property="og:url" content="${albumUrl}"><meta property="og:site_name" content="Alcyone PhotoShare"><meta name="twitter:title" content="${title}">${ogImage}<meta http-equiv="refresh" content="0;url=${albumUrl}"></head><body><script>location.replace("${albumUrl}")</script></body></html>`
         return new Response(html,{headers:{'Content-Type':'text/html;charset=UTF-8','Cache-Control':'no-cache',...CORS}})
@@ -433,6 +434,10 @@ export default {
       if(ogImageMatch&&req.method==='GET'){
         const t=ogImageMatch[1],album=await getAlbum(env,t)
         if(!album||!isAlbumActive(album))return errR('No image',404)
+        if(album.heroImageKey){
+          const obj=await env.HERO_IMAGES.get(album.heroImageKey)
+          if(obj)return new Response(obj.body,{headers:{'Content-Type':obj.httpMetadata?.contentType||'image/jpeg','Cache-Control':'public, max-age=86400',...CORS}})
+        }
         if(!album.coverId)return errR('No image',404)
         const at=await getAccessToken(env,true)
         const meta=await driveReq(`/files/${album.coverId}?fields=thumbnailLink`,at)
@@ -440,6 +445,18 @@ export default {
         if(!thumbUrl)return errR('No thumbnail',404)
         const res=await fetch(thumbUrl),blob=await res.blob()
         return new Response(blob,{headers:{'Content-Type':res.headers.get('Content-Type')||'image/jpeg','Cache-Control':'public, max-age=86400',...CORS}})
+      }
+
+      // カスタムヒーロー画像（R2にアップロードされた専用画像）の配信。
+      // OGP画像と同様、リンクプレビュー等のためパスワード入力前でも表示できるようにする
+      const heroImageMatch=path.match(/^\/api\/hero-image\/([a-z0-9]+)$/)
+      if(heroImageMatch&&req.method==='GET'){
+        const t=heroImageMatch[1],album=await getAlbum(env,t)
+        if(!album||!isAlbumActive(album))return errR('No image',404)
+        if(!album.heroImageKey)return errR('No image',404)
+        const obj=await env.HERO_IMAGES.get(album.heroImageKey)
+        if(!obj)return errR('No image',404)
+        return new Response(obj.body,{headers:{'Content-Type':obj.httpMetadata?.contentType||'image/jpeg','Cache-Control':'public, max-age=86400',...CORS}})
       }
 
       // ログイン・ログアウト
@@ -644,6 +661,39 @@ export default {
           })()
           ctx.waitUntil(_p)
         }
+        await saveAlbum(env,t,updated)
+        return jsonR({ok:true,album:updated})
+      }
+
+      // カスタムヒーロー画像のアップロード／削除（既存写真から選ぶcoverIdとは別に、
+      // アルバム内の写真と無関係な専用画像をR2に保存して使えるようにする）
+      const heroUploadMatch=path.match(/^\/api\/admin\/albums\/([a-z0-9]+)\/hero-image$/)
+      if(heroUploadMatch&&req.method==='POST'){
+        if(!await isAdmin(req,env))return errR('Unauthorized',401)
+        const t=heroUploadMatch[1]
+        const album=await getAlbum(env,t)
+        if(!album)return errR('Not found',404)
+        const form=await req.formData()
+        const file=form.get('file')
+        if(!file||typeof file==='string')return errR('file required')
+        if(!file.type?.startsWith('image/'))return errR('Invalid file type')
+        if(file.size>10*1024*1024)return errR('File too large (max 10MB)')
+        const ext=(file.type.split('/')[1]||'jpg').replace('jpeg','jpg')
+        const key=`hero/${t}/${Date.now()}.${ext}`
+        await env.HERO_IMAGES.put(key,file,{httpMetadata:{contentType:file.type}})
+        if(album.heroImageKey)await env.HERO_IMAGES.delete(album.heroImageKey).catch(()=>{})
+        const updated={...album,heroImageKey:key,updatedAt:new Date().toISOString()}
+        await saveAlbum(env,t,updated)
+        return jsonR({ok:true,album:updated})
+      }
+
+      if(heroUploadMatch&&req.method==='DELETE'){
+        if(!await isAdmin(req,env))return errR('Unauthorized',401)
+        const t=heroUploadMatch[1]
+        const album=await getAlbum(env,t)
+        if(!album)return errR('Not found',404)
+        if(album.heroImageKey)await env.HERO_IMAGES.delete(album.heroImageKey).catch(()=>{})
+        const updated={...album,heroImageKey:null,updatedAt:new Date().toISOString()}
         await saveAlbum(env,t,updated)
         return jsonR({ok:true,album:updated})
       }
@@ -878,7 +928,7 @@ export default {
         // 動画一覧はサムネイル・名前・サイズの表示のみ。公開設定は写真と同様に不要（再生時に/api/video-openで個別に公開する）
         const videoFiles=await listVideos(album.folderId,at)
         const videos=videoFiles.map(v=>({id:v.id,name:v.name,thumb:v.thumbnailLink?.replace('=s220','=s400')||null,viewLink:v.webViewLink,size:parseInt(v.size||0)}))
-        return jsonR({name:album.name,expiresAt:album.expiresAt,count:photos.length,totalSize,totalSizeLabel:fmtSize(totalSize),heroText:album.heroText||'Photography',heroFont:album.heroFont||'josefin',coverId:album.coverId||null,coverIdMobile:album.coverIdMobile||null,selectToken:album.selectToken||null,allowCustomerUpload:album.allowCustomerUpload||false,allowVideoUpload:album.allowVideoUpload||false,lang:album.lang||'ja',siteTitle:album.siteTitle||null,photos,videos})
+        return jsonR({name:album.name,expiresAt:album.expiresAt,count:photos.length,totalSize,totalSizeLabel:fmtSize(totalSize),heroText:album.heroText||'Photography',heroFont:album.heroFont||'josefin',hasHeroImage:!!album.heroImageKey,coverId:album.coverId||null,coverIdMobile:album.coverIdMobile||null,selectToken:album.selectToken||null,allowCustomerUpload:album.allowCustomerUpload||false,allowVideoUpload:album.allowVideoUpload||false,lang:album.lang||'ja',siteTitle:album.siteTitle||null,photos,videos})
       }
 
       // 動画の個別公開（再生ボタンが押されたときだけ、その動画1本をDrive上で公開する）
