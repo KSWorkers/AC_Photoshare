@@ -279,10 +279,23 @@ body{font-family:-apple-system,'Hiragino Sans',sans-serif;background:var(--bg);c
       <div style="display:flex;gap:6px;padding:2px;background:var(--bg);border-radius:10px;">
         <button id="thumbTabPc" onclick="setThumbTab('pc')" style="flex:1;padding:8px;border:none;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;background:var(--tx);color:#fff;transition:all .15s;">💻 PC用（横長推奨）</button>
         <button id="thumbTabMobile" onclick="setThumbTab('mobile')" style="flex:1;padding:8px;border:none;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;background:transparent;color:var(--mt);transition:all .15s;">📱 スマホ用（縦長推奨）</button>
+        <button id="thumbTabCustom" onclick="setThumbTab('custom')" style="flex:1;padding:8px;border:none;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;background:transparent;color:var(--mt);transition:all .15s;">🖼️ カスタム画像</button>
       </div>
       <div style="font-size:12px;color:var(--mt);" id="thumbTabHint">PC・スマホ共通のカバー画像を選択します。</div>
       <div id="thumbGrid" style="max-height:400px;overflow-y:auto;overflow-x:hidden;">
         <div style="text-align:center;padding:20px;color:var(--mt);">読み込み中...</div>
+      </div>
+      <div id="thumbCustomPane" style="display:none;">
+        <div id="heroCustomPreviewWrap" style="display:none;margin-bottom:10px;">
+          <img id="heroCustomPreview" style="width:100%;max-height:220px;object-fit:cover;border-radius:10px;display:block;">
+          <button class="btn btn-d btn-sm" style="margin-top:8px;" onclick="removeHeroImage()">この画像を削除する</button>
+        </div>
+        <label style="display:block;border:2px dashed var(--bdm);border-radius:12px;padding:24px;text-align:center;cursor:pointer;background:var(--bg);">
+          <div style="font-size:24px;margin-bottom:4px;">🖼️</div>
+          <div style="font-size:13px;font-weight:500;">クリックして画像を選択（JPEG/PNGなど、10MBまで）</div>
+          <input type="file" id="heroCustomFileInput" accept="image/*" style="display:none;" onchange="onHeroCustomFileChange(event)">
+        </label>
+        <div id="heroCustomUploadStatus" style="font-size:12px;color:var(--mt);margin-top:8px;"></div>
       </div>
     </div>
     <div class="mf"><button class="btn btn-s" onclick="closeThumb()">キャンセル</button><button class="btn btn-p" id="thumbSaveBtn" onclick="saveThumb()" disabled>選択して保存</button></div>
@@ -634,7 +647,9 @@ function renderGrid(){
     if(prv){sc='sb-pv';sl='非公開'}
     if(exp){sc='sb-ex';sl='期限切れ'}
     const isSel=selToks.has(a.token)
-    const thumbHtml=a.coverId
+    const thumbHtml=a.heroImageKey
+      ?`<img src="${W}/api/hero-image/${a.token}" loading="lazy" onerror="this.outerHTML='<div class=th-ph>📸</div>'">`
+      :a.coverId
       ?`<img src="${W}/api/admin/thumb/${a.coverId}?session=${tok}" loading="lazy" onerror="this.outerHTML='<div class=th-ph>📸</div>'">`
       :`<div class="th-ph">📸</div>`
     const heroVal=a.heroText||'Photography'
@@ -886,20 +901,45 @@ function setCurPendingId(id){if(thumbTab==='pc')pendingCoverId=id;else pendingCo
 
 function setThumbTab(tab){
   thumbTab=tab
-  const isPc=tab==='pc'
-  document.getElementById('thumbTabPc').style.cssText=`flex:1;padding:8px;border:none;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;transition:all .15s;background:${isPc?'var(--tx)':'transparent'};color:${isPc?'#fff':'var(--mt)'};`
-  document.getElementById('thumbTabMobile').style.cssText=`flex:1;padding:8px;border:none;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;transition:all .15s;background:${isPc?'transparent':'var(--tx)'};color:${isPc?'var(--mt)':'#fff'};`
-  document.getElementById('thumbTabHint').textContent=isPc?'PC・スマホ共通のカバー画像を選択します。':'スマホ専用カバー画像（縦長写真推奨）。未設定の場合はPC用と同じ画像が使われます。'
+  const tabIds=[['thumbTabPc','pc'],['thumbTabMobile','mobile'],['thumbTabCustom','custom']]
+  tabIds.forEach(([id,name])=>{
+    const on=tab===name
+    document.getElementById(id).style.cssText=`flex:1;padding:8px;border:none;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;transition:all .15s;background:${on?'var(--tx)':'transparent'};color:${on?'#fff':'var(--mt)'};`
+  })
+  const hints={pc:'PC・スマホ共通のカバー画像を選択します。',mobile:'スマホ専用カバー画像（縦長写真推奨）。未設定の場合はPC用と同じ画像が使われます。',custom:'写真一覧とは別に専用の画像をアップロードできます。設定するとPC・スマホどちらでもこちらが優先されます。'}
+  document.getElementById('thumbTabHint').textContent=hints[tab]
+  document.getElementById('thumbGrid').style.display=tab==='custom'?'none':'block'
+  document.getElementById('thumbCustomPane').style.display=tab==='custom'?'block':'none'
+  document.getElementById('thumbSaveBtn').style.display=tab==='custom'?'none':''
+  if(tab==='custom')return
   // タブを切り替えても選択中の内容（未保存分）は保持したまま表示を切り替えるだけ
   document.getElementById('thumbGrid').innerHTML=renderThumbGrid(thumbPhotos,curPendingId())
   document.getElementById('thumbSaveBtn').disabled=!(pendingCoverId||pendingCoverIdMobile)
 }
 
+function renderHeroCustomPreview(){
+  const album=albums.find(a=>a.token===thumbToken)
+  const wrap=document.getElementById('heroCustomPreviewWrap')
+  const img=document.getElementById('heroCustomPreview')
+  if(album?.heroImageKey){
+    img.src=`${W}/api/hero-image/${thumbToken}?t=${Date.now()}`
+    wrap.style.display='block'
+  }else{
+    img.src=''
+    wrap.style.display='none'
+  }
+  document.getElementById('heroCustomUploadStatus').textContent=''
+}
+
 async function openThumb(token){
   thumbToken=token;thumbPhotos=[];pendingCoverId=null;pendingCoverIdMobile=null;thumbTab='pc'
+  document.getElementById('thumbGrid').style.display='block'
+  document.getElementById('thumbCustomPane').style.display='none'
+  document.getElementById('thumbSaveBtn').style.display=''
   document.getElementById('thumbSaveBtn').disabled=true
   document.getElementById('thumbGrid').innerHTML='<div style="text-align:center;padding:20px;color:var(--mt);">読み込み中...</div>'
   document.getElementById('moThumb').classList.add('on')
+  renderHeroCustomPreview()
   try{
     const r=await fetch(`${W}/api/admin/albums/${token}/photos`,{headers:{Authorization:`Bearer ${tok}`}})
     const d=await r.json()
@@ -910,6 +950,37 @@ async function openThumb(token){
     pendingCoverIdMobile=album?.coverIdMobile||null
     setThumbTab('pc')
   }catch{document.getElementById('thumbGrid').innerHTML='<div style="text-align:center;padding:20px;color:#c0392b;">読み込みに失敗しました</div>'}
+}
+
+async function onHeroCustomFileChange(event){
+  const file=event.target.files[0]
+  event.target.value=''
+  if(!file)return
+  if(!file.type.startsWith('image/')){showToast('画像ファイルを選択してください');return}
+  if(file.size>10*1024*1024){showToast('ファイルサイズは10MBまでにしてください');return}
+  const status=document.getElementById('heroCustomUploadStatus')
+  status.textContent='アップロード中...'
+  try{
+    const fd=new FormData()
+    fd.append('file',file)
+    const res=await fetch(`${W}/api/admin/albums/${thumbToken}/hero-image`,{method:'POST',headers:{Authorization:`Bearer ${tok}`},body:fd})
+    if(!res.ok)throw new Error()
+    const d=await res.json()
+    const a=albums.find(x=>x.token===thumbToken)
+    if(a)a.heroImageKey=d.album.heroImageKey
+    renderHeroCustomPreview();renderGrid();showToast('カスタム画像をアップロードしました')
+  }catch{status.textContent='';showToast('アップロードに失敗しました')}
+}
+
+async function removeHeroImage(){
+  if(!confirm('カスタム画像を削除しますか？'))return
+  try{
+    const res=await fetch(`${W}/api/admin/albums/${thumbToken}/hero-image`,{method:'DELETE',headers:{Authorization:`Bearer ${tok}`}})
+    if(!res.ok)throw new Error()
+    const a=albums.find(x=>x.token===thumbToken)
+    if(a)a.heroImageKey=null
+    renderHeroCustomPreview();renderGrid();showToast('カスタム画像を削除しました')
+  }catch{showToast('削除に失敗しました')}
 }
 
 function selectThumb(id){

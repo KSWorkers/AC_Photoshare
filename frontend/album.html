@@ -666,16 +666,21 @@ async function load(password='') {
     applyFont(d.heroFont||'josefin')
     document.getElementById('heroText').textContent = d.heroText||'Photography'
 
-    // カバー画像（スマホ: coverIdMobile > coverId > 1枚目、PC: coverId > 1枚目）
-    const preferredId = isMobile ? (d.coverIdMobile || d.coverId) : d.coverId
-    const cover = preferredId ? photos.find(p=>p.id===preferredId) : photos[0]
-    if (cover) {
-      document.getElementById('heroImg').src = cover.thumb
+    // カバー画像：専用アップロード画像 > 選択した写真（スマホ: coverIdMobile > coverId）> 1枚目
+    if (d.hasHeroImage) {
+      document.getElementById('heroImg').src = `${W}/api/hero-image/${token}`
       document.getElementById('heroSection').style.display = 'block'
     } else {
-      // カバー未設定時: ヒーロー非表示 + ヘッダー分のスペース確保
-      document.getElementById('heroSection').style.display = 'none'
-      document.querySelector('.album-info').style.marginTop = '52px'
+      const preferredId = isMobile ? (d.coverIdMobile || d.coverId) : d.coverId
+      const cover = preferredId ? photos.find(p=>p.id===preferredId) : photos[0]
+      if (cover) {
+        document.getElementById('heroImg').src = cover.thumb
+        document.getElementById('heroSection').style.display = 'block'
+      } else {
+        // カバー未設定時: ヒーロー非表示 + ヘッダー分のスペース確保
+        document.getElementById('heroSection').style.display = 'none'
+        document.querySelector('.album-info').style.marginTop = '52px'
+      }
     }
 
     // アルバム情報
