@@ -318,6 +318,7 @@ body{font-family:-apple-system,'Hiragino Sans',sans-serif;background:var(--bg);c
         <div style="font-size:12px;color:var(--mt);">JPG・PNG・MP4・MOVなど複数選択可</div>
         <input type="file" multiple accept="image/*,video/*" id="uploadFileInput" style="display:none;" onchange="onFilesSelected()">
       </label>
+      <div id="uploadSummary" style="display:none;align-items:center;justify-content:space-between;gap:8px;font-size:12px;color:var(--mt);"></div>
       <div id="uploadList" style="display:grid;gap:6px;max-height:240px;overflow-y:auto;"></div>
     </div>
     <div class="mf"><button class="btn btn-s" onclick="closeUpload()">閉じる</button></div>
@@ -1610,7 +1611,7 @@ async function quickHeroChange(token,sel){
 // ─── アップロード ─────────────────────────────────
 let uploadAlbumToken=''
 
-function openUpload(albumToken){uploadAlbumToken=albumToken;document.getElementById('uploadList').innerHTML='';document.getElementById('uploadFileInput').value='';document.getElementById('uploadResizeSw').className=`sw${uploadResizeOn?' on':''}`;document.getElementById('moUpload').classList.add('on')}
+function openUpload(albumToken){uploadAlbumToken=albumToken;uploadItems={};uploadResults={};document.getElementById('uploadList').innerHTML='';document.getElementById('uploadSummary').style.display='none';document.getElementById('uploadFileInput').value='';document.getElementById('uploadResizeSw').className=`sw${uploadResizeOn?' on':''}`;document.getElementById('moUpload').classList.add('on')}
 function closeUpload(){document.getElementById('moUpload').classList.remove('on')}
 function onFilesSelected(){const files=Array.from(document.getElementById('uploadFileInput').files);if(!files.length)return;uploadFiles(files)}
 ;(()=>{
@@ -1648,15 +1649,16 @@ async function resizeImageFile(f,maxEdge){
     return new File([blob],f.name,{type:'image/jpeg',lastModified:f.lastModified})
   }catch{return f}
 }
+let uploadItems={},uploadResults={}
 async function uploadFiles(files){
   const list=document.getElementById('uploadList')
-  const items={}
   // 既存ファイルとの重複（同名）チェック用に現在のアルバムのファイル名一覧を取得
   const existingNames=new Set()
   try{
     const fr=await fetch(`${W}/api/admin/albums/${uploadAlbumToken}/files`,{headers:{Authorization:`Bearer ${tok}`}})
     if(fr.ok){const fd=await fr.json();[...(fd.photos||[]),...(fd.videos||[])].forEach(f=>existingNames.add(f.name))}
   }catch{}
+  const newKeys=[]
   for(let f of files){
     if(uploadResizeOn)f=await resizeImageFile(f,3000)
     const key=f.name+f.size
@@ -1666,51 +1668,87 @@ async function uploadFiles(files){
     const sizeStr=f.size>1048576?`${(f.size/1048576).toFixed(1)}MB`:`${Math.round(f.size/1024)}KB`
     const isDupl=existingNames.has(f.name)
     const stHtml=isDupl?`<span id="st_${key}" style="color:#c0392b;font-size:12px;">⚠️ 重複（スキップ）</span>`:`<span id="st_${key}" style="color:var(--mt);font-size:12px;">待機中</span>`
-    item.innerHTML=`<div style="display:flex;align-items:center;gap:8px;"><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${f.name}</span><span style="color:var(--mt);font-size:11px;">${isVideo?'🎬':'🖼'} ${sizeStr}</span>${stHtml}</div><div id="pb_${key}" style="display:none;height:3px;background:var(--bdm);border-radius:2px;overflow:hidden;"><div id="pbi_${key}" style="height:100%;background:var(--tx);width:0%;transition:width .3s;"></div></div>`
+    item.innerHTML=`<div style="display:flex;align-items:center;gap:8px;"><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${f.name}</span><span style="color:var(--mt);font-size:11px;">${isVideo?'🎬':'🖼'} ${sizeStr}</span>${stHtml}<button id="rt_${key}" onclick="retryUploadOne('${key}')" style="display:none;background:none;border:none;color:var(--tx);cursor:pointer;font-size:13px;padding:2px 4px;" title="再試行">🔁</button></div><div id="pb_${key}" style="display:none;height:3px;background:var(--bdm);border-radius:2px;overflow:hidden;"><div id="pbi_${key}" style="height:100%;background:var(--tx);width:0%;transition:width .3s;"></div></div>`
     list.appendChild(item)
     if(isDupl)continue
     existingNames.add(f.name) // 同じバッチ内での重複選択も1件目のみアップロード
-    items[key]={f,item}
+    uploadItems[key]={f,item}
+    newKeys.push(key)
   }
-  async function uploadOne(key,f){
-    const st=document.getElementById(`st_${key}`)
-    const pb=document.getElementById(`pb_${key}`)
-    const pbi=document.getElementById(`pbi_${key}`)
-    if(st)st.textContent='アップロード中...'
-    try{
-      if(pb)pb.style.display='block'
-      const sesRes=await fetch(`${W}/api/admin/albums/${uploadAlbumToken}/upload/session`,{method:'POST',headers:{Authorization:`Bearer ${tok}`,'Content-Type':'application/json'},body:JSON.stringify({name:f.name,mimeType:f.type||'application/octet-stream',size:f.size})})
-      if(!sesRes.ok)throw new Error(`Session failed: ${sesRes.status}`)
-      const{sessionUri}=await sesRes.json()
-      const CHUNK=8*1024*1024
-      let offset=0,uploadOk=false
-      while(offset<f.size){
-        const end=Math.min(offset+CHUNK,f.size)
-        const chunk=f.slice(offset,end)
-        const cr=`bytes ${offset}-${end-1}/${f.size}`
-        const cRes=await fetch(`${W}/api/admin/albums/${uploadAlbumToken}/upload/chunk`,{method:'POST',headers:{Authorization:`Bearer ${tok}`,'Content-Type':f.type||'application/octet-stream','X-Session-Uri':sessionUri,'X-Content-Range':cr},body:chunk})
-        if(!cRes.ok)throw new Error(`Chunk failed: ${cRes.status}`)
-        const cData=await cRes.json()
-        if(cData.status==='continue'){offset=end;if(pbi)pbi.style.width=Math.round(end/f.size*100)+'%';continue}
-        if(cData.status==='complete'){uploadOk=true;break}
-        throw new Error('Unexpected chunk response')
-      }
-      if(!uploadOk)throw new Error('Upload incomplete')
-      if(pbi)pbi.style.width='100%'
-      if(st){st.textContent='✅ 完了';st.style.color='#1a7a3c'}
-    }catch(e){if(st){st.textContent='❌ 失敗';st.style.color='#c0392b'}}
+  updateUploadSummary()
+  await runUploadQueue(newKeys)
+  await loadAlbums()
+}
+async function uploadOne(key,f){
+  const st=document.getElementById(`st_${key}`)
+  const pb=document.getElementById(`pb_${key}`)
+  const pbi=document.getElementById(`pbi_${key}`)
+  const rt=document.getElementById(`rt_${key}`)
+  if(rt)rt.style.display='none'
+  if(st){st.textContent='アップロード中...';st.style.color='var(--mt)';st.title=''}
+  try{
+    if(pb)pb.style.display='block'
+    const sesRes=await fetch(`${W}/api/admin/albums/${uploadAlbumToken}/upload/session`,{method:'POST',headers:{Authorization:`Bearer ${tok}`,'Content-Type':'application/json'},body:JSON.stringify({name:f.name,mimeType:f.type||'application/octet-stream',size:f.size})})
+    if(!sesRes.ok)throw new Error(`アップロード開始に失敗しました（${sesRes.status}）`)
+    const{sessionUri}=await sesRes.json()
+    const CHUNK=8*1024*1024
+    let offset=0,uploadOk=false
+    while(offset<f.size){
+      const end=Math.min(offset+CHUNK,f.size)
+      const chunk=f.slice(offset,end)
+      const cr=`bytes ${offset}-${end-1}/${f.size}`
+      const cRes=await fetch(`${W}/api/admin/albums/${uploadAlbumToken}/upload/chunk`,{method:'POST',headers:{Authorization:`Bearer ${tok}`,'Content-Type':f.type||'application/octet-stream','X-Session-Uri':sessionUri,'X-Content-Range':cr},body:chunk})
+      if(!cRes.ok)throw new Error(`通信エラーが発生しました（${cRes.status}）`)
+      const cData=await cRes.json()
+      if(cData.status==='continue'){offset=end;if(pbi)pbi.style.width=Math.round(end/f.size*100)+'%';continue}
+      if(cData.status==='complete'){uploadOk=true;break}
+      throw new Error('予期しない応答です')
+    }
+    if(!uploadOk)throw new Error('アップロードが完了しませんでした')
+    if(pbi)pbi.style.width='100%'
+    if(st){st.textContent='✅ 完了';st.style.color='#1a7a3c'}
+    uploadResults[key]='ok'
+  }catch(e){
+    if(st){st.textContent='❌ 失敗';st.style.color='#c0392b';st.title=e.message||''}
+    if(rt)rt.style.display='inline'
+    uploadResults[key]='fail'
   }
-  // 同時4件までのプールで並列アップロード（1件ずつ逐次にすると通信待ちが直列化して遅い）
+  updateUploadSummary()
+}
+// 同時4件までのプールで並列アップロード（1件ずつ逐次にすると通信待ちが直列化して遅い）
+async function runUploadQueue(keys){
   const CONCURRENCY=4
-  const queue=Object.entries(items)
+  const queue=[...keys]
   async function worker(){
     while(queue.length){
-      const[key,{f}]=queue.shift()
-      await uploadOne(key,f)
+      const key=queue.shift()
+      await uploadOne(key,uploadItems[key].f)
     }
   }
   await Promise.all(Array.from({length:Math.min(CONCURRENCY,queue.length)},worker))
-  await loadAlbums()
+}
+function updateUploadSummary(){
+  const summary=document.getElementById('uploadSummary')
+  const keys=Object.keys(uploadItems)
+  if(!keys.length){summary.style.display='none';return}
+  const done=keys.filter(k=>uploadResults[k]).length
+  const fail=keys.filter(k=>uploadResults[k]==='fail').length
+  const ok=keys.filter(k=>uploadResults[k]==='ok').length
+  const pending=keys.length-done
+  summary.style.display='flex'
+  let text=`${ok}件成功`
+  if(fail)text+=`・${fail}件失敗`
+  if(pending)text+=`・${pending}件処理中`
+  summary.innerHTML=`<span>${text}</span>${fail&&!pending?`<button onclick="retryFailedUploads()" style="background:#c0392b;color:#fff;border:none;border-radius:6px;padding:4px 10px;font-size:12px;cursor:pointer;">失敗した${fail}件を再試行</button>`:''}`
+}
+function retryUploadOne(key){
+  if(!uploadItems[key])return
+  runUploadQueue([key]).then(loadAlbums)
+}
+function retryFailedUploads(){
+  const failKeys=Object.keys(uploadItems).filter(k=>uploadResults[k]==='fail')
+  if(!failKeys.length)return
+  runUploadQueue(failKeys).then(loadAlbums)
 }
 
 // ─── ファイル管理 ─────────────────────────────────────
