@@ -1646,8 +1646,52 @@ async function resizeImageFile(f,maxEdge){
     bitmap.close?.()
     const blob=await new Promise(res=>canvas.toBlob(res,'image/jpeg',0.92))
     if(!blob)return f
-    return new File([blob],f.name,{type:'image/jpeg',lastModified:f.lastModified})
+    const withExif=await copyExif(f,blob)
+    return new File([withExif],f.name,{type:'image/jpeg',lastModified:f.lastModified})
   }catch{return f}
+}
+// canvasで縮小するとEXIF（撮影日時など）が消え、Drive側で撮影時間が取れずに
+// 撮影時間順の並び替えがアップロード順になってしまうため、元ファイルのEXIFを移植する
+async function copyExif(srcFile,dstBlob){
+  try{
+    const exif=extractExifSegment(new Uint8Array(await srcFile.arrayBuffer()))
+    if(!exif)return dstBlob
+    // 描画時点で向きは補正済みなので、二重に回転しないよう向き情報は「回転なし」に戻す
+    resetExifOrientation(exif)
+    const dst=new Uint8Array(await dstBlob.arrayBuffer())
+    let pos=2
+    if(dst[2]===0xFF&&dst[3]===0xE0)pos=4+((dst[4]<<8)|dst[5])
+    return new Blob([dst.slice(0,pos),exif,dst.slice(pos)],{type:'image/jpeg'})
+  }catch{return dstBlob}
+}
+function extractExifSegment(b){
+  if(b[0]!==0xFF||b[1]!==0xD8)return null
+  let i=2
+  while(i+4<=b.length&&b[i]===0xFF){
+    const marker=b[i+1]
+    if(marker===0xDA||marker===0xD9)break
+    const len=(b[i+2]<<8)|b[i+3]
+    if(marker===0xE1&&b[i+4]===0x45&&b[i+5]===0x78&&b[i+6]===0x69&&b[i+7]===0x66)return b.slice(i,i+2+len)
+    i+=2+len
+  }
+  return null
+}
+function resetExifOrientation(seg){
+  const t=10
+  const le=seg[t]===0x49
+  const r16=o=>le?seg[o]|(seg[o+1]<<8):(seg[o]<<8)|seg[o+1]
+  const r32=o=>(le?seg[o]|(seg[o+1]<<8)|(seg[o+2]<<16)|(seg[o+3]<<24):(seg[o]<<24)|(seg[o+1]<<16)|(seg[o+2]<<8)|seg[o+3])>>>0
+  const ifd=t+r32(t+4)
+  if(ifd+2>seg.length)return
+  const n=r16(ifd)
+  for(let k=0;k<n;k++){
+    const e=ifd+2+k*12
+    if(e+12>seg.length)return
+    if(r16(e)===0x0112){
+      if(le){seg[e+8]=1;seg[e+9]=0}else{seg[e+8]=0;seg[e+9]=1}
+      return
+    }
+  }
 }
 let uploadItems={},uploadResults={}
 async function uploadFiles(files){
