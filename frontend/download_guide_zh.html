@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>照片下載說明 | Alcyone PhotoShare</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#FDFCF9;
+  --bg2:#F4F1EB;
+  --text:#1E1E1C;
+  --muted:#888880;
+  --accent:#C47A4A;
+  --accent-light:#FBF0E8;
+  --border:#E8E5DF;
+  --green:#4A9B6F;
+  --green-light:#EBF5F0;
+  --red:#C44A4A;
+  --red-light:#FBE8E8;
+  --blue:#4A7AC4;
+  --blue-light:#E8EEF5;
+  --sans:'Noto Sans JP',sans-serif;
+}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);font-weight:300;line-height:1.8;-webkit-font-smoothing:antialiased}
+.wrap{max-width:720px;margin:0 auto;padding:0 20px}
+
+/* header */
+header{background:var(--text);color:var(--bg);padding:32px 0 28px}
+header .wrap{display:flex;flex-direction:column;gap:6px}
+.header-logo{font-size:13px;font-weight:500;opacity:.5;letter-spacing:.1em}
+.header-title{font-size:clamp(18px,3vw,24px);font-weight:500;line-height:1.4}
+.header-sub{font-size:13px;opacity:.6;margin-top:4px}
+
+/* tabs */
+.tab-nav{background:#fff;border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100}
+.tab-nav .wrap{display:flex;gap:0}
+.tab-btn{flex:1;padding:14px 8px;font-size:13px;font-weight:400;font-family:var(--sans);border:none;background:transparent;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;transition:all .2s;display:flex;flex-direction:column;align-items:center;gap:4px}
+.tab-btn .tab-icon{font-size:18px}
+.tab-btn.active{color:var(--accent);border-bottom-color:var(--accent);font-weight:500}
+
+/* tab content */
+.tab-content{display:none;padding:32px 0 64px}
+.tab-content.active{display:block}
+
+/* section */
+.section{margin-bottom:40px}
+.section-title{font-size:16px;font-weight:500;margin-bottom:20px;padding-bottom:10px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px}
+.section-title .icon{font-size:18px}
+
+/* steps */
+.steps{display:grid;gap:12px}
+.step{display:flex;gap:14px;align-items:flex-start}
+.step-num{width:26px;height:26px;border-radius:50%;background:var(--accent);color:#fff;font-size:12px;font-weight:500;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px}
+.step-body{flex:1}
+.step-title{font-size:14px;font-weight:500;margin-bottom:3px;line-height:1.5}
+.step-desc{font-size:13px;color:var(--muted);line-height:1.75}
+.step-desc code{background:var(--bg2);padding:1px 6px;border-radius:3px;font-size:12px;color:var(--text)}
+
+/* method cards */
+.method-grid{display:grid;gap:14px;margin-bottom:32px}
+.method-card{border:1px solid var(--border);border-radius:6px;overflow:hidden}
+.method-head{background:var(--bg2);padding:12px 16px;display:flex;align-items:center;gap:10px}
+.method-head-icon{font-size:16px}
+.method-head-title{font-size:14px;font-weight:500}
+.method-head-badge{margin-left:auto;font-size:11px;color:var(--muted);background:#fff;border:1px solid var(--border);padding:2px 8px;border-radius:10px}
+.method-body{padding:16px}
+
+/* tip / note / warn */
+.tip,.note,.warn{border-radius:6px;padding:12px 14px;font-size:13px;line-height:1.75;margin:12px 0;display:flex;gap:10px;align-items:flex-start}
+.tip{background:var(--accent-light);color:var(--accent)}
+.note{background:var(--blue-light);color:var(--blue)}
+.warn{background:var(--red-light);color:var(--red)}
+.tip-icon,.note-icon,.warn-icon{flex-shrink:0;margin-top:1px}
+.tip-text,.note-text,.warn-text{color:var(--text)}
+
+/* file app guide */
+.file-app{background:var(--bg2);border-radius:6px;padding:20px;margin-top:8px}
+.file-app-title{font-size:13px;font-weight:500;margin-bottom:14px;color:var(--muted)}
+
+/* size table */
+.size-table{width:100%;border-collapse:collapse;font-size:13px;margin-top:8px}
+.size-table th{background:var(--bg2);padding:10px 12px;text-align:left;font-weight:500;border-bottom:1px solid var(--border)}
+.size-table td{padding:10px 12px;border-bottom:1px solid var(--border);color:var(--text)}
+.size-table tr:last-child td{border-bottom:none}
+.size-table .ok{color:var(--green);font-weight:500}
+.size-table .ng{color:var(--red)}
+.size-badge{display:inline-block;background:var(--green-light);color:var(--green);font-size:11px;padding:1px 7px;border-radius:10px;font-weight:500}
+.size-badge.ng{background:var(--red-light);color:var(--red)}
+
+/* goods */
+.goods-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.goods-card{border:1px solid var(--border);border-radius:6px;padding:16px}
+.goods-icon{font-size:24px;margin-bottom:8px}
+.goods-name{font-size:14px;font-weight:500;margin-bottom:4px}
+.goods-desc{font-size:12px;color:var(--muted);line-height:1.7}
+
+.cta-banner{background:var(--text);color:#fff;border-radius:8px;padding:24px;text-align:center;margin-top:24px}
+.cta-banner p{font-size:13px;opacity:.7;margin-bottom:14px;line-height:1.7}
+.cta-banner a{display:inline-block;background:var(--accent);color:#fff;font-size:13px;padding:10px 28px;border-radius:3px;font-family:var(--sans)}
+
+/* notice section */
+.notice-list{display:grid;gap:10px}
+.notice-item{display:flex;gap:12px;padding:14px 16px;border-radius:6px;font-size:13px;line-height:1.75}
+.notice-item.warn{background:var(--red-light)}
+.notice-item.ok{background:var(--green-light)}
+
+footer{padding:28px 0;border-top:1px solid var(--border);text-align:center;margin-top:40px}
+footer p{font-size:12px;color:var(--muted)}
+
+@media(max-width:560px){
+  .goods-grid{grid-template-columns:1fr}
+  .size-table{font-size:11px}
+  .size-table th,.size-table td{padding:6px 6px}
+  .size-table th:nth-child(3),.size-table td:nth-child(3){display:none} 
+}
+</style>
+</head>
+
+<body>
+
+<header>
+  <div class="wrap">
+    <div class="header-logo">Alcyone PhotoShare</div>
+    <div class="header-title">📥 照片下載說明</div>
+    <div class="header-sub">請依照您使用的裝置選擇下載方式</div>
+    <div class="header-sub"><a href="/download_guide.html" style="color:inherit;text-decoration:underline;">日本語版はこちら</a></div>
+  </div>
+</header>
+
+<nav class="tab-nav">
+  <div class="wrap">
+    <button class="tab-btn active" onclick="switchTab('iphone',this)">
+      <span class="tab-icon">📱</span>iPhone
+    </button>
+    <button class="tab-btn" onclick="switchTab('android',this)">
+      <span class="tab-icon">🤖</span>Android
+    </button>
+    <button class="tab-btn" onclick="switchTab('pc',this)">
+      <span class="tab-icon">💻</span>PC / Mac
+    </button>
+  </div>
+</nav>
+
+<!-- 注意事項 -->
+<div style="background:var(--bg2);border-bottom:1px solid var(--border);padding:20px 0">
+  <div class="wrap">
+    <div style="font-size:12px;font-weight:500;color:var(--muted);margin-bottom:10px;letter-spacing:.04em">📋 下載前請先確認</div>
+    <div class="notice-list">
+      <div class="notice-item warn"><span>⏰</span><span><strong>相簿有下載期限。</strong>請在期限內下載，期限過後將無法再開啟相簿。</span></div>
+      <div class="notice-item warn"><span>📶</span><span><strong>建議在 Wi-Fi 環境下下載。</strong>照片檔案較大，使用行動網路下載會消耗大量流量。</span></div>
+      <div class="notice-item warn"><span>💾</span><span><strong>請確認裝置的可用儲存空間。</strong>原始尺寸的照片每張約 5〜15MB。</span></div>
+      <div class="notice-item warn"><span>🔟</span><span><strong>建議一次儲存約 10 張以內。</strong>依裝置不同，一次儲存 15〜20 張以上時可能會無法順利完成。如果要儲存大量照片，請分成每次約 10 張的方式儲存。</span></div>
+      <div class="notice-item ok"><span>🖨️</span><span><strong>請依照列印尺寸選擇下載尺寸。</strong>要大尺寸列印時請選「原始尺寸」，A4 以內請選「中尺寸（適合A4列印）」，3×5 吋請選「小尺寸（適合3×5吋列印）」。也請參考頁面下方的列印尺寸表。</span></div>
+      <div class="notice-item ok"><span>✅</span><span><strong>在期限內可以不限次數重複下載。</strong></span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== iPhone ==================== -->
+<div id="tab-iphone" class="tab-content active">
+  <div class="wrap">
+
+    <div class="tip" style="margin-top:24px">
+      <span class="tip-icon">💡</span>
+      <span class="tip-text">在 iPhone 上建議使用 <strong>Safari</strong> 開啟頁面。使用 Chrome 時，下載位置可能會不同。</span>
+    </div>
+
+    <div class="section" style="margin-top:24px">
+      <div class="section-title"><span class="icon">📲</span>下載方式</div>
+      <div class="method-grid">
+
+        <!-- 個別 -->
+        <div class="method-card">
+          <div class="method-head">
+            <span class="method-head-icon">🖼️</span>
+            <span class="method-head-title">單張下載（一張一張儲存到「照片」App）</span>
+            <span class="method-head-badge">推薦</span>
+          </div>
+          <div class="method-body">
+            <div class="steps">
+              <div class="step"><div class="step-num">1</div><div class="step-body"><div class="step-title">點選想要儲存的照片並開啟</div></div></div>
+              <div class="step"><div class="step-num">2</div><div class="step-body"><div class="step-title">點選右上角的「儲存 ▾」按鈕</div><div class="step-desc">位於照片開啟畫面的右上角</div></div></div>
+              <div class="step"><div class="step-num">3</div><div class="step-body"><div class="step-title">選擇尺寸</div><div class="step-desc">可從原始尺寸・中尺寸（適合A4列印）・小尺寸（適合3×5吋列印）中選擇</div></div></div>
+              <div class="step"><div class="step-num">4</div><div class="step-body"><div class="step-title">分享畫面開啟後，點選「儲存影像」</div><div class="step-desc">照片會直接儲存到「照片」App</div></div></div>
+            </div>
+            <div class="tip" style="margin-top:12px">
+              <span class="tip-icon">💡</span>
+              <span class="tip-text">如果照片載入時間較長，畫面會顯示「已準備好 1 張照片」。點選「儲存」即可開啟分享畫面。</span>
+            </div>
+            <div class="tip">
+              <span class="tip-icon">💡</span>
+              <span class="tip-text">在無法開啟分享畫面的機型上，照片會改為在新分頁中開啟。這時請長按圖片 →點選「儲存到"照片"」。</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 選取→一次儲存到相簿 -->
+        <div class="method-card">
+          <div class="method-head">
+            <span class="method-head-icon">☑️</span>
+            <span class="method-head-title">選取後儲存（多張一次儲存到相簿）</span>
+            <span class="method-head-badge">推薦</span>
+          </div>
+          <div class="method-body">
+            <div class="steps">
+              <div class="step"><div class="step-num">1</div><div class="step-body"><div class="step-title">點選「選取」按鈕</div><div class="step-desc">進入選擇照片的模式</div></div></div>
+              <div class="step"><div class="step-num">2</div><div class="step-body"><div class="step-title">點選想要儲存的照片</div><div class="step-desc">出現勾選記號的照片即為已選取</div></div></div>
+              <div class="step"><div class="step-num">3</div><div class="step-body"><div class="step-title">點選畫面下方的「下載所選 ▾」，再選擇「📱 儲存到相簿」</div><div class="step-desc">如果沒有出現這個選項，請使用下方的「選取下載（以 ZIP 一次儲存）」</div></div></div>
+              <div class="step"><div class="step-num">4</div><div class="step-body"><div class="step-title">等待載入完成</div><div class="step-desc">畫面會顯示「正在準備 ◯ 張照片...」。如果載入時間較長，會顯示「已準備好 ◯ 張照片」，請點選「儲存」</div></div></div>
+              <div class="step"><div class="step-num">5</div><div class="step-body"><div class="step-title">分享畫面開啟後，點選「儲存 ◯ 張影像」</div><div class="step-desc">選取的照片會一次儲存到「照片」App</div></div></div>
+            </div>
+            <div class="tip" style="margin-top:12px">
+              <span class="tip-icon">💡</span>
+              <span class="tip-text">不需經過 ZIP 檔或「檔案」App，可以直接儲存到「照片」App。</span>
+            </div>
+            <div class="warn">
+              <span class="warn-icon">⚠️</span>
+              <span class="warn-text">建議一次選取<strong>約 10 張以內</strong>。依裝置不同，一次儲存 15〜20 張以上時可能會顯示「儲存失敗」。發生這種情況時，請減少張數後再試一次。</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 選取 ZIP -->
+        <div class="method-card">
+          <div class="method-head">
+            <span class="method-head-icon">📦</span>
+            <span class="method-head-title">選取下載（以 ZIP 一次儲存）</span>
+          </div>
+          <div class="method-body">
+            <div class="steps">
+              <div class="step"><div class="step-num">1</div><div class="step-body"><div class="step-title">點選「選取」按鈕</div><div class="step-desc">進入選擇照片的模式</div></div></div>
+              <div class="step"><div class="step-num">2</div><div class="step-body"><div class="step-title">點選想要儲存的照片</div><div class="step-desc">出現勾選記號的照片即為已選取</div></div></div>
+              <div class="step"><div class="step-num">3</div><div class="step-body"><div class="step-title">點選畫面下方的「下載所選 ▾」，再選擇想要的尺寸</div><div class="step-desc">選取的照片會被整合成一個 ZIP 檔，建立過程中會顯示進度</div></div></div>
+              <div class="step"><div class="step-num">4</div><div class="step-body"><div class="step-title">出現確認視窗時，點選「下載」</div></div></div>
+              <div class="step"><div class="step-num">5</div><div class="step-body"><div class="step-title">在「檔案」App 中確認</div><div class="step-desc">請參考下方的「「檔案」App 的開啟方式」</div></div></div>
+            </div>
+            <div class="warn" style="margin-top:12px">
+              <span class="warn-icon">⚠️</span>
+              <span class="warn-text">建議一次選取<strong>約 10 張以內</strong>。依裝置不同，一次儲存 15〜20 張以上時可能會無法順利完成。</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 全部 -->
+        <div class="method-card">
+          <div class="method-head">
+            <span class="method-head-icon">📦</span>
+            <span class="method-head-title">全部下載（一次儲存所有照片）</span>
+          </div>
+          <div class="method-body">
+            <div class="steps">
+              <div class="step"><div class="step-num">1</div><div class="step-body"><div class="step-title">點選「全部下載」按鈕</div><div class="step-desc">位於照片列表上方</div></div></div>
+              <div class="step"><div class="step-num">2</div><div class="step-body"><div class="step-title">選擇想要的尺寸</div><div class="step-desc">開始建立 ZIP 檔並顯示進度。依照片數量不同，可能需要一些時間</div></div></div>
+              <div class="step"><div class="step-num">3</div><div class="step-body"><div class="step-title">出現確認視窗時，點選「下載」</div><div class="step-desc">畫面右上角的 ↓ 圖示代表下載進行中</div></div></div>
+              <div class="step"><div class="step-num">4</div><div class="step-body"><div class="step-title">在「檔案」App 中確認</div><div class="step-desc">請參考下方的「「檔案」App 的開啟方式」</div></div></div>
+            </div>
+            <div class="tip" style="margin-top:12px">
+              <span class="tip-icon">💡</span>
+              <span class="tip-text">照片會以 ZIP 檔一次下載。在「檔案」App 中開啟即可自動解壓縮。檔案較大時，會分成多個 ZIP 檔下載。</span>
+            </div>
+            <div class="warn">
+              <span class="warn-icon">⚠️</span>
+              <span class="warn-text">照片數量較多的相簿，依裝置不同可能會無法順利完成。這時請使用「選取」功能，每次約 10 張分批儲存，或改用電腦下載。</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- 檔案 App -->
+    <div class="section">
+      <div class="section-title"><span class="icon">📁</span>「檔案」App 的開啟方式與使用方法</div>
+      <div class="file-app">
+        <div class="file-app-title">📂 在「檔案」App 中確認下載的照片</div>
+        <div class="steps">
+          <div class="step"><div class="step-num">1</div><div class="step-body"><div class="step-title">在主畫面開啟「檔案」App</div><div class="step-desc">找不到時，請在主畫面向下滑動，搜尋「檔案」</div></div></div>
+          <div class="step"><div class="step-num">2</div><div class="step-body"><div class="step-title">點選「我的 iPhone」</div></div></div>
+          <div class="step"><div class="step-num">3</div><div class="step-body"><div class="step-title">開啟「下載項目」資料夾</div><div class="step-desc">下載的照片和 ZIP 檔都會存放在這裡</div></div></div>
+          <div class="step"><div class="step-num">4</div><div class="step-body"><div class="step-title">點選 ZIP 檔即可自動解壓縮</div><div class="step-desc">解壓縮後會建立一個資料夾，照片就在裡面</div></div></div>
+        </div>
+      </div>
+      <div class="file-app" style="margin-top:12px">
+        <div class="file-app-title">📷 移到「照片」App 的方法</div>
+        <div class="steps">
+          <div class="step"><div class="step-num">1</div><div class="step-body"><div class="step-title">在「檔案」App 中開啟照片</div></div></div>
+          <div class="step"><div class="step-num">2</div><div class="step-body"><div class="step-title">點選左下角的「分享」按鈕（□↑）</div></div></div>
+          <div class="step"><div class="step-num">3</div><div class="step-body"><div class="step-title">點選「儲存影像」</div><div class="step-desc">照片就會移到「照片」App。有多張照片時，可以一張一張進行，或一次選取後再分享。</div></div></div>
+        </div>
+        <div class="note" style="margin-top:12px">
+          <span class="note-icon">ℹ️</span>
+          <span class="note-text">一次移動多張照片時：在「檔案」App 中開啟資料夾，依序點選右上角的「...」→「選取」→ 全選 → 分享 →「儲存影像」即可。</span>
+        </div>
+        <div class="warn" style="margin-top:10px">
+          <span class="warn-icon">🗑️</span>
+          <span class="warn-text"><strong>照片儲存到「照片」App 之後，請刪除「檔案」App 中的資料。</strong>如果不刪除，同樣的資料會存放在兩個地方，佔用不必要的儲存空間。在「檔案」App 的「下載項目」資料夾中，長按 ZIP 檔和解壓縮後的資料夾 →「刪除」即可刪除。</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 尺寸確認 iPhone -->
+    <div class="section">
+      <div class="section-title"><span class="icon">📐</span>確認圖片尺寸的方法（iPhone）</div>
+      <div class="steps">
+        <div class="step"><div class="step-num">1</div><div class="step-body"><div class="step-title">在「照片」App 中開啟要確認的照片</div></div></div>
+        <div class="step"><div class="step-num">2</div><div class="step-body"><div class="step-title">向上滑動畫面，或點選「ⓘ」按鈕</div><div class="step-desc">會顯示照片的資訊</div></div></div>
+        <div class="step"><div class="step-num">3</div><div class="step-body"><div class="step-title">「〇〇 × 〇〇」的數字就是圖片尺寸（像素）</div><div class="step-desc">例如：6000 × 4000 → 原始尺寸，可大尺寸列印</div></div></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ==================== Android ==================== -->
+<div id="tab-android" class="tab-content">
+  <div class="wrap">
+
+    <div class="tip" style="margin-top:24px">
+      <span class="tip-icon">💡</span>
+      <span class="tip-text">Android 依機型不同，操作可能略有差異，但基本流程相同。</span>
+    </div>
+
+    <div class="section" style="margin-top:24px">
+      <div class="section-title"><span class="icon">📲</span>下載方式</div>
+      <div class="method-grid">
+
+        <div class="method-card">
+          <div class="method-head">
+            <span class="method-head-icon">🖼️</span>
+            <span class="method-head-title">單張下載（一張一張儲存）</span>
+            <span class="method-head-badge">推薦</span>
+          </div>
+          <div class="method-body">
+            <div class="steps">
+              <div class="step"><div class="step-num">1</div><div class="step-body"><div class="step-title">點選照片並開啟</div></div></div>
+              <div class="step"><div class="step-num">2</div><div class="step-body"><div class="step-title">點選右上角的「儲存 ▾」按鈕</div></div></div>
+              <div class="step"><div class="step-num">3</div><div class="step-body"><div class="step-title">選擇尺寸</div><div class="step-desc">可從原始尺寸・中尺寸（適合A4列印）・小尺寸（適合3×5吋列印）中選擇</div></div></div>
+            </div>
+            <div class="tip" style="margin-top:12px">
+              <span class="tip-icon">💡</span>
+              <span class="tip-text">部分機型會開啟分享畫面，可直接儲存到相簿。如果載入時間較長，畫面會顯示「已準備好 1 張照片」，請點選「儲存」。無法開啟分享畫面時，請長按在新分頁中開啟的圖片 →選擇「下載圖片」。</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="method-card">
+          <div class="method-head">
+            <span class="method-head-icon">☑️</span>
+            <span class="method-head-title">選取下載（選擇後儲存）</span>
+          </div>
+          <div class="method-body">
+            <div class="steps">
+              <div class="step"><div class="step-num">1</div><div class="step-body"><div class="step-title">點選「選取」按鈕</div></div></div>
+              <div class="step"><div class="step-num">2</div><div class="step-body"><div class="step-title">點選想要儲存的照片</div></div></div>
+              <div class="step"><div class="step-num">3</div><div class="step-body"><div class="step-title">點選畫面下方的「下載所選 ▾」</div><div class="step-desc">如果有顯示「📱 儲存到相簿」，選擇它即可不經過下載資料夾，直接一次儲存到相簿（載入時間較長時請點選「儲存」）。選擇尺寸的話，照片會整合成 ZIP 檔儲存到下載資料夾</div></div></div>
+            </div>
+            <div class="warn" style="margin-top:12px">
+              <span class="warn-icon">⚠️</span>
+              <span class="warn-text">建議一次選取<strong>約 10 張以內</strong>。依裝置不同，一次儲存 15〜20 張以上時可能會無法順利完成。發生這種情況時，請減少張數後再試一次。</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="method-card">
+          <div class="method-head">
+            <span class="method-head-icon">📦</span>
+            <span class="method-head-title">全部下載（一次儲存所有照片）</span>
+          </div>
+          <div class="method-body">
+            <div class="steps">
+              <div class="step"><div class="step-num">1</div><div class="step-body"><div class="step-title">點選「全部下載」按鈕</div><div class="step-desc">位於照片列表上方</div></div></div>
+              <div class="step"><div class="step-num">2</div><div class="step-body"><div class="step-title">選擇想要的尺寸，等待完成</div><div class="step-desc">建立 ZIP 檔時會顯示進度。檔案較大時，會分成多個 ZIP 檔下載</div></div></div>
+              <div class="step"><div class="step-num">3</div><div class="step-body"><div class="step-title">點選通知，或在檔案管理 App 中確認</div><div class="step-desc">ZIP 檔會儲存在「Download（下載）」資料夾中</div></div></div>
+              <div class="step"><div class="step-num">4</div><div class="step-body"><div class="step-title">點選 ZIP 檔進行解壓縮</div><div class="step-desc">解壓縮 App 啟動後即可取出照片</div></div></div>
+            </div>
+            <div class="warn" style="margin-top:12px">
+              <span class="warn-icon">⚠️</span>
+              <span class="warn-text">照片數量較多的相簿，依裝置不同可能會無法順利完成。這時請使用「選取」功能，每次約 10 張分批儲存，或改用電腦下載。</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title"><span class="icon">📁</span>檔案管理 App 的開啟方式</div>
+      <div class="file-app">
+        <div class="file-app-title">📂 確認下載的照片</div>
+        <div class="steps">
+          <div class="step"><div class="step-num">1</div><div class="step-body"><div class="step-title">開啟「檔案」或「我的檔案」App</div><div class="step-desc">找不到時，請在應用程式清單中搜尋「檔案」</div></div></div>
+          <div class="step"><div class="step-num">2</div><div class="step-body"><div class="step-title">開啟「Download（下載）」資料夾</div><div class="step-desc">下載的照片和 ZIP 檔都在這裡</div></div></div>
+          <div class="step"><div class="step-num">3</div><div class="step-body"><div class="step-title">長按 ZIP 檔 →「解壓縮」</div><div class="step-desc">依機型不同，顯示的名稱可能會不一樣</div></div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title"><span class="icon">📐</span>確認圖片尺寸的方法（Android）</div>
+      <div class="steps">
+        <div class="step"><div class="step-num">1</div><div class="step-body"><div class="step-title">在相簿 App 中開啟照片</div></div></div>
+        <div class="step"><div class="step-num">2</div><div class="step-body"><div class="step-title">點選「詳細資料」或「ⓘ」按鈕</div><div class="step-desc">位於選單或畫面下方</div></div></div>
+        <div class="step"><div class="step-num">3</div><div class="step-body"><div class="step-title">確認「解析度」或「尺寸」欄位</div><div class="step-desc">例如會顯示 6000 × 4000</div></div></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ==================== PC ==================== -->
+<div id="tab-pc" class="tab-content">
+  <div class="wrap">
+
+    <div class="tip" style="margin-top:24px">
+      <span class="tip-icon">💡</span>
+      <span class="tip-text">用電腦下載最簡單。要儲存大量照片時，建議使用電腦。</span>
+    </div>
+
+    <div class="section" style="margin-top:24px">
+      <div class="section-title"><span class="icon">📲</span>下載方式</div>
+      <div class="method-grid">
+
+        <div class="method-card">
+          <div class="method-head">
+            <span class="method-head-icon">🖼️</span>
+            <span class="method-head-title">單張下載（一張一張儲存）</span>
+          </div>
+          <div class="method-body">
+            <div class="steps">
+              <div class="step"><div class="step-num">1</div><div class="step-body"><div class="step-title">點擊照片並開啟</div></div></div>
+              <div class="step"><div class="step-num">2</div><div class="step-body"><div class="step-title">點擊右上角的「儲存 ▾」按鈕</div></div></div>
+              <div class="step"><div class="step-num">3</div><div class="step-body"><div class="step-title">選擇尺寸</div><div class="step-desc">照片會在新分頁中開啟</div></div></div>
+              <div class="step"><div class="step-num">4</div><div class="step-body"><div class="step-title">在照片上按右鍵 →「另存圖片」</div><div class="step-desc">依瀏覽器不同，顯示的名稱可能會不一樣（例如「圖片另存為」）</div></div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="method-card">
+          <div class="method-head">
+            <span class="method-head-icon">☑️</span>
+            <span class="method-head-title">選取下載（選擇後儲存）</span>
+          </div>
+          <div class="method-body">
+            <div class="steps">
+              <div class="step"><div class="step-num">1</div><div class="step-body"><div class="step-title">點擊「選取」按鈕</div></div></div>
+              <div class="step"><div class="step-num">2</div><div class="step-body"><div class="step-title">點擊想要儲存的照片</div><div class="step-desc">每點擊一次就會多選取一張</div></div></div>
+              <div class="step"><div class="step-num">3</div><div class="step-body"><div class="step-title">點擊畫面下方的「下載所選 ▾」，再選擇尺寸</div><div class="step-desc">選取的照片會整合成一個 ZIP 檔下載</div></div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="method-card">
+          <div class="method-head">
+            <span class="method-head-icon">📦</span>
+            <span class="method-head-title">全部下載（一次儲存所有照片）</span>
+          </div>
+          <div class="method-body">
+            <div class="steps">
+              <div class="step"><div class="step-num">1</div><div class="step-body"><div class="step-title">點擊「全部下載」按鈕</div><div class="step-desc">位於照片列表上方</div></div></div>
+              <div class="step"><div class="step-num">2</div><div class="step-body"><div class="step-title">選擇尺寸後，開始建立 ZIP 檔</div><div class="step-desc">建立過程中畫面會顯示進度，完成後就會開始下載。檔案較大時，會分成多個 ZIP 檔下載</div></div></div>
+              <div class="step"><div class="step-num">3</div><div class="step-body"><div class="step-title">開啟下載資料夾並解壓縮 ZIP 檔</div><div class="step-desc">Windows 請按右鍵 →「解壓縮全部」，Mac 請按兩下即可解壓縮</div></div></div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title"><span class="icon">📁</span>確認儲存位置的方法</div>
+      <div class="file-app">
+        <div class="file-app-title">🪟 Windows</div>
+        <div class="steps">
+          <div class="step"><div class="step-num">1</div><div class="step-body"><div class="step-title">開啟檔案總管</div><div class="step-desc">點擊工作列上的資料夾圖示，或按 Windows 鍵 + E</div></div></div>
+          <div class="step"><div class="step-num">2</div><div class="step-body"><div class="step-title">點擊左側的「下載」</div></div></div>
+          <div class="step"><div class="step-num">3</div><div class="step-body"><div class="step-title">在 ZIP 檔上按右鍵 →「解壓縮全部」</div></div></div>
+        </div>
+      </div>
+      <div class="file-app" style="margin-top:12px">
+        <div class="file-app-title">🍎 Mac</div>
+        <div class="steps">
+          <div class="step"><div class="step-num">1</div><div class="step-body"><div class="step-title">開啟 Finder</div></div></div>
+          <div class="step"><div class="step-num">2</div><div class="step-body"><div class="step-title">點擊左側的「下載項目」</div></div></div>
+          <div class="step"><div class="step-num">3</div><div class="step-body"><div class="step-title">按兩下 ZIP 檔即可解壓縮</div><div class="step-desc">會在同一個資料夾中建立解壓縮後的資料夾</div></div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title"><span class="icon">📐</span>確認圖片尺寸的方法（電腦）</div>
+      <div class="file-app">
+        <div class="file-app-title">🪟 Windows</div>
+        <div class="steps">
+          <div class="step"><div class="step-num">1</div><div class="step-body"><div class="step-title">在照片檔案上按右鍵 →「內容」</div></div></div>
+          <div class="step"><div class="step-num">2</div><div class="step-body"><div class="step-title">點擊「詳細資料」分頁</div></div></div>
+          <div class="step"><div class="step-num">3</div><div class="step-body"><div class="step-title">確認「寬度」和「高度」的數值</div></div></div>
+        </div>
+      </div>
+      <div class="file-app" style="margin-top:12px">
+        <div class="file-app-title">🍎 Mac</div>
+        <div class="steps">
+          <div class="step"><div class="step-num">1</div><div class="step-body"><div class="step-title">用「預覽程式」開啟照片</div></div></div>
+          <div class="step"><div class="step-num">2</div><div class="step-body"><div class="step-title">選單列「工具」→「顯示檢閱器」</div></div></div>
+          <div class="step"><div class="step-num">3</div><div class="step-body"><div class="step-title">在「一般資訊」分頁中確認解析度和尺寸</div></div></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ==================== 共通 ==================== -->
+<div style="background:var(--bg2);padding:48px 0;margin-top:8px">
+  <div class="wrap">
+
+    <!-- 影片 -->
+    <div class="section">
+      <div class="section-title"><span class="icon">🎬</span>影片的儲存方法</div>
+      <div class="steps">
+        <div class="step"><div class="step-num">1</div><div class="step-body"><div class="step-title">在相簿照片列表下方的「影片」中，點選想要儲存的影片</div><div class="step-desc">沒有影片的相簿不會顯示此區塊</div></div></div>
+        <div class="step"><div class="step-num">2</div><div class="step-body"><div class="step-title">點選播放畫面下方的「下載影片」</div><div class="step-desc">會開啟新分頁並開始下載</div></div></div>
+        <div class="step"><div class="step-num">3</div><div class="step-body"><div class="step-title">在儲存位置確認</div><div class="step-desc">iPhone 會儲存在「檔案」App 的「下載項目」資料夾中（點選分享按鈕 →「儲存影片」即可移到「照片」App）。Android 和電腦會儲存在「下載」資料夾中</div></div></div>
+      </div>
+      <div class="note" style="margin-top:12px">
+        <span class="note-icon">ℹ️</span>
+        <span class="note-text">影片檔案較大，建議在 Wi-Fi 環境下下載。</span>
+      </div>
+    </div>
+
+    <!-- 列印尺寸 -->
+    <div class="section">
+      <div class="section-title"><span class="icon">🖨️</span>列印尺寸參考</div>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:16px;line-height:1.75">照片可從「原始尺寸」「中尺寸（適合A4列印）」「小尺寸（適合3×5吋列印）」三種中選擇下載。請依照想要列印的尺寸選擇。</p>
+      <table class="size-table">
+        <thead>
+          <tr>
+            <th>尺寸名稱</th>
+            <th>尺寸</th>
+            <th>300dpi 建議像素</th>
+            <th>用途</th>
+            <th>原始</th>
+            <th>中</th>
+            <th>小</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>3×5吋</strong></td>
+            <td>89×127mm</td>
+            <td style="color:var(--muted);font-size:12px">1051×1500px</td>
+            <td>一般照片沖印</td>
+            <td><span class="size-badge">◎</span></td>
+            <td><span class="size-badge">◎</span></td>
+            <td><span class="size-badge">◎</span></td>
+          </tr>
+          <tr>
+            <td><strong>4×6吋</strong></td>
+            <td>102×152mm</td>
+            <td style="color:var(--muted);font-size:12px">1205×1795px</td>
+            <td>相簿・明信片尺寸</td>
+            <td><span class="size-badge">◎</span></td>
+            <td><span class="size-badge">◎</span></td>
+            <td><span class="size-badge">◎</span></td>
+          </tr>
+          <tr>
+            <td><strong>5×7吋</strong></td>
+            <td>127×178mm</td>
+            <td style="color:var(--muted);font-size:12px">1500×2102px</td>
+            <td>擺飾・禮物</td>
+            <td><span class="size-badge">◎</span></td>
+            <td><span class="size-badge">◎</span></td>
+            <td><span class="size-badge">○</span></td>
+          </tr>
+          <tr>
+            <td><strong>8×10吋</strong></td>
+            <td>203×254mm</td>
+            <td style="color:var(--muted);font-size:12px">2398×3000px</td>
+            <td>相框・擺飾</td>
+            <td><span class="size-badge">◎</span></td>
+            <td><span class="size-badge">◎</span></td>
+            <td><span class="size-badge ng">△</span></td>
+          </tr>
+          <tr>
+            <td><strong>A4</strong></td>
+            <td>210×297mm</td>
+            <td style="color:var(--muted);font-size:12px">2480×3508px</td>
+            <td>相片書・室內裝飾</td>
+            <td><span class="size-badge">◎</span></td>
+            <td><span class="size-badge">◎</span></td>
+            <td><span class="size-badge ng">△</span></td>
+          </tr>
+          <tr>
+            <td><strong>10×12吋</strong></td>
+            <td>254×305mm</td>
+            <td style="color:var(--muted);font-size:12px">3000×3602px</td>
+            <td>大型相框</td>
+            <td><span class="size-badge">◎</span></td>
+            <td><span class="size-badge">○</span></td>
+            <td><span class="size-badge ng">✕</span></td>
+          </tr>
+          <tr>
+            <td><strong>A3</strong></td>
+            <td>297×420mm</td>
+            <td style="color:var(--muted);font-size:12px">3508×4961px</td>
+            <td>大尺寸・畫布輸出</td>
+            <td><span class="size-badge">◎</span></td>
+            <td><span class="size-badge ng">△</span></td>
+            <td><span class="size-badge ng">✕</span></td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="tip" style="margin-top:14px">
+        <span class="tip-icon">💡</span>
+        <span class="tip-text">不確定時，建議先下載 <strong>原始尺寸</strong>。之後可以列印任何尺寸。</span>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<footer>
+  <p>© Alcyone PhotoShare　如有任何疑問，歡迎透過<a href="https://lin.ee/Qy34W1s" target="_blank" style="color:var(--muted);">官方 LINE</a>與我們聯絡</p>
+</footer>
+
+<script>
+function switchTab(id, btn) {
+  document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+  document.getElementById('tab-' + id).classList.add('active');
+  btn.classList.add('active');
+}
+</script>
+
+</body>
+</html>
