@@ -80,6 +80,8 @@ body{font-family:-apple-system,'Hiragino Sans',sans-serif;background:var(--bg);c
 
 /* ── ツールバー ── */
 .tb{position:sticky;top:52px;z-index:100;background:rgba(250,250,248,.94);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);padding:8px 12px;display:flex;align-items:center;justify-content:flex-end;gap:6px;flex-wrap:wrap;}
+.lang-globe{margin-right:3px;}
+@media(max-width:640px){#langBtnTxt,.lang-caret{display:none;}.lang-globe{margin-right:0;}}
 @media(max-width:400px){.btn-sm{padding:5px 8px;font-size:11px;}#slideshowBtnTxt{display:none;}}
 .dl-wrap{position:relative;}
 .dl-menu{position:absolute;top:calc(100%+6px);right:0;background:#fff;border-radius:10px;box-shadow:0 8px 32px rgba(44,36,24,.15);overflow:hidden;white-space:nowrap;z-index:20;display:none;min-width:200px;}
@@ -179,7 +181,14 @@ body{font-family:-apple-system,'Hiragino Sans',sans-serif;background:var(--bg);c
 <header class="hd" id="header">
   <div class="logo" id="siteLogo">Alcyone PhotoShare <span>Photo</span></div>
   <div class="hd-right">
-    <button class="btn btn-gw btn-sm" id="langBtn" onclick="toggleLang()" style="min-width:36px;text-align:center;">EN</button>
+    <div class="dl-wrap">
+      <button class="btn btn-gw btn-sm" id="langBtn" onclick="toggleLangMenu(event)"><span class="lang-globe">🌐</span><span id="langBtnTxt">日本語</span><span class="lang-caret"> ▾</span></button>
+      <div class="dl-menu" id="langMenu">
+        <button class="dl-item" data-lang="ja" onclick="setLang('ja')">日本語</button>
+        <button class="dl-item" data-lang="en" onclick="setLang('en')">English</button>
+        <button class="dl-item" data-lang="zh-TW" onclick="setLang('zh-TW')">繁體中文</button>
+      </div>
+    </div>
     <div class="dl-wrap">
       <button class="btn btn-gw btn-sm" id="slideshowBtn" onclick="toggleSsMenu(event)">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="6 3 20 12 6 21 6 3"/></svg>
@@ -432,6 +441,12 @@ const T = {
     errExpired: 'このアルバムは期限切れです', errExpiredSub: 'ダウンロード期限が過ぎています。',
     errPrivate: 'このアルバムは現在非公開です', errPrivateSub: '公開されるまでしばらくお待ちください。',
     errLoad: '読み込みに失敗しました', errLoadSub: '時間をおいて再試行してください。',
+    custSkipped: n => `・${n}件スキップ`,
+    custDoneSummary: (d,e,s) => `完了（${d}件成功・${e}件失敗${s}）`,
+    custAllSkipped: n => `${n}件はすでに送信済みです`,
+    custAdded: (d,s) => `✅ ${d}件を追加しました${s}`,
+    toastCustAdded: n => `${n}件を追加しました`,
+    deleting: '削除中...',
   },
   en: {
     share: 'Share', selBtn: 'Select', selCancel: 'Deselect',
@@ -479,6 +494,65 @@ const T = {
     errExpired: 'This album has expired', errExpiredSub: 'The download period has ended.',
     errPrivate: 'This album is currently private', errPrivateSub: 'Please wait until it is published.',
     errLoad: 'Failed to load', errLoadSub: 'Please try again later.',
+    custSkipped: n => ` · ${n} skipped`,
+    custDoneSummary: (d,e,s) => `Done (${d} succeeded, ${e} failed${s})`,
+    custAllSkipped: n => `${n} file(s) already sent`,
+    custAdded: (d,s) => `✅ Added ${d} file(s)${s}`,
+    toastCustAdded: n => `Added ${n} file(s)`,
+    deleting: 'Deleting...',
+  },
+  'zh-TW': {
+    share: '分享', selBtn: '選取', selCancel: '取消選取',
+    slideshow: '幻燈片', ssNew: '由新到舊', ssOld: '由舊到新', ssRandom: '隨機',
+    dlAll: '全部下載', dlSel: '下載所選 ▾', cancelSel: '取消',
+    dlFull: '原始尺寸', dlFullSub: '原始檔案',
+    dlMed: '中尺寸（適合A4列印）', dlMedSub: '約2400px',
+    dlSm: '小尺寸（適合3×5吋列印）', dlSmSub: '約1200px',
+    dlCameraRoll: '📱 儲存到相簿', dlCameraRollSub: '一次儲存（僅限支援的裝置）',
+    toastCamRollPrep: n => `正在準備 ${n} 張照片...`, toastCamRollUnsupported: '此裝置不支援此功能', toastCamRollFail: '儲存失敗',
+    camRollReady: n => `已準備好 ${n} 張照片`, camRollReadyHint: '按下按鈕即可開啟儲存選單', camRollSaveBtn: '儲存',
+    dlGuide: '📖 儲存方法說明',
+    lbSave: '儲存 ▾', lbDel: '刪除',
+    lbHintShare: '點選「儲存 ▾」選擇尺寸 → 點選「儲存影像」',
+    lbHintOpen: '點選「儲存 ▾」選擇尺寸 → 圖片開啟後長按 →「儲存影像」',
+    selCount: n => `已選取 ${n} 張`,
+    lbCount: (c,t) => `${c} / ${t}`,
+    loading: '載入中...',
+    toastUrl: '已複製網址', toastDlDone: '下載完成！', toastErr: '發生錯誤',
+    toastDel: '已刪除', toastDelFail: '刪除失敗',
+    toastDlDoneMulti: n => `已分成 ${n} 個檔案下載`,
+    toastZeroPhotos: '無法取得照片。請稍候再試一次。',
+    zipGen: '正在建立 ZIP...', zipComp: '正在壓縮 ZIP...',
+    zipGenPart: n => `正在建立第 ${n} 個檔案...`,
+    progressCount: (d,t) => `${d} / ${t} 張`,
+    pwProtected: '此相簿受密碼保護', pwPlaceholder: '密碼', pwOpen: '開啟', pwErr: '密碼錯誤',
+    pwLoadErr: '無法載入，請再試一次。',
+    videoSection: n => `影片（${n}部）`,
+    videoNotice: '上傳的影片在顯示縮圖之前可能無法播放。請稍候再重新整理頁面。',
+    videoDl: '下載影片', videoDelBtn: '刪除', videoDelConfirm: '確定要刪除這部影片嗎？',
+    videoOpenFail: '無法播放影片。請稍候再試一次。',
+    uploadTitle: '新增照片', uploadLabel: '拖放或點選以選擇照片／影片', uploadSub: '支援 JPG、PNG、HEIC、MP4、MOV 等格式',
+    uploadClose: '關閉', uploadDone: f => `完成（成功 ${f} 個・`, uploadFail: n => `失敗 ${n} 個）`,
+    uploadedFile: '已上傳的檔案', uploadDupl: '⚠️ 已傳送',
+    sortUploadDesc: '上傳順序（由新到舊）', sortUploadAsc: '上傳順序（由舊到新）',
+    sortCaptureDesc: '拍攝時間（由新到舊）', sortCaptureAsc: '拍攝時間（由舊到新）',
+    uploadWait: '等待中', uploadUploading: '上傳中', uploadOk: '✓', uploadFailed: '✗',
+    custDelConfirm: '確定要刪除這個檔案嗎？',
+    guideLink: '📖 查看照片・影片的儲存方法 →',
+    guidePromptText: '要查看儲存方法說明嗎？',
+    guidePromptOpen: '查看說明', guidePromptClose: '關閉',
+    photoCount: n => `${n} 張`,
+    expiry: d => `期限：${d}`,
+    errNotfound: '找不到相簿', errNotfoundSub: '請確認網址是否正確。',
+    errExpired: '此相簿已過期', errExpiredSub: '下載期限已過。',
+    errPrivate: '此相簿目前未公開', errPrivateSub: '請等待相簿公開。',
+    errLoad: '載入失敗', errLoadSub: '請稍後再試。',
+    custSkipped: n => `・略過 ${n} 個`,
+    custDoneSummary: (d,e,s) => `完成（成功 ${d} 個・失敗 ${e} 個${s}）`,
+    custAllSkipped: n => `${n} 個檔案已傳送過`,
+    custAdded: (d,s) => `✅ 已新增 ${d} 個檔案${s}`,
+    toastCustAdded: n => `已新增 ${n} 個檔案`,
+    deleting: '刪除中...',
   }
 }
 function t(key, ...args){
@@ -486,14 +560,34 @@ function t(key, ...args){
   const val = dict[key] ?? T.ja[key] ?? key
   return typeof val === 'function' ? val(...args) : val
 }
-function toggleLang(){
-  lang = lang==='ja'?'en':'ja'
+// ボタンには短い表記、メニューには正式名を出す
+const LANG_BTN_LABEL = { ja: '日本語', en: 'EN', 'zh-TW': '中文' }
+// ボタンの表記と、メニュー内の選択中の言語の✓を更新する（スマホではボタンが🌐だけになるため✓で現在の言語を示す）
+function markLangMenu(){
+  document.getElementById('langBtnTxt').textContent = LANG_BTN_LABEL[lang] || LANG_BTN_LABEL.ja
+  document.querySelectorAll('#langMenu [data-lang]').forEach(b=>{
+    const on=b.dataset.lang===lang
+    b.style.fontWeight=on?'600':''
+    b.textContent=(on?'✓ ':'')+b.textContent.replace(/^✓ /,'')
+  })
+}
+function toggleLangMenu(e){e.stopPropagation();document.getElementById('langMenu').classList.toggle('on')}
+function setLang(code){
+  closeAllMenus()
+  if(!T[code])return
+  lang = code
   localStorage.setItem('albumLang', lang)
   applyLang()
+  if(albumData){
+    renderAlbumMeta()
+    document.querySelectorAll('.video-section').forEach(el=>el.remove())
+    if(albumData.videos&&albumData.videos.length)renderVideos(albumData.videos)
+  }
 }
+function guideUrl(){return lang==='zh-TW'?'/download_guide_zh.html':'/download_guide.html'}
 function applyLang(){
-  const btn = document.getElementById('langBtn')
-  btn.textContent = lang==='ja'?'EN':'日本語'
+  markLangMenu()
+  document.documentElement.lang = lang==='zh-TW' ? 'zh-Hant-TW' : lang
   document.getElementById('shareBtnTxt').textContent = t('share')
   const ssBtnTxt = document.getElementById('slideshowBtnTxt')
   if(ssBtnTxt) ssBtnTxt.textContent = t('slideshow')
@@ -549,7 +643,7 @@ function applyLang(){
   document.getElementById('custCloseBtn').textContent = t('uploadClose')
   // Guide link
   const guide = document.querySelector('.guide-link-big')
-  if(guide) guide.innerHTML = t('guideLink')
+  if(guide){ guide.innerHTML = t('guideLink'); guide.href = guideUrl() }
   // LB save button text
   const lbSaveBtn = document.querySelector('[onclick="toggleLbDl(event)"]')
   if(lbSaveBtn) {
@@ -565,19 +659,19 @@ function dlMenuItems(isSel=false){
   // カメラロールへの一括保存（Web Share API）は、選択保存メニューにだけ出す。
   // PCやWeb Share API非対応の端末では今までどおりZIPダウンロードのみにする
   const camRoll = (isSel && canShareFiles()) ? `<button class="dl-item" onclick="saveSelToCameraRoll()">${t('dlCameraRoll')}<small>${t('dlCameraRollSub')}</small></button>` : ''
-  return `<a class="dl-item" href="/download_guide.html" target="_blank" style="border-bottom:1px solid var(--border);color:var(--muted);">${t('dlGuide')}</a>
+  return `<a class="dl-item" href="${guideUrl()}" target="_blank" style="border-bottom:1px solid var(--border);color:var(--muted);">${t('dlGuide')}</a>
     ${camRoll}<button class="dl-item" onclick="${prefix}('full')">${t('dlFull')}<small>${t('dlFullSub')}</small></button>
     <button class="dl-item" onclick="${prefix}('medium')">${t('dlMed')}<small>${t('dlMedSub')}</small></button>
     <button class="dl-item" onclick="${prefix}('small')">${t('dlSm')}<small>${t('dlSmSub')}</small></button>`
 }
 function lbDlMenuItems(){
-  return `<a class="dl-item" href="/download_guide.html" target="_blank" style="border-bottom:1px solid var(--border);color:var(--muted);">${t('dlGuide')}</a>
+  return `<a class="dl-item" href="${guideUrl()}" target="_blank" style="border-bottom:1px solid var(--border);color:var(--muted);">${t('dlGuide')}</a>
     <button class="dl-item" onclick="dlCurrent('full')">${t('dlFull')}<small>${t('dlFullSub')}</small></button>
     <button class="dl-item" onclick="dlCurrent('medium')">${t('dlMed')}<small>${t('dlMedSub')}</small></button>
     <button class="dl-item" onclick="dlCurrent('small')">${t('dlSm')}<small>${t('dlSmSub')}</small></button>`
 }
 // 初期適用
-;(()=>{ document.getElementById('langBtn').textContent = lang==='ja'?'EN':'日本語' })()
+;(()=>{ markLangMenu() })()
 
 // フォント定義
 const FONTS = {
@@ -604,6 +698,16 @@ function applyFont(fontKey) {
 }
 
 let photos=[], pw='', selMode=false, selIds=new Set(), cur=0, lastSel=-1
+let albumData=null // 言語を切り替えたときに枚数・期限・動画一覧を描き直すために保持する
+function renderAlbumMeta(){
+  const d=albumData,meta=[]
+  if (d.count) meta.push(t('photoCount', d.count))
+  if (d.totalSizeLabel) meta.push(d.totalSizeLabel)
+  if (d.expiresAt) meta.push(t('expiry', d.expiresAt.slice(0,10)))
+  document.getElementById('albumMeta').innerHTML = meta.map((m,i)=>
+    i<meta.length-1 ? `<span>${m}</span><span class="dot">·</span>` : `<span>${m}</span>`
+  ).join('')
+}
 let curSort=localStorage.getItem('albumSort')||'upload_desc'
 
 function sortPhotos(){
@@ -664,7 +768,7 @@ async function load(password='') {
     sortPhotos()
     const sortSel=document.getElementById('sortSel');if(sortSel)sortSel.value=curSort
     // アルバム設定の言語を初回のみ適用（お客さまが手動で変更した場合は上書きしない）
-    if(!_albumLangSet&&d.lang){lang=d.lang;_albumLangSet=true}
+    if(!_albumLangSet&&d.lang&&T[d.lang]){lang=d.lang;_albumLangSet=true}
     if(d.siteTitle){document.getElementById('siteLogo').textContent=d.siteTitle;document.title=`フォトギャラリー | ${d.siteTitle}`}
     if(d.allowCustomerUpload){const b=document.getElementById('custUploadBtn');b.style.display='flex'}
     if(!d.allowVideoUpload){document.getElementById('custFileInput').accept='image/*'}
@@ -692,13 +796,8 @@ async function load(password='') {
 
     // アルバム情報
     document.getElementById('albumName').textContent = d.name
-    const meta=[]
-    if (d.count) meta.push(t('photoCount', d.count))
-    if (d.totalSizeLabel) meta.push(d.totalSizeLabel)
-    if (d.expiresAt) meta.push(t('expiry', d.expiresAt.slice(0,10)))
-    document.getElementById('albumMeta').innerHTML = meta.map((m,i)=>
-      i<meta.length-1 ? `<span>${m}</span><span class="dot">·</span>` : `<span>${m}</span>`
-    ).join('')
+    albumData=d
+    renderAlbumMeta()
 
     if (photos.length > 0) {
       renderGrid()
@@ -722,13 +821,8 @@ async function refreshGallery(){
     if (!res.ok || d.requirePassword) return
     photos = d.photos
     sortPhotos()
-    const meta=[]
-    if (d.count) meta.push(t('photoCount', d.count))
-    if (d.totalSizeLabel) meta.push(d.totalSizeLabel)
-    if (d.expiresAt) meta.push(t('expiry', d.expiresAt.slice(0,10)))
-    document.getElementById('albumMeta').innerHTML = meta.map((m,i)=>
-      i<meta.length-1 ? `<span>${m}</span><span class="dot">·</span>` : `<span>${m}</span>`
-    ).join('')
+    albumData=d
+    renderAlbumMeta()
     document.getElementById('grid').style.display = photos.length ? '' : 'none'
     if (photos.length > 0) renderGrid()
     document.querySelectorAll('.video-section').forEach(el=>el.remove())
@@ -817,7 +911,7 @@ function maybeShowGuidePrompt(){
   document.getElementById('guidePromptCloseBtn').textContent=t('guidePromptClose')
   document.getElementById('guidePrompt').classList.add('on')
 }
-function openGuidePrompt(){window.open('/download_guide.html','_blank');dismissGuidePrompt()}
+function openGuidePrompt(){window.open(guideUrl(),'_blank');dismissGuidePrompt()}
 function dismissGuidePrompt(){localStorage.setItem(GUIDE_PROMPT_DISMISSED_KEY,'1');document.getElementById('guidePrompt').classList.remove('on')}
 
 function showProgress(title){document.getElementById('progressTtl').textContent=title;document.getElementById('progressModal').classList.add('on')}
@@ -1198,7 +1292,7 @@ function addGuideLink() {
   const container = document.getElementById('guideLinkTop')
   if (!container || container.querySelector('.guide-link-big')) return
   const guide = document.createElement('a')
-  guide.href = '/download_guide.html'
+  guide.href = guideUrl()
   guide.target = '_blank'
   guide.className = 'guide-link-big'
   guide.innerHTML = t('guideLink')
@@ -1334,11 +1428,11 @@ async function uploadCustFiles(files){
     }
   }
   await Promise.all(Array.from({length:Math.min(CONCURRENCY,queue.length)},worker))
-  const skipMsg=skipped?(lang==='en'?` · ${skipped} skipped`:`・${skipped}件スキップ`):''
-  document.getElementById('custUploadTtl').textContent=errors?(lang==='en'?`Done (${done} succeeded, ${errors} failed${skipMsg})`:`完了（${done}件成功・${errors}件失敗${skipMsg}）`):skipped&&!done?(lang==='en'?`${skipped} file(s) already sent`:`${skipped}件はすでに送信済みです`):(lang==='en'?`✅ Added ${done} file(s)${skipMsg}`:`✅ ${done}件を追加しました${skipMsg}`)
+  const skipMsg=skipped?t('custSkipped',skipped):''
+  document.getElementById('custUploadTtl').textContent=errors?t('custDoneSummary',done,errors,skipMsg):skipped&&!done?t('custAllSkipped',skipped):t('custAdded',done,skipMsg)
   custUploading=false
   document.getElementById('custCloseBtn').disabled=false
-  if(done>0){showToast(lang==='en'?`Added ${done} file(s)`:`${done}件を追加しました`);refreshGallery()}
+  if(done>0){showToast(t('toastCustAdded',done));refreshGallery()}
 }
 
 async function deleteCurrent(){
@@ -1367,7 +1461,7 @@ async function deleteCurrent(){
 
 async function deleteCustFile(fileId,btn){
   if(!confirm(t('custDelConfirm')))return
-  btn.disabled=true;btn.textContent=lang==='en'?'Deleting...':'削除中...'
+  btn.disabled=true;btn.textContent=t('deleting')
   const res=await fetch(`${W}/api/album/${token}/files/${fileId}`,{method:'DELETE'})
   if(res.ok){
     const row=document.getElementById(`cuf_${fileId}`)
