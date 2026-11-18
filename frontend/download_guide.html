@@ -149,7 +149,8 @@ footer p{font-size:12px;color:var(--muted)}
       <div class="notice-item warn"><span>⏰</span><span><strong>有効期限があります。</strong>期限内にダウンロードしてください。期限が切れるとアクセスできなくなります。</span></div>
       <div class="notice-item warn"><span>📶</span><span><strong>Wi-Fi環境でのダウンロードをおすすめします。</strong>写真データは大容量のため、モバイル通信だと通信量が多くかかります。</span></div>
       <div class="notice-item warn"><span>💾</span><span><strong>ストレージの空き容量を確認してください。</strong>フルサイズは1枚あたり5〜15MB程度あります。</span></div>
-      <div class="notice-item ok"><span>🖨️</span><span><strong>印刷サイズに合わせてダウンロードサイズを選んでください。</strong>大きく印刷したい場合は「フルサイズ」、L判〜A4なら「A4用」がおすすめです。ページ下部の印刷サイズ表も参考にしてください。</span></div>
+      <div class="notice-item warn"><span>🔟</span><span><strong>一度に保存する枚数は10枚程度までをおすすめします。</strong>お使いの端末によっては、15〜20枚以上をまとめて保存しようとするとうまくいかないことがあります。たくさん保存したい場合は、10枚程度ずつに分けて保存してください。</span></div>
+      <div class="notice-item ok"><span>🖨️</span><span><strong>印刷サイズに合わせてダウンロードサイズを選んでください。</strong>大きく印刷したい場合は「フルサイズ」、A4までなら「中サイズ（A4印刷対応）」、L判なら「小サイズ（L判印刷対応）」がおすすめです。ページ下部の印刷サイズ表も参考にしてください。</span></div>
       <div class="notice-item ok"><span>✅</span><span><strong>有効期限内であれば何度でもダウンロードできます。</strong></span></div>
     </div>
   </div>
@@ -178,11 +179,15 @@ footer p{font-size:12px;color:var(--muted)}
           <div class="method-body">
             <div class="steps">
               <div class="step"><div class="step-num">1</div><div class="step-body"><div class="step-title">保存したい写真をタップして開く</div></div></div>
-              <div class="step"><div class="step-num">2</div><div class="step-body"><div class="step-title">右上の「保存」ボタンをタップ</div><div class="step-desc">画面右上に表示されている保存アイコンです</div></div></div>
-              <div class="step"><div class="step-num">3</div><div class="step-body"><div class="step-title">サイズを選択する</div><div class="step-desc">フルサイズ・中サイズ・小サイズから選べます</div></div></div>
-              <div class="step"><div class="step-num">4</div><div class="step-body"><div class="step-title">共有画面が開いたら「◯枚の画像を保存」をタップ</div><div class="step-desc">これで写真アプリに直接保存されます</div></div></div>
+              <div class="step"><div class="step-num">2</div><div class="step-body"><div class="step-title">右上の「保存 ▾」ボタンをタップ</div><div class="step-desc">写真を開いた画面の右上にあります</div></div></div>
+              <div class="step"><div class="step-num">3</div><div class="step-body"><div class="step-title">サイズを選択する</div><div class="step-desc">フルサイズ・中サイズ（A4印刷対応）・小サイズ（L判印刷対応）から選べます</div></div></div>
+              <div class="step"><div class="step-num">4</div><div class="step-body"><div class="step-title">共有画面が開いたら「画像を保存」をタップ</div><div class="step-desc">これで写真アプリに直接保存されます</div></div></div>
             </div>
             <div class="tip" style="margin-top:12px">
+              <span class="tip-icon">💡</span>
+              <span class="tip-text">写真の読み込みに時間がかかった場合は「1枚の準備ができました」と表示されます。「保存する」をタップすると共有画面が開きます。</span>
+            </div>
+            <div class="tip">
               <span class="tip-icon">💡</span>
               <span class="tip-text">共有画面が開かない機種では、代わりに新しいタブで写真が開きます。その場合は画像を長押し→「"写真"に保存」をタップしてください。</span>
             </div>
@@ -200,13 +205,17 @@ footer p{font-size:12px;color:var(--muted)}
             <div class="steps">
               <div class="step"><div class="step-num">1</div><div class="step-body"><div class="step-title">「選択」ボタンをタップ</div><div class="step-desc">保存したい写真を選ぶモードになります</div></div></div>
               <div class="step"><div class="step-num">2</div><div class="step-body"><div class="step-title">保存したい写真をタップして選ぶ</div><div class="step-desc">チェックが入った写真が選択された状態です</div></div></div>
-              <div class="step"><div class="step-num">3</div><div class="step-body"><div class="step-title">「選択DL」をタップし、「📱 カメラロールに保存」を選ぶ</div><div class="step-desc">この選択肢が出ない場合は、下の「選択ダウンロード（ZIPでまとめて保存）」をご利用ください</div></div></div>
-              <div class="step"><div class="step-num">4</div><div class="step-body"><div class="step-title">読み込みが終わるまで待つ</div><div class="step-desc">枚数によっては少し時間がかかります</div></div></div>
-              <div class="step"><div class="step-num">5</div><div class="step-body"><div class="step-title">「◯枚の画像を保存」をタップ</div><div class="step-desc">選んだ写真がまとめて写真アプリに保存されます</div></div></div>
+              <div class="step"><div class="step-num">3</div><div class="step-body"><div class="step-title">画面下の「選択DL ▾」をタップし、「📱 カメラロールに保存」を選ぶ</div><div class="step-desc">この選択肢が出ない場合は、下の「選択ダウンロード（ZIPでまとめて保存）」をご利用ください</div></div></div>
+              <div class="step"><div class="step-num">4</div><div class="step-body"><div class="step-title">読み込みが終わるまで待つ</div><div class="step-desc">「◯枚を準備中...」と表示されます。読み込みに時間がかかった場合は「◯枚の準備ができました」と表示されるので、「保存する」をタップしてください</div></div></div>
+              <div class="step"><div class="step-num">5</div><div class="step-body"><div class="step-title">共有画面が開いたら「◯枚の画像を保存」をタップ</div><div class="step-desc">選んだ写真がまとめて写真アプリに保存されます</div></div></div>
             </div>
             <div class="tip" style="margin-top:12px">
               <span class="tip-icon">💡</span>
               <span class="tip-text">ZIPファイルやファイルアプリを経由せず、直接写真アプリに保存できます。</span>
+            </div>
+            <div class="warn">
+              <span class="warn-icon">⚠️</span>
+              <span class="warn-text">一度に選ぶのは<strong>10枚程度まで</strong>をおすすめします。端末によっては、15〜20枚以上をまとめて保存しようとすると「保存に失敗しました」と表示されることがあります。その場合は枚数を減らしてもう一度お試しください。</span>
             </div>
           </div>
         </div>
@@ -221,8 +230,13 @@ footer p{font-size:12px;color:var(--muted)}
             <div class="steps">
               <div class="step"><div class="step-num">1</div><div class="step-body"><div class="step-title">「選択」ボタンをタップ</div><div class="step-desc">保存したい写真を選ぶモードになります</div></div></div>
               <div class="step"><div class="step-num">2</div><div class="step-body"><div class="step-title">保存したい写真をタップして選ぶ</div><div class="step-desc">チェックが入った写真が選択された状態です</div></div></div>
-              <div class="step"><div class="step-num">3</div><div class="step-body"><div class="step-title">「ダウンロード」をタップ</div><div class="step-desc">選択した写真がZIPでまとめてダウンロードされます</div></div></div>
-              <div class="step"><div class="step-num">4</div><div class="step-body"><div class="step-title">ファイルアプリで確認する</div><div class="step-desc">↓の「ファイルアプリの開き方」をご確認ください</div></div></div>
+              <div class="step"><div class="step-num">3</div><div class="step-body"><div class="step-title">画面下の「選択DL ▾」をタップし、保存したいサイズを選ぶ</div><div class="step-desc">選んだ写真がZIPファイルにまとめられます。作成中は進行状況が表示されます</div></div></div>
+              <div class="step"><div class="step-num">4</div><div class="step-body"><div class="step-title">確認が表示されたら「ダウンロード」をタップ</div></div></div>
+              <div class="step"><div class="step-num">5</div><div class="step-body"><div class="step-title">ファイルアプリで確認する</div><div class="step-desc">↓の「ファイルアプリの開き方」をご確認ください</div></div></div>
+            </div>
+            <div class="warn" style="margin-top:12px">
+              <span class="warn-icon">⚠️</span>
+              <span class="warn-text">一度に選ぶのは<strong>10枚程度まで</strong>をおすすめします。端末によっては、15〜20枚以上をまとめて保存しようとするとうまくいかないことがあります。</span>
             </div>
           </div>
         </div>
@@ -235,14 +249,18 @@ footer p{font-size:12px;color:var(--muted)}
           </div>
           <div class="method-body">
             <div class="steps">
-              <div class="step"><div class="step-num">1</div><div class="step-body"><div class="step-title">「全部ダウンロード」ボタンをタップ</div><div class="step-desc">アルバムページ上部のボタンです</div></div></div>
-              <div class="step"><div class="step-num">2</div><div class="step-body"><div class="step-title">「ダウンロード」をタップ</div><div class="step-desc">Safariの確認ダイアログが出ます</div></div></div>
-              <div class="step"><div class="step-num">3</div><div class="step-body"><div class="step-title">ダウンロードが完了するまで待つ</div><div class="step-desc">画面右上の↓マークが進行中を表しています。写真の枚数によっては少し時間がかかります</div></div></div>
+              <div class="step"><div class="step-num">1</div><div class="step-body"><div class="step-title">「まとめてDL」ボタンをタップ</div><div class="step-desc">写真一覧の上にあるボタンです</div></div></div>
+              <div class="step"><div class="step-num">2</div><div class="step-body"><div class="step-title">保存したいサイズを選ぶ</div><div class="step-desc">ZIPファイルの作成が始まり、進行状況が表示されます。写真の枚数によっては少し時間がかかります</div></div></div>
+              <div class="step"><div class="step-num">3</div><div class="step-body"><div class="step-title">確認が表示されたら「ダウンロード」をタップ</div><div class="step-desc">画面右上の↓マークが進行中を表しています</div></div></div>
               <div class="step"><div class="step-num">4</div><div class="step-body"><div class="step-title">ファイルアプリで確認する</div><div class="step-desc">↓の「ファイルアプリの開き方」をご確認ください</div></div></div>
             </div>
             <div class="tip" style="margin-top:12px">
               <span class="tip-icon">💡</span>
-              <span class="tip-text">ZIPファイルでまとめてダウンロードされます。ファイルアプリで開くと自動で解凍されます。</span>
+              <span class="tip-text">ZIPファイルでまとめてダウンロードされます。ファイルアプリで開くと自動で解凍されます。容量が大きい場合は、ZIPファイルが複数に分かれてダウンロードされます。</span>
+            </div>
+            <div class="warn">
+              <span class="warn-icon">⚠️</span>
+              <span class="warn-text">写真の枚数が多いアルバムでは、端末によってはうまくいかないことがあります。その場合は「選択」で10枚程度ずつに分けて保存するか、PCでのダウンロードをご利用ください。</span>
             </div>
           </div>
         </div>
@@ -315,12 +333,12 @@ footer p{font-size:12px;color:var(--muted)}
           <div class="method-body">
             <div class="steps">
               <div class="step"><div class="step-num">1</div><div class="step-body"><div class="step-title">写真をタップして開く</div></div></div>
-              <div class="step"><div class="step-num">2</div><div class="step-body"><div class="step-title">右上の「保存」ボタンをタップ</div></div></div>
-              <div class="step"><div class="step-num">3</div><div class="step-body"><div class="step-title">サイズを選択してダウンロード</div></div></div>
+              <div class="step"><div class="step-num">2</div><div class="step-body"><div class="step-title">右上の「保存 ▾」ボタンをタップ</div></div></div>
+              <div class="step"><div class="step-num">3</div><div class="step-body"><div class="step-title">サイズを選択する</div><div class="step-desc">フルサイズ・中サイズ（A4印刷対応）・小サイズ（L判印刷対応）から選べます</div></div></div>
             </div>
             <div class="tip" style="margin-top:12px">
               <span class="tip-icon">💡</span>
-              <span class="tip-text">機種によっては共有画面が開き、「画像を保存」でそのままギャラリーに保存できます。共有画面が開かない場合は、画像を長押し→「画像を保存」を選んでください。</span>
+              <span class="tip-text">機種によっては共有画面が開き、「画像を保存」でそのままギャラリーに保存できます。読み込みに時間がかかった場合は「1枚の準備ができました」と表示されるので、「保存する」をタップしてください。共有画面が開かない場合は、新しいタブで開いた画像を長押し→「画像を保存」を選んでください。</span>
             </div>
           </div>
         </div>
@@ -334,7 +352,11 @@ footer p{font-size:12px;color:var(--muted)}
             <div class="steps">
               <div class="step"><div class="step-num">1</div><div class="step-body"><div class="step-title">「選択」ボタンをタップ</div></div></div>
               <div class="step"><div class="step-num">2</div><div class="step-body"><div class="step-title">保存したい写真をタップして選ぶ</div></div></div>
-              <div class="step"><div class="step-num">3</div><div class="step-body"><div class="step-title">「ダウンロード」をタップ</div><div class="step-desc">「📱 カメラロールに保存」が表示されている場合はそちらを選ぶと、ダウンロードフォルダを経由せず直接ギャラリーへまとめて保存できます。表示されない機種では、通常どおりダウンロードフォルダに保存されます</div></div></div>
+              <div class="step"><div class="step-num">3</div><div class="step-body"><div class="step-title">画面下の「選択DL ▾」をタップ</div><div class="step-desc">「📱 カメラロールに保存」が表示されている場合はそちらを選ぶと、ダウンロードフォルダを経由せず直接ギャラリーへまとめて保存できます（読み込みに時間がかかった場合は「保存する」をタップ）。サイズを選んだ場合は、ZIPファイルにまとめてダウンロードフォルダに保存されます</div></div></div>
+            </div>
+            <div class="warn" style="margin-top:12px">
+              <span class="warn-icon">⚠️</span>
+              <span class="warn-text">一度に選ぶのは<strong>10枚程度まで</strong>をおすすめします。端末によっては、15〜20枚以上をまとめて保存しようとするとうまくいかないことがあります。その場合は枚数を減らしてもう一度お試しください。</span>
             </div>
           </div>
         </div>
@@ -346,10 +368,14 @@ footer p{font-size:12px;color:var(--muted)}
           </div>
           <div class="method-body">
             <div class="steps">
-              <div class="step"><div class="step-num">1</div><div class="step-body"><div class="step-title">「全部ダウンロード」ボタンをタップ</div></div></div>
-              <div class="step"><div class="step-num">2</div><div class="step-body"><div class="step-title">ダウンロードが完了するまで待つ</div><div class="step-desc">画面上部の通知バーにダウンロードの進行状況が表示されます</div></div></div>
+              <div class="step"><div class="step-num">1</div><div class="step-body"><div class="step-title">「まとめてDL」ボタンをタップ</div><div class="step-desc">写真一覧の上にあるボタンです</div></div></div>
+              <div class="step"><div class="step-num">2</div><div class="step-body"><div class="step-title">保存したいサイズを選び、完了するまで待つ</div><div class="step-desc">ZIPファイルの作成中は進行状況が表示されます。容量が大きい場合は、ZIPファイルが複数に分かれてダウンロードされます</div></div></div>
               <div class="step"><div class="step-num">3</div><div class="step-body"><div class="step-title">通知をタップ、またはファイルマネージャーで確認</div><div class="step-desc">「ダウンロード」フォルダにZIPファイルが保存されています</div></div></div>
               <div class="step"><div class="step-num">4</div><div class="step-body"><div class="step-title">ZIPファイルをタップして解凍</div><div class="step-desc">解凍アプリが起動して写真を取り出せます</div></div></div>
+            </div>
+            <div class="warn" style="margin-top:12px">
+              <span class="warn-icon">⚠️</span>
+              <span class="warn-text">写真の枚数が多いアルバムでは、端末によってはうまくいかないことがあります。その場合は「選択」で10枚程度ずつに分けて保存するか、PCでのダウンロードをご利用ください。</span>
             </div>
           </div>
         </div>
@@ -402,8 +428,9 @@ footer p{font-size:12px;color:var(--muted)}
           <div class="method-body">
             <div class="steps">
               <div class="step"><div class="step-num">1</div><div class="step-body"><div class="step-title">写真をクリックして開く</div></div></div>
-              <div class="step"><div class="step-num">2</div><div class="step-body"><div class="step-title">右上の「保存」ボタンをクリック</div></div></div>
-              <div class="step"><div class="step-num">3</div><div class="step-body"><div class="step-title">サイズを選択するとダウンロードが始まる</div><div class="step-desc">保存先を変えたい場合はブラウザのダウンロード設定で変更できます</div></div></div>
+              <div class="step"><div class="step-num">2</div><div class="step-body"><div class="step-title">右上の「保存 ▾」ボタンをクリック</div></div></div>
+              <div class="step"><div class="step-num">3</div><div class="step-body"><div class="step-title">サイズを選択する</div><div class="step-desc">新しいタブで写真が開きます</div></div></div>
+              <div class="step"><div class="step-num">4</div><div class="step-body"><div class="step-title">写真を右クリック→「名前を付けて画像を保存」</div><div class="step-desc">Macの場合は「画像を別名で保存」など、ブラウザによって表示が異なります</div></div></div>
             </div>
           </div>
         </div>
@@ -417,7 +444,7 @@ footer p{font-size:12px;color:var(--muted)}
             <div class="steps">
               <div class="step"><div class="step-num">1</div><div class="step-body"><div class="step-title">「選択」ボタンをクリック</div></div></div>
               <div class="step"><div class="step-num">2</div><div class="step-body"><div class="step-title">保存したい写真をクリックして選ぶ</div><div class="step-desc">複数選択はクリックのたびに追加されます</div></div></div>
-              <div class="step"><div class="step-num">3</div><div class="step-body"><div class="step-title">「ダウンロード」をクリック</div></div></div>
+              <div class="step"><div class="step-num">3</div><div class="step-body"><div class="step-title">画面下の「選択DL ▾」をクリックし、サイズを選ぶ</div><div class="step-desc">選んだ写真がZIPファイルにまとめてダウンロードされます</div></div></div>
             </div>
           </div>
         </div>
@@ -429,8 +456,8 @@ footer p{font-size:12px;color:var(--muted)}
           </div>
           <div class="method-body">
             <div class="steps">
-              <div class="step"><div class="step-num">1</div><div class="step-body"><div class="step-title">「全部ダウンロード」ボタンをクリック</div></div></div>
-              <div class="step"><div class="step-num">2</div><div class="step-body"><div class="step-title">ZIPファイルのダウンロードが始まる</div><div class="step-desc">ブラウザ下部またはダウンロードバーに進行状況が表示されます</div></div></div>
+              <div class="step"><div class="step-num">1</div><div class="step-body"><div class="step-title">「まとめてDL」ボタンをクリック</div><div class="step-desc">写真一覧の上にあるボタンです</div></div></div>
+              <div class="step"><div class="step-num">2</div><div class="step-body"><div class="step-title">サイズを選ぶとZIPファイルの作成が始まる</div><div class="step-desc">作成中は画面に進行状況が表示され、完了するとダウンロードされます。容量が大きい場合は、ZIPファイルが複数に分かれてダウンロードされます</div></div></div>
               <div class="step"><div class="step-num">3</div><div class="step-body"><div class="step-title">ダウンロードフォルダを開いてZIPを解凍</div><div class="step-desc">Windowsは右クリック→「すべて展開」、Macはダブルクリックで解凍できます</div></div></div>
             </div>
           </div>
@@ -486,10 +513,24 @@ footer p{font-size:12px;color:var(--muted)}
 <div style="background:var(--bg2);padding:48px 0;margin-top:8px">
   <div class="wrap">
 
+    <!-- 動画 -->
+    <div class="section">
+      <div class="section-title"><span class="icon">🎬</span>動画の保存方法</div>
+      <div class="steps">
+        <div class="step"><div class="step-num">1</div><div class="step-body"><div class="step-title">アルバムの写真一覧の下にある「動画」から、保存したい動画をタップ</div><div class="step-desc">動画が入っていないアルバムでは表示されません</div></div></div>
+        <div class="step"><div class="step-num">2</div><div class="step-body"><div class="step-title">再生画面の下の「動画をダウンロード」をタップ</div><div class="step-desc">新しいタブが開き、ダウンロードが始まります</div></div></div>
+        <div class="step"><div class="step-num">3</div><div class="step-body"><div class="step-title">保存先で確認する</div><div class="step-desc">iPhoneは「ファイル」アプリの「ダウンロード」フォルダに保存されます（共有ボタン→「ビデオを保存」で写真アプリへ移せます）。Android・PCは「ダウンロード」フォルダに保存されます</div></div></div>
+      </div>
+      <div class="note" style="margin-top:12px">
+        <span class="note-icon">ℹ️</span>
+        <span class="note-text">動画はファイルサイズが大きいため、Wi-Fi環境でのダウンロードをおすすめします。</span>
+      </div>
+    </div>
+
     <!-- 印刷サイズ（注意事項セクションは上部に移動済み） -->
     <div class="section">
       <div class="section-title"><span class="icon">🖨️</span>印刷サイズの目安</div>
-      <p style="font-size:13px;color:var(--muted);margin-bottom:16px;line-height:1.75">納品写真はフルサイズ・A4印刷用・Lサイズ印刷用の3種類からダウンロードできます。印刷したいサイズに合わせてお選びください。</p>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:16px;line-height:1.75">納品写真は「フルサイズ」「中サイズ（A4印刷対応）」「小サイズ（L判印刷対応）」の3種類からダウンロードできます。印刷したいサイズに合わせてお選びください。</p>
       <table class="size-table">
         <thead>
           <tr>
@@ -498,8 +539,8 @@ footer p{font-size:12px;color:var(--muted)}
             <th>300dpi推奨ピクセル数</th>
             <th>用途</th>
             <th>フル</th>
-            <th>A4用</th>
-            <th>L用</th>
+            <th>中</th>
+            <th>小</th>
           </tr>
         </thead>
         <tbody>
